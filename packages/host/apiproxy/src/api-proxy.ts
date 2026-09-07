@@ -34,6 +34,8 @@ import {
 } from '@deepseek-ai/dsh-agent-presets'
 import type { PresetBearingSession } from '@deepseek-ai/dsh-agent-presets'
 import type {} from '@deepseek-ai/dsh-tools'
+import type {} from '@deepseek-ai/dsh-workbench-bridge'
+import type { PiDshRuntime } from '@deepseek-ai/dsh-workbench-bridge'
 import type {
   ApiProxy, ConfigurableProviderView, CredentialView, GoalRef, HistoryEntry, HostFrame,
   ModelCatalogFailure, ModelProviderGroup,
@@ -2400,6 +2402,12 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
 
       async prompt(request) {
         const { sessionId, mode, content, clientTimeZone } = request.payload
+        const piBridge = ctx.get('piBridge') as PiDshRuntime | undefined
+        if (piBridge?.enabled) {
+          const text = content.filter((part): part is { type: 'text'; text: string } => part.type === 'text').map(part => part.text).join('')
+          await piBridge.prompt(sessionId, text)
+          return ok(request, { accepted: true as const })
+        }
         const canonicalTimeZone = clientTimeZone === undefined
           ? undefined
           : canonicalClientTimeZone(clientTimeZone)

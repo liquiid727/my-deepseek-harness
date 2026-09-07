@@ -2993,6 +2993,28 @@ export interface Config {
 
 来源：[`packages/web/web-search-perplexity/src/index.ts:32`](../packages/web/web-search-perplexity/src/index.ts)
 
+<a id="deepseek-aidsh-workbench-bridge"></a>
+
+## `@deepseek-ai/dsh-workbench-bridge`
+
+需要：`sessions`
+
+```ts config-catalog
+/** Configuration for the optional Pi bridge plugin. */
+export interface Config {
+  /** Enables Pi prompt handling in the Host API. */
+  enabled?: boolean
+  /** Pi global configuration directory. */
+  agentDir?: string
+  /** Pi session directory. */
+  sessionDir?: string
+  /** Workbench-to-Pi mapping JSON file. */
+  mappingPath?: string
+}
+```
+
+来源：[`packages/workbench/dsh-bridge/src/index.ts:151`](../packages/workbench/dsh-bridge/src/index.ts)
+
 <a id="deepseek-aidsh-workflow-worker-thread"></a>
 
 ## `@deepseek-ai/dsh-workflow-worker-thread`
@@ -3138,6 +3160,7 @@ export interface Config {
 - `@deepseek-ai/dsh-loader-smoke`（[`packages/test-support/loader-smoke/src/index.ts`](../packages/test-support/loader-smoke/src/index.ts)）
 - `@deepseek-ai/dsh-native-command`（[`packages/util/native-command/src/index.ts`](../packages/util/native-command/src/index.ts)）
 - `@deepseek-ai/dsh-output-retention`（[`packages/util/output-retention/src/index.ts`](../packages/util/output-retention/src/index.ts)）
+- `@deepseek-ai/dsh-pi-adapter`（[`packages/workbench/pi-adapter/src/index.ts`](../packages/workbench/pi-adapter/src/index.ts)）
 - `@deepseek-ai/dsh-sandbox-windows-acl`（[`packages/sandbox/sandbox-windows-acl/src/index.ts`](../packages/sandbox/sandbox-windows-acl/src/index.ts)）
 - `@deepseek-ai/dsh-scope`（[`packages/core/scope/src/index.ts`](../packages/core/scope/src/index.ts)）
 - `@deepseek-ai/dsh-sdk-client`（[`packages/sdk/client/src/index.ts`](../packages/sdk/client/src/index.ts)）
@@ -3150,3 +3173,4 @@ export interface Config {
 - `@deepseek-ai/dsh-typert-generator`（[`packages/typert/generator/src/index.ts`](../packages/typert/generator/src/index.ts)）
 - `@deepseek-ai/dsh-typert-protocol`（[`packages/typert/protocol/src/index.ts`](../packages/typert/protocol/src/index.ts)）
 - `@deepseek-ai/dsh-typert-registry`（[`packages/typert/registry/src/index.ts`](../packages/typert/registry/src/index.ts)）
+- `@deepseek-ai/dsh-workbench-contract`（[`packages/workbench/workbench-contract/src/index.ts`](../packages/workbench/workbench-contract/src/index.ts)）

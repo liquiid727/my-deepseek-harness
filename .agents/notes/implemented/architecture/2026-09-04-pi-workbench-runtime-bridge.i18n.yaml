@@ -1,0 +1,6 @@
+# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
+# side as of the last confirmed-consistent state. Both languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-09-04-pi-workbench-runtime-bridge.md
+2026-09-04-pi-workbench-runtime-bridge.md: 6974c928fcd602ffa541137d296dd47a2d98e134
+2026-09-04-pi-workbench-runtime-bridge.zh.md: 3c4fbd91a844577dc00b3839bd32c05c7083bb97

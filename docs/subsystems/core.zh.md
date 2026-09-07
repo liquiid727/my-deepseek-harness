@@ -730,6 +730,27 @@ roots(): Agent[]
 
 Source: [`packages/core/agent/src/index.ts:256`](../../packages/core/agent/src/index.ts)
 
+<a id="ctxpibridge--pidshruntime"></a>
+
+### `ctx.piBridge` — `PiDshRuntime`
+
+Embedded Pi runtime facade used by the Host API ingress.
+
+```ts cordis-catalog
+/** Sends a text prompt through Pi after creating one stable mapping.
+ * @param sessionId - DSH session id.
+ * @param text - user-visible prompt text.
+ */
+async prompt(sessionId: string, text: string): Promise<void>
+
+/** Aborts the active Pi turn for one DSH session.
+ * @param sessionId - DSH session id.
+ */
+async abort(sessionId: string): Promise<void>
+```
+
+Source: [`packages/workbench/dsh-bridge/src/index.ts:25`](../../packages/workbench/dsh-bridge/src/index.ts)
+
 <a id="agent-events"></a>
 
 ### `agent/*` events

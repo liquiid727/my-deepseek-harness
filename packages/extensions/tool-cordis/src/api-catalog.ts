@@ -951,6 +951,28 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     ],
   },
   {
+    key: 'piBridge',
+    summary: 'Embedded Pi runtime facade used by the Host API ingress.',
+    description: 'Embedded Pi runtime facade used by the Host API ingress.',
+    methods: [
+      {
+        signature: 'readonly enabled: boolean = true',
+        description: 'Whether this facade is enabled by the deployment.',
+        parameters: [],
+      },
+      {
+        signature: 'async prompt(sessionId: string, text: string): Promise<void>',
+        description: 'Sends a text prompt through Pi after creating one stable mapping.',
+        parameters: [{ name: 'sessionId', description: 'DSH session id.' }, { name: 'text', description: 'user-visible prompt text.' }],
+      },
+      {
+        signature: 'async abort(sessionId: string): Promise<void>',
+        description: 'Aborts the active Pi turn for one DSH session.',
+        parameters: [{ name: 'sessionId', description: 'DSH session id.' }],
+      },
+    ],
+  },
+  {
     key: 'planMode',
     summary: '`ctx.planMode`: owns logged plan state, applies and narrates selected state at step start, the `plan:policy` section, the `/plan` command, and the stable exit tool.',
     description: '`ctx.planMode`: owns logged plan state, applies and narrates selected state at step start, the `plan:policy` section, the `/plan` command, and the stable exit tool. UIs observe committed flips through `session/event`; there is no live mirror.',

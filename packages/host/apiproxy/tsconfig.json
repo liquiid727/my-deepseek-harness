@@ -48,6 +48,9 @@
       "path": "../../core/session"
     },
     {
+      "path": "../../workbench/dsh-bridge"
+    },
+    {
       "path": "../../core/tools"
     },
     {

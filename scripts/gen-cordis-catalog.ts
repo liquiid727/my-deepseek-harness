@@ -77,6 +77,7 @@ export const SERVICE_PAGE: Record<string, string> = {
   messageFeedback: 'feedback.md',
   permissionPresets: 'permission-presets.md',
   planMode: 'plan.md',
+  piBridge: 'core.md',
   terminals: 'terminal.md',
   sandbox: 'sandbox.md',
   sandboxPolicy: 'sandbox.md',

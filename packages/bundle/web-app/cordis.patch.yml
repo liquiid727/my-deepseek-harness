@@ -99,6 +99,13 @@
     - id: api-gateway
       name: '@deepseek-ai/dsh-host-apiproxy'
 
+    # Pi Runtime Bridge is opt-in for the POC; the legacy DSH Agent remains
+    # the default when this row is disabled.
+    - id: pi-workbench-bridge
+      name: '@deepseek-ai/dsh-workbench-bridge'
+      config:
+        enabled: !!js process.env.DSH_PI_RUNTIME === '1'
+
     - id: cordis-host-runner
       name: '@deepseek-ai/dsh-cordis-host-runner'
 

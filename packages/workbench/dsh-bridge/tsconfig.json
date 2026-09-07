@@ -1,0 +1,12 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": { "rootDir": "src", "outDir": "lib/types", "tsBuildInfoFile": "lib/types/tsconfig.tsbuildinfo" },
+  "include": ["src"],
+  "references": [
+    { "path": "../../core/session/tsconfig.json" },
+    { "path": "../../llm/llm/tsconfig.json" },
+    { "path": "../../runtime-diagnostics/invariants" },
+    { "path": "../pi-adapter/tsconfig.json" },
+    { "path": "../workbench-contract/tsconfig.json" }
+  ]
+}

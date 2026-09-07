@@ -101,6 +101,16 @@ const GENERIC_SKIPS: readonly GenericSkip[] = [
   { file: 'apps/cli/config/agent-presets/cordis/agent.cordis.yml', upstream: ['cordis'] },
   // The preset-roster loop names the `cordis` preset id, not a package.
   { file: 'apps/cli/tests/windows-shell.spec.ts', upstream: ['cordis'] },
+  // The Cordis UI namespace is product data, not the vendored package name.
+  { file: 'packages/client/ui-settings-plugin-inventory/src/client/PluginInventorySettingsTab.tsx', upstream: ['cordis'] },
+  { file: 'packages/extensions/ui-cordis/src/client/CordisActionRow.tsx', upstream: ['cordis'] },
+  { file: 'packages/extensions/ui-cordis/src/client/CordisDefineRow.tsx', upstream: ['cordis'] },
+  { file: 'packages/extensions/ui-cordis/src/client/CordisPanel.tsx', upstream: ['cordis'] },
+  { file: 'packages/extensions/ui-cordis/src/client/CordisRunRow.tsx', upstream: ['cordis'] },
+  { file: 'packages/extensions/ui-cordis/src/client/index.ts', upstream: ['cordis'] },
+  { file: 'packages/extensions/ui-cordis/src/client/locales.ts', upstream: ['cordis'] },
+  // The Cordis catalog owns protocol event scopes alongside its scoped module declarations.
+  { file: 'scripts/gen-cordis-catalog.ts', upstream: ['cordis'] },
   // GROUP_ORDER holds `packages/<group>/` directory names, not package names.
   { file: 'scripts/gen-module-graph.ts', upstream: ['cordis'] },
   { file: 'scripts/gen-doc-graphs.ts', upstream: ['cordis'] },
@@ -498,7 +508,9 @@ function patterns(reverse: boolean): Pattern[] {
     .sort((left, right) => right.from.length - left.from.length)
     .map(rename => ({
       ...rename,
-      token: new RegExp(`(['"\`])${escapeRegExp(rename.from)}((?:/[^'"\`\\s]*)?)\\1`, 'g'),
+      // Cordis event scopes use `cordis/<event>`, which is product data rather
+      // than an npm subpath. The vendored package has no subpath imports.
+      token: new RegExp(`(['"\`])${escapeRegExp(rename.from)}${rename.upstream === 'cordis' ? '' : '((?:/[^\'"`\\s]*)?)'}\\1`, 'g'),
       yamlName: new RegExp(`^(\\s*(?:-\\s*)?name:[ \\t]+)${escapeRegExp(rename.from)}([ \\t]*(?:#.*)?)$`, 'gm'),
     }))
 }
@@ -508,10 +520,12 @@ function skipped(file: string, pattern: Pattern): boolean {
 }
 
 function rewriteLine(line: string, file: string, all: readonly Pattern[]): string {
-  let out = line
+  // A prior generic pass could mistake a Cordis event scope for a package
+  // subpath. Keep the event protocol stable while the package name is scoped.
+  let out = line.replaceAll('@deepseek-ai/cordis/', 'cordis/')
   for (const pattern of all) {
     if (skipped(file, pattern)) continue
-    out = out.replace(pattern.token, (_match, quote: string, subpath: string) => `${quote}${pattern.to}${subpath}${quote}`)
+    out = out.replace(pattern.token, (_match, quote: string, subpath: string | undefined) => `${quote}${pattern.to}${subpath ?? ''}${quote}`)
     out = out.replace(pattern.yamlName, (_match, prefix: string, suffix: string) => `${prefix}${pattern.to}${suffix}`)
   }
   return out

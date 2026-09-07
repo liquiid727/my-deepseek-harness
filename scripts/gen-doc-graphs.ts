@@ -548,6 +548,14 @@ const SERVICE_ROLES: ServiceRole[] = [
     note: 'The transport-agnostic host gateway face: it dispatches browser API calls, and each open host stream subscribes to the events it forwards rather than being pushed to through a broadcast verb.',
   },
   {
+    key: 'piBridge',
+    pkg: 'workbench-bridge',
+    title: 'Embedded Pi runtime bridge',
+    mode: 'core',
+    consumers: ['apiproxy'],
+    note: 'Maps each DSH session to a Pi AgentSession, projects the normalized Workbench event stream into the DSH session log, and is opt-in at Host composition.',
+  },
+  {
     key: 'dynamicCordisRunner',
     pkg: 'cordis-host-runner',
     title: 'Dynamic Cordis package host runner',
