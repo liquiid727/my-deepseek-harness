@@ -11,7 +11,8 @@ import type {
   WorkbenchSessionSummary,
 } from '@deepseek-ai/dsh-workbench-contract'
 import { WorkbenchSessionId as workbenchSessionId } from '@deepseek-ai/dsh-workbench-contract'
-import { createAgentSession, SessionManager, type CreateAgentSessionOptions } from '@mariozechner/pi-coding-agent'
+import { Type } from '@mariozechner/pi-ai'
+import { createAgentSession, defineTool, SessionManager, type CreateAgentSessionOptions, type ToolDefinition } from '@mariozechner/pi-coding-agent'
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
 import { dirname } from 'node:path'
 
@@ -55,6 +56,8 @@ export interface WorkbenchSessionMapping {
   updatedAt: number
   /** DSH session id when the Host bridge owns this mapping. */
   dshSessionId?: string
+  /** Last emitted Workbench turn number, used to continue a resumed transcript. */
+  lastTurn?: number
 }
 
 /** Persistence face for session mappings. */
@@ -70,14 +73,19 @@ export class MemoryWorkbenchSessionMappingStore implements WorkbenchSessionMappi
   private readonly mappings = new Map<string, WorkbenchSessionMapping>()
 
   /** Returns a snapshot of current mappings. */
-  async load(): Promise<WorkbenchSessionMapping[]> { return [...this.mappings.values()] }
+  load(): Promise<WorkbenchSessionMapping[]> { return Promise.resolve([...this.mappings.values()]) }
 
   /** Stores one mapping by Workbench id. */
-  async save(mapping: WorkbenchSessionMapping): Promise<void> { this.mappings.set(mapping.workbench.id, mapping) }
+  save(mapping: WorkbenchSessionMapping): Promise<void> {
+    this.mappings.set(mapping.workbench.id, mapping)
+    return Promise.resolve()
+  }
 }
 
 /** JSON-file mapping store for Host restarts. Writes are replaced atomically. */
 export class JsonWorkbenchSessionMappingStore implements WorkbenchSessionMappingStore {
+  private writeQueue: Promise<void> = Promise.resolve()
+
   /** @param path - mapping file owned by the deployment. */
   constructor(private readonly path: string) {}
 
@@ -95,13 +103,17 @@ export class JsonWorkbenchSessionMappingStore implements WorkbenchSessionMapping
   }
 
   /** Atomically writes the current mapping set. */
-  async save(mapping: WorkbenchSessionMapping): Promise<void> {
-    const current = await this.load()
-    const next = [...current.filter(item => item.workbench.id !== mapping.workbench.id), mapping]
-    await mkdir(dirname(this.path), { recursive: true })
-    const temporary = `${this.path}.tmp-${process.pid}`
-    await writeFile(temporary, `${JSON.stringify(next)}\n`, 'utf8')
-    await rename(temporary, this.path)
+  save(mapping: WorkbenchSessionMapping): Promise<void> {
+    const write = this.writeQueue.then(async () => {
+      const current = await this.load()
+      const next = [...current.filter(item => item.workbench.id !== mapping.workbench.id), mapping]
+      await mkdir(dirname(this.path), { recursive: true })
+      const temporary = `${this.path}.tmp-${process.pid}`
+      await writeFile(temporary, `${JSON.stringify(next)}\n`, 'utf8')
+      await rename(temporary, this.path)
+    })
+    this.writeQueue = write.catch(() => {})
+    return write
   }
 }
 
@@ -129,7 +141,7 @@ export class PiWorkbenchRuntime implements WorkbenchRuntime {
       const created = await this.factory.create(input)
       const id = workbenchSessionId(`workbench-${++this.nextSession}`)
       const workbench: WorkbenchSession = { id, ...input?.title === undefined ? {} : { title: input.title } }
-      this.attach(workbench, created.id, created.session)
+      await this.attach(workbench, created.id, created.session)
       return workbench
     },
     open: async (id: WorkbenchSessionId): Promise<WorkbenchSession> => {
@@ -139,7 +151,7 @@ export class PiWorkbenchRuntime implements WorkbenchRuntime {
       const mapping = this.persistedMappings.get(id)
       if (mapping === undefined) throw new Error(`Workbench session "${id}" is not mapped to Pi`)
       const opened = await this.factory.open(mapping.piSessionId)
-      this.attach(mapping.workbench, opened.id, opened.session)
+      await this.attach(mapping.workbench, opened.id, opened.session)
       return mapping.workbench
     },
     list: async (): Promise<WorkbenchSessionSummary[]> => {
@@ -152,8 +164,22 @@ export class PiWorkbenchRuntime implements WorkbenchRuntime {
   readonly agent = {
     prompt: async (sessionId: WorkbenchSessionId, input: WorkbenchPromptInput): Promise<void> => {
       const record = await this.recordFor(sessionId)
-      await record.pi.prompt(input.text)
-      this.touch(sessionId)
+      try {
+        await record.pi.prompt(input.text)
+      } catch (error: unknown) {
+        this.emit({
+          type: 'runtime.error',
+          sessionId,
+          message: error instanceof Error ? error.message : String(error),
+          recoverable: true,
+          timestamp: Date.now(),
+        })
+        record.activeTurn = undefined
+        record.activeMessage = undefined
+        throw error
+      } finally {
+        this.touch(sessionId)
+      }
     },
     abort: async (sessionId: WorkbenchSessionId): Promise<void> => {
       const record = await this.recordFor(sessionId)
@@ -182,22 +208,22 @@ export class PiWorkbenchRuntime implements WorkbenchRuntime {
     return () => { this.listeners.delete(listener) }
   }
 
-  private attach(workbench: WorkbenchSession, piSessionId: string, pi: PiSession): void {
+  private async attach(workbench: WorkbenchSession, piSessionId: string, pi: PiSession): Promise<void> {
     const record: SessionRecord = {
       workbench,
       piSessionId,
       pi,
       unsubscribe: () => {},
-      nextTurn: 0,
+      nextTurn: this.persistedMappings.get(workbench.id)?.lastTurn ?? 0,
       nextMessage: 0,
       activeTurn: undefined,
       activeMessage: undefined,
     }
     record.unsubscribe = pi.subscribe((event) => { this.handle(record, event) })
     this.records.set(workbench.id, record)
-    const mapping = { workbench, piSessionId, updatedAt: Date.now() }
+    const mapping = { ...this.persistedMappings.get(workbench.id), workbench, piSessionId, updatedAt: Date.now() }
     this.persistedMappings.set(workbench.id, mapping)
-    void this.mappingStore.save(mapping)
+    await this.mappingStore.save(mapping)
   }
 
   private async recordFor(id: WorkbenchSessionId): Promise<SessionRecord> {
@@ -217,13 +243,24 @@ export class PiWorkbenchRuntime implements WorkbenchRuntime {
       case 'agent_start': {
         const turnId = `turn-${++record.nextTurn}`
         record.activeTurn = turnId
+        const mapping = this.persistedMappings.get(sessionId)
+        if (mapping !== undefined) {
+          mapping.lastTurn = record.nextTurn
+          void this.mappingStore.save(mapping)
+        }
         this.emit({ type: 'turn.start', sessionId, turnId, timestamp })
         break
       }
       case 'agent_end': {
         const turnId = record.activeTurn
-        if (turnId !== undefined) this.emit({ type: 'turn.end', sessionId, turnId, timestamp })
+        const errorMessage = agentEndError(event.messages)
+        if (errorMessage !== undefined) {
+          this.emit({ type: 'runtime.error', sessionId, message: errorMessage, recoverable: true, timestamp })
+        } else if (turnId !== undefined) {
+          this.emit({ type: 'turn.end', sessionId, turnId, timestamp })
+        }
         record.activeTurn = undefined
+        record.activeMessage = undefined
         break
       }
       case 'message_start': {
@@ -293,6 +330,24 @@ export interface EmbeddedPiSessionFactoryOptions {
   sessionDir?: string
 }
 
+/** Creates the read-only project identity tool used by the bridge POC.
+ * @param cwd - project directory reported by the tool.
+ * @returns a Pi tool definition with no file or process side effects.
+ */
+export function createProjectInfoTool(cwd: string): ToolDefinition {
+  return defineTool({
+    name: 'get_current_project_info',
+    label: 'Project info',
+    description: 'Return the current project identity and the active runtime.',
+    promptSnippet: 'Inspect the current project identity without changing files.',
+    parameters: Type.Object({}),
+    execute: () => Promise.resolve({
+      content: [{ type: 'text', text: JSON.stringify({ name: 'deepseek-harness', root: cwd, runtime: 'pi' }) }],
+      details: {},
+    }),
+  })
+}
+
 /** Creates real Pi AgentSessions backed by Pi's durable SessionManager.
  * @param options - SDK and session-directory options.
  * @returns a factory for creating and opening Pi sessions.
@@ -305,6 +360,7 @@ export function createEmbeddedPiSessionFactory(options: EmbeddedPiSessionFactory
       const result = await createAgentSession({
         ...options.sessionOptions,
         cwd,
+        customTools: [createProjectInfoTool(cwd), ...(options.sessionOptions?.customTools ?? [])],
         ...(options.agentDir === undefined ? {} : { agentDir: options.agentDir }),
         sessionManager: SessionManager.create(cwd, options.sessionDir),
       })
@@ -320,6 +376,7 @@ export function createEmbeddedPiSessionFactory(options: EmbeddedPiSessionFactory
       const result = await createAgentSession({
         ...options.sessionOptions,
         cwd: sessionManager.getCwd(),
+        customTools: [createProjectInfoTool(sessionManager.getCwd()), ...(options.sessionOptions?.customTools ?? [])],
         ...(options.agentDir === undefined ? {} : { agentDir: options.agentDir }),
         sessionManager,
       })
@@ -339,7 +396,9 @@ interface EmbeddedPiSession {
 
 function adaptAgentSession(session: EmbeddedPiSession): PiSession {
   return {
-    subscribe: listener => session.subscribe(event => listener(event as PiSessionEvent)),
+    subscribe: (listener) => {
+      return session.subscribe((event) => { listener(event as PiSessionEvent) })
+    },
     prompt: text => session.prompt(text),
     abort: () => session.abort(),
   }
@@ -348,4 +407,13 @@ function adaptAgentSession(session: EmbeddedPiSession): PiSession {
 /** Produces a concise safe error string from a Pi tool result. */
 function stringifyError(value: unknown): string {
   return value instanceof Error ? value.message : typeof value === 'string' ? value : 'Pi tool execution failed'
+}
+
+function agentEndError(messages: readonly unknown[]): string | undefined {
+  for (const message of [...messages].reverse()) {
+    if (typeof message !== 'object' || message === null) continue
+    const candidate = message as { stopReason?: unknown; errorMessage?: unknown }
+    if (candidate.stopReason === 'error' && typeof candidate.errorMessage === 'string') return candidate.errorMessage
+  }
+  return undefined
 }

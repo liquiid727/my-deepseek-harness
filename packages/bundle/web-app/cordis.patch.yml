@@ -105,6 +105,9 @@
       name: '@deepseek-ai/dsh-workbench-bridge'
       config:
         enabled: !!js process.env.DSH_PI_RUNTIME === '1'
+        agentDir: !!js process.env.PI_CODING_AGENT_DIR
+        sessionDir: !!js process.env.PI_CODING_AGENT_SESSION_DIR
+        mappingPath: !!js process.env.DSH_PI_MAPPING_PATH ?? dshHomePath('workbench-pi-mappings.json')
 
     - id: cordis-host-runner
       name: '@deepseek-ai/dsh-cordis-host-runner'

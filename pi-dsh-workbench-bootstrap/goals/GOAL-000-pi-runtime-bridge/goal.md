@@ -2,7 +2,7 @@
 
 ## Status
 
-`IN PROGRESS`
+`DONE`
 
 ## Goal
 
@@ -120,11 +120,11 @@ Pi Runtime
 - [x] Baseline 已记录
 - [x] Workbench Contract 已建立
 - [x] Pi Adapter 已建立
-- [ ] DSH UI 的 Prompt 实际由 Pi 处理
-- [ ] Streaming 正常
-- [ ] Tool lifecycle 正常映射
-- [ ] Session Resume 可验证
-- [ ] Abort 或 Runtime Error 可验证
+- [x] DSH UI 的 Prompt 实际由 Pi 处理
+- [x] Streaming 正常
+- [x] Tool lifecycle 正常映射
+- [x] Session Resume 可验证
+- [x] Abort 或 Runtime Error 可验证
 - [x] build / typecheck / test 状态已记录
 - [x] evidence.md 有真实证据
 - [x] decision.md 已更新为最终决策

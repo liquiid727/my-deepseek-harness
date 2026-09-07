@@ -29,6 +29,7 @@
   "license": "MIT",
   "dependencies": {
     "@deepseek-ai/dsh-workbench-contract": "workspace:*",
+    "@mariozechner/pi-ai": "0.73.1",
     "@mariozechner/pi-coding-agent": "0.73.1"
   },
   "peerDependencies": {

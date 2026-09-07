@@ -799,3 +799,54 @@ describe('sessions.prompt synchronous rejection', () => {
     }
   })
 })
+
+describe('Pi bridge cold resume', () => {
+  it('resumes the DSH agent before the bridge appends a prompt', async () => {
+    const ctx = new Context()
+    await ctx.plugin(SessionStore)
+    await ctx.plugin(AgentRegistry)
+    await ctx.plugin(UserQuestionService)
+    const sessionId = sid('pi-cold-resume')
+    const meta = header('pi-cold-resume', 1000)
+    const resumedSession = { id: sessionId, header: meta, events: [] } as unknown as import('@deepseek-ai/dsh-session').Session
+    const resumedAgent = { id: sessionId, session: resumedSession, status: 'idle', ctx } as Agent
+    const resume = vi.spyOn(ctx.agents, 'resume').mockResolvedValue({ agent: resumedAgent, dispose: () => Promise.resolve() })
+    const prompt = vi.fn(() => Promise.resolve())
+    ctx.provide('sessionPersistence', {
+      list: () => Promise.resolve([meta]),
+      inspect: () => Promise.resolve({ meta, events: [] }),
+      locate: () => undefined,
+    } as never)
+    ctx.provide('piBridge', { enabled: true, prompt, abort: vi.fn() } as never)
+    const api = createApiProxy(ctx, { defaultModelSelection: () => ({ provider: 'p', model: 'm' }), cwd: '/tmp' })
+
+    const response = await api.sessions.prompt(request({
+      sessionId,
+      mode: 'queue',
+      content: [{ type: 'text', text: 'resume through Pi' }],
+    }))
+
+    expect(response.result.ok).toBe(true)
+    expect(resume).toHaveBeenCalledOnce()
+    expect(prompt).toHaveBeenCalledWith(sessionId, 'resume through Pi')
+  })
+
+  it('routes session cancellation to the Pi bridge', async () => {
+    const ctx = new Context()
+    await ctx.plugin(SessionStore)
+    await ctx.plugin(AgentRegistry)
+    await ctx.plugin(UserQuestionService)
+    const session = ctx.sessions.create(sid('pi-cancel'), { meta: { cwd: '/proj' } })
+    const cancel = vi.fn()
+    const abort = vi.fn(() => Promise.resolve())
+    ctx.agents.register({ id: session.id, session, status: 'running', ctx, cancel } as unknown as Agent)
+    ctx.provide('piBridge', { enabled: true, prompt: vi.fn(), abort } as never)
+    const api = createApiProxy(ctx, { defaultModelSelection: () => ({ provider: 'p', model: 'm' }), cwd: '/tmp' })
+
+    const response = await api.sessions.cancel(request({ sessionId: session.id }))
+
+    expect(response.result.ok).toBe(true)
+    expect(abort).toHaveBeenCalledWith(session.id)
+    expect(cancel).not.toHaveBeenCalled()
+  })
+})

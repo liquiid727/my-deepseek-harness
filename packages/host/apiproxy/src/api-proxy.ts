@@ -35,7 +35,6 @@ import {
 import type { PresetBearingSession } from '@deepseek-ai/dsh-agent-presets'
 import type {} from '@deepseek-ai/dsh-tools'
 import type {} from '@deepseek-ai/dsh-workbench-bridge'
-import type { PiDshRuntime } from '@deepseek-ai/dsh-workbench-bridge'
 import type {
   ApiProxy, ConfigurableProviderView, CredentialView, GoalRef, HistoryEntry, HostFrame,
   ModelCatalogFailure, ModelProviderGroup,
@@ -2402,8 +2401,10 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
 
       async prompt(request) {
         const { sessionId, mode, content, clientTimeZone } = request.payload
-        const piBridge = ctx.get('piBridge') as PiDshRuntime | undefined
+        const piBridge = ctx.get('piBridge')
         if (piBridge?.enabled) {
+          const found = await agentFor(sessionId)
+          if ('error' in found) return err(request, found.error)
           const text = content.filter((part): part is { type: 'text'; text: string } => part.type === 'text').map(part => part.text).join('')
           await piBridge.prompt(sessionId, text)
           return ok(request, { accepted: true as const })
@@ -2575,6 +2576,10 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
         }
         if (hasSubagentOwner(agent.session, agent)) {
           return Promise.resolve(err(request, subagentOwnershipError(sessionId)))
+        }
+        const piBridge = ctx.get('piBridge')
+        if (piBridge?.enabled) {
+          return piBridge.abort(sessionId).then(() => ok(request, { accepted: true as const }))
         }
         agent.cancel({ kind: 'user' }, { keepInbox: true })
         return Promise.resolve(ok(request, { accepted: true as const }))

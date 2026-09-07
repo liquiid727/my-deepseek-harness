@@ -1,6 +1,6 @@
 /** DSH durable-log projection for the runtime-neutral Workbench stream. @module @deepseek-ai/dsh-workbench-bridge */
 
-import { CallId, createAssistantMessage, createToolResultMessage } from '@deepseek-ai/dsh-llm'
+import { CallId, createAssistantMessage, createToolResultMessage, createUserMessage } from '@deepseek-ai/dsh-llm'
 import type { Session } from '@deepseek-ai/dsh-session'
 import { WorkbenchSessionId, type WorkbenchEvent } from '@deepseek-ai/dsh-workbench-contract'
 import { JsonWorkbenchSessionMappingStore, PiWorkbenchRuntime, createEmbeddedPiSessionFactory, type PiSessionFactory, type WorkbenchSessionMappingStore } from '@deepseek-ai/dsh-pi-adapter'
@@ -15,7 +15,7 @@ declare module '@deepseek-ai/cordis' {
 /** Minimal durable append face; keeping it small makes the bridge easy to test. */
 export interface DurableSession {
   /** Appends one validated DSH event. */
-  append(type: string, data: unknown): unknown
+  append(type: string, data: unknown, opts?: { surfaceOp: 'append' }): unknown
 }
 
 /** Resolves a DSH session for one Workbench session id. */
@@ -73,7 +73,7 @@ export class PiDshRuntime {
     }
     const durable = this.resolveSession(sessionId)
     if (durable === undefined) throw new Error(`DSH session "${sessionId}" is unavailable for Pi prompt`)
-    durable.append('user/message', { content: [{ type: 'text', text }], source: { kind: 'user' } })
+    durable.append('user/message', createUserMessage({ content: [{ type: 'text', text }], source: { kind: 'user' } }), { surfaceOp: 'append' })
     await this.runtime.agent.prompt(WorkbenchSessionId(workbenchId), { text })
   }
 
@@ -99,7 +99,7 @@ function preserveDshIdentity(store: WorkbenchSessionMappingStore): WorkbenchSess
 
 /** Host plugin that opts a deployment into the embedded Pi runtime. */
 export class PiDshBridgeService extends Service {
-  static inject = ['sessions']
+  static inject = ['sessions', 'agents']
   static Config: z<Config> = z.object({
     enabled: z.boolean().default(false),
     agentDir: z.string().default(''),
@@ -127,9 +127,12 @@ export class PiDshBridgeService extends Service {
       }),
       (id) => {
         const session = ctx.sessions.get(SessionId(id))
-        if (session === undefined) return undefined
-        const append = session.append as unknown as (type: string, data: unknown) => unknown
-        return { append: (type: string, data: unknown) => append(type, data) }
+        const agents = ctx.get('agents') as { get(id: SessionId): { session: Session } | undefined } | undefined
+        const agent = agents?.get(SessionId(id))
+        const durable = session ?? agent?.session
+        if (durable === undefined) return undefined
+        const append = durable.append.bind(durable) as unknown as (type: string, data: unknown) => unknown
+        return { append }
       },
       mappingStore,
     )
@@ -211,7 +214,7 @@ export class WorkbenchDshBridge {
       }
       case 'message.end': {
         const state = this.messageState(event.sessionId)
-        session.append('assistant/message', { turn: state.turn, step: state.step, message: createAssistantMessage({ content: [{ type: 'text', text: state.messages.get(event.messageId) ?? '' }], source: { provider: 'pi', model: 'pi-runtime' } }) })
+        session.append('assistant/message', { turn: state.turn, step: state.step, message: createAssistantMessage({ content: [{ type: 'text', text: state.messages.get(event.messageId) ?? '' }], source: { provider: 'pi', model: 'pi-runtime' } }) }, { surfaceOp: 'append' })
         break
       }
       case 'tool.start': {
@@ -223,7 +226,7 @@ export class WorkbenchDshBridge {
         const state = this.messageState(event.sessionId)
         const error = event.error
         const output = error === undefined ? JSON.stringify(event.result ?? null) : error.message
-        session.append('tool/result', { turn: state.turn, step: state.step, message: createToolResultMessage({ callId: CallId(event.toolCallId), content: [{ type: 'text', text: output }], isError: error !== undefined }), ...(error === undefined ? {} : { error: { name: 'PiRuntimeError', code: error.code ?? 'PI_TOOL_ERROR' } }) })
+        session.append('tool/result', { turn: state.turn, step: state.step, message: createToolResultMessage({ callId: CallId(event.toolCallId), content: [{ type: 'text', text: output }], isError: error !== undefined }), ...(error === undefined ? {} : { error: { name: 'PiRuntimeError', code: error.code ?? 'PI_TOOL_ERROR' } }) }, { surfaceOp: 'append' })
         break
       }
       case 'tool.update':

@@ -31,6 +31,26 @@ describe('WorkbenchDshBridge', () => {
     ])
     expect(target.events.find(([type]) => type === 'tool/call')?.[1]).toMatchObject({ callId: 'call-1', name: 'safe' })
   })
+
+  it('projects a failed tool result as an error for the DSH tool UI', () => {
+    const target = session()
+    const bridge = new WorkbenchDshBridge(id => id === 's-1' ? target : undefined)
+    const sessionId = WorkbenchSessionId('s-1')
+    bridge.handle({ type: 'turn.start', sessionId, turnId: 'turn-1' })
+    bridge.handle({ type: 'tool.start', sessionId, toolCallId: 'call-1', toolName: 'safe', args: {} })
+    bridge.handle({
+      type: 'tool.end',
+      sessionId,
+      toolCallId: 'call-1',
+      toolName: 'safe',
+      error: { type: 'runtime.error', sessionId, message: 'denied', code: 'PI_TOOL_DENIED' },
+    })
+
+    expect(target.events.find(([type]) => type === 'tool/result')?.[1]).toMatchObject({
+      message: { content: [{ type: 'tool-result', isError: true, content: [{ type: 'text', text: 'denied' }] }] },
+      error: { code: 'PI_TOOL_DENIED' },
+    })
+  })
 })
 
 describe('PiDshRuntime', () => {
@@ -65,6 +85,27 @@ describe('PiDshRuntime', () => {
     const restarted = new PiDshRuntime(factory, id => id === 's-1' ? target : undefined, mappings)
     await restarted.prompt('s-1', 'after-restart')
     expect(created).toBe(1)
+  })
+
+  it('marks the bridged user message as a surface append', async () => {
+    const appended: Array<[string, unknown, unknown]> = []
+    const target: DurableSession = {
+      append(type, data, opts) { appended.push([type, data, opts]) },
+    }
+    const pi: PiSession = {
+      subscribe() { return () => {} },
+      async prompt() {},
+      async abort() {},
+    }
+    const factory: PiSessionFactory = {
+      async create() { return { id: 'pi-session', session: pi } },
+      async open() { return { id: 'pi-session', session: pi } },
+    }
+
+    await new PiDshRuntime(factory, id => id === 's-1' ? target : undefined).prompt('s-1', 'hello')
+
+    expect(appended[0]?.[0]).toBe('user/message')
+    expect(appended[0]?.[2]).toEqual({ surfaceOp: 'append' })
   })
 
   it('projects a runtime error into a terminal DSH turn event', () => {

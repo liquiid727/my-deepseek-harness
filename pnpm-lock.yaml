@@ -8160,6 +8160,9 @@ importers:
       '@deepseek-ai/dsh-workbench-contract':
         specifier: workspace:*
         version: link:../workbench-contract
+      '@mariozechner/pi-ai':
+        specifier: 0.73.1
+        version: 0.73.1(@modelcontextprotocol/sdk@1.29.0(zod@4.4.3))(@opentelemetry/api@1.9.1)(ws@8.21.0)(zod@4.4.3)
       '@mariozechner/pi-coding-agent':
         specifier: 0.73.1
         version: 0.73.1(@modelcontextprotocol/sdk@1.29.0(zod@4.4.3))(@opentelemetry/api@1.9.1)(ws@8.21.0)(zod@4.4.3)

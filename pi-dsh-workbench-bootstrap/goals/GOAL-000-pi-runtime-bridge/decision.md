@@ -225,3 +225,47 @@ Actual decision:
 Reason:
 
 - The SDK gives direct streaming events and durable session files inside the existing Host process; a separate RPC protocol is unnecessary for this bridge.
+
+## ADR-0106 — POC Tool and Mapping Defaults
+
+Status: `ACCEPTED`
+
+Decision:
+
+- The embedded factory registers a read-only `get_current_project_info` tool for the POC.
+- The Web bundle persists Workbench-to-Pi mappings under `dshHomePath('workbench-pi-mappings.json')` by default and accepts `DSH_PI_MAPPING_PATH` as an explicit override.
+- Pi prompt rejection and Pi error assistant completions emit `runtime.error`; the original error is still rethrown to the Host RPC caller.
+
+Reason:
+
+- P0 Tool Call needs one predictable, non-mutating tool that does not depend on DSH tool registration.
+- A default file-backed mapping is required for Host restart recovery; an empty mapping path would make the bridge in-memory-only.
+- Provider failures otherwise terminate without a durable terminal error event, leaving the existing UI loading state without a normalized runtime error.
+
+## ADR-0107 — Verified Gateway Protocol
+
+Status: `ACCEPTED`
+
+Decision:
+
+- The supplied temporary gateway is configured for Pi as an OpenAI-compatible provider at `/v1`, using `deepseek-v4-flash` and `openai-completions`.
+- The Anthropic Messages route was not selected: the gateway's `/v1/messages` probe returned `Model not found`, while `/v1/chat/completions` returned a successful response for the configured model.
+
+Reason:
+
+- Pi must use the protocol the actual endpoint accepts. This keeps the test configuration explicit and avoids claiming Anthropic compatibility that the observed endpoint did not provide.
+
+## ADR-0108 — P0 Closeout and Remaining Scope
+
+Status: `ACCEPTED`
+
+Decision:
+
+- P0 prompt, streaming, tool lifecycle, restart/resume, and controlled runtime-error behavior are accepted based on assembled Host/browser evidence in `evidence.md`.
+- The DSH UI, mux, durable session projection, API schemas, and legacy DSH Agent remain as the intentional compatibility shell for GOAL-000.
+- Product branding/onboarding cleanup, broad DSH removal, model-switching parity, and multi-session expansion remain follow-up work and must not be represented as GOAL-000 completion criteria.
+- The full parallel repository test command remains recorded as a pre-existing/timing-sensitive exception; the Workbench-focused regression suite and all static gates relevant to this bridge pass.
+
+Reason:
+
+- The bridge goal proves runtime substitution without widening the change into a product rewrite. The remaining DSH surfaces are required by the current shell and belong to the later cleanup goal.

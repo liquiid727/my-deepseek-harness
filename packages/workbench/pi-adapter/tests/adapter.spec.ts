@@ -6,10 +6,12 @@ import {
   JsonWorkbenchSessionMappingStore,
   MemoryWorkbenchSessionMappingStore,
   PiWorkbenchRuntime,
+  createProjectInfoTool,
   type PiSession,
   type PiSessionFactory,
 } from '../src/index.ts'
 import { WorkbenchSessionId } from '@deepseek-ai/dsh-workbench-contract'
+import type { WorkbenchEvent } from '@deepseek-ai/dsh-workbench-contract'
 
 type PiEvent = Parameters<NonNullable<PiSession['subscribe']>>[0] extends (event: infer Event) => void ? Event : never
 
@@ -17,6 +19,7 @@ class FakePiSession implements PiSession {
   readonly listeners = new Set<(event: PiEvent) => void>()
   prompts: string[] = []
   aborted = false
+  promptError: Error | undefined
 
   subscribe(listener: (event: PiEvent) => void): () => void {
     this.listeners.add(listener)
@@ -25,6 +28,10 @@ class FakePiSession implements PiSession {
 
   async prompt(text: string): Promise<void> {
     this.prompts.push(text)
+    if (this.promptError !== undefined) {
+      this.emit({ type: 'agent_start' })
+      throw this.promptError
+    }
   }
 
   async abort(): Promise<void> {
@@ -58,6 +65,16 @@ function factory(): { factory: PiSessionFactory; sessions: Map<string, FakePiSes
 }
 
 describe('PiWorkbenchRuntime', () => {
+  it('provides a read-only project info tool for the bridge POC', async () => {
+    const tool = createProjectInfoTool('/project')
+
+    expect(tool.name).toBe('get_current_project_info')
+    await expect(tool.execute('call-1', {}, undefined, undefined, {} as never)).resolves.toEqual({
+      content: [{ type: 'text', text: JSON.stringify({ name: 'deepseek-harness', root: '/project', runtime: 'pi' }) }],
+      details: {},
+    })
+  })
+
   it('maps Pi streaming and tool events without exposing Pi events to subscribers', async () => {
     const setup = factory()
     const runtime = new PiWorkbenchRuntime(setup.factory)
@@ -125,6 +142,21 @@ describe('PiWorkbenchRuntime', () => {
     expect((await readFile(join(dir, 'mappings.json'), 'utf8')).endsWith('\n')).toBe(true)
   })
 
+  it('serializes concurrent mapping writes', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'dsh-workbench-'))
+    const store = new JsonWorkbenchSessionMappingStore(join(dir, 'mappings.json'))
+
+    await Promise.all([
+      store.save({ workbench: { id: WorkbenchSessionId('workbench-1') }, piSessionId: '/tmp/pi-1.jsonl', updatedAt: 1 }),
+      store.save({ workbench: { id: WorkbenchSessionId('workbench-2') }, piSessionId: '/tmp/pi-2.jsonl', updatedAt: 2 }),
+      store.save({ workbench: { id: WorkbenchSessionId('workbench-3') }, piSessionId: '/tmp/pi-3.jsonl', updatedAt: 3 }),
+    ])
+
+    expect((await store.load()).map(mapping => mapping.workbench.id)).toEqual([
+      'workbench-1', 'workbench-2', 'workbench-3',
+    ])
+  })
+
   it('forwards prompt and abort to the mapped Pi session', async () => {
     const setup = factory()
     const runtime = new PiWorkbenchRuntime(setup.factory)
@@ -137,5 +169,61 @@ describe('PiWorkbenchRuntime', () => {
 
     expect(pi.prompts).toEqual(['Reply exactly with: PI_RUNTIME_OK'])
     expect(pi.aborted).toBe(true)
+  })
+
+  it('continues turn numbering after restoring a persisted session', async () => {
+    const setup = factory()
+    const mappings = new MemoryWorkbenchSessionMappingStore()
+    const first = new PiWorkbenchRuntime(setup.factory, mappings)
+    const events: WorkbenchEvent[] = []
+    const unsubscribe = first.subscribe((event) => { events.push(event) })
+    const created = await first.sessions.create()
+    await first.agent.prompt(created.id, { text: 'first' })
+    const firstPi = setup.sessions.get('pi-1')
+    if (firstPi === undefined) throw new Error('expected first Pi session')
+    firstPi.emit({ type: 'agent_start' })
+    firstPi.emit({ type: 'agent_end', messages: [] })
+    unsubscribe()
+
+    const restarted = new PiWorkbenchRuntime(setup.factory, mappings)
+    restarted.subscribe((event) => { events.push(event) })
+    await restarted.agent.prompt(created.id, { text: 'second' })
+    firstPi.emit({ type: 'agent_start' })
+    firstPi.emit({ type: 'agent_end', messages: [] })
+
+    expect(events.filter(event => event.type === 'turn.start').map(event => event.turnId)).toEqual(['turn-1', 'turn-2'])
+    expect((await mappings.load())[0]?.lastTurn).toBe(2)
+  })
+
+  it('publishes a recoverable runtime error when Pi prompt fails after starting a turn', async () => {
+    const setup = factory()
+    const runtime = new PiWorkbenchRuntime(setup.factory)
+    const events: WorkbenchEvent[] = []
+    runtime.subscribe((event) => { events.push(event) })
+    const session = await runtime.sessions.create()
+    const pi = setup.sessions.get('pi-1')
+    if (pi === undefined) throw new Error('expected Pi session')
+    pi.promptError = new Error('provider unavailable')
+
+    await expect(runtime.agent.prompt(session.id, { text: 'hello' })).rejects.toThrow('provider unavailable')
+
+    expect(events.map(event => event.type)).toEqual(['turn.start', 'runtime.error'])
+    expect(events[1]).toMatchObject({ type: 'runtime.error', sessionId: session.id, message: 'provider unavailable', recoverable: true })
+  })
+
+  it('publishes a runtime error when Pi ends a turn with an error assistant message', async () => {
+    const setup = factory()
+    const runtime = new PiWorkbenchRuntime(setup.factory)
+    const events: WorkbenchEvent[] = []
+    runtime.subscribe((event) => { events.push(event) })
+    const session = await runtime.sessions.create()
+    const pi = setup.sessions.get('pi-1')
+    if (pi === undefined) throw new Error('expected Pi session')
+
+    pi.emit({ type: 'agent_start' })
+    pi.emit({ type: 'agent_end', messages: [{ role: 'assistant', stopReason: 'error', errorMessage: 'rate limited' }] })
+
+    expect(events.map(event => event.type)).toEqual(['turn.start', 'runtime.error'])
+    expect(events[1]).toMatchObject({ type: 'runtime.error', sessionId: session.id, message: 'rate limited', recoverable: true })
   })
 })
