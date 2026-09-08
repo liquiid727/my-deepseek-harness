@@ -2015,6 +2015,9 @@ importers:
       '@deepseek-ai/dsh-tool-todo':
         specifier: workspace:^
         version: link:../../todo/tool-todo
+      '@deepseek-ai/dsh-util-crypto':
+        specifier: workspace:^
+        version: link:../../util/crypto
       '@deepseek-ai/dsh-util-values':
         specifier: workspace:^
         version: link:../../util/values
