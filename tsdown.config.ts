@@ -19,7 +19,10 @@ export default defineConfig(({ env }) => {
     workspace: client
       ? ['vendor/*', 'packages/*/*', 'apps/cli']
       : ['vendor/*', 'packages/*/*', 'apps/cli', 'apps/desktop', 'apps/desktop-host'],
-    entry: client ? '' : ['lib/types/{index,invariant,startup}.js'],
+    // The repository root is a private workspace coordinator, not a runtime
+    // package. Its tsconfig is type-check-only, so it has no runtime entry;
+    // package-local configs provide every bundle input.
+    entry: client ? '' : undefined,
     outDir: 'lib',
     format: ['esm'],
     platform: 'node',
