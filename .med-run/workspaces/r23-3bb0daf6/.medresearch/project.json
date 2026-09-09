@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "project": {
+    "id": "3bb0daf6-86e0-42bf-94fc-ab2b8784dc81",
+    "name": "R23 审计与绑定验证",
+    "researchQuestion": "",
+    "background": "",
+    "population": "",
+    "interventionOrExposure": "",
+    "comparison": "",
+    "outcome": "",
+    "keywords": [],
+    "workspacePath": "/Users/mac_liquiid/Desktop/code/my-deepseek-harness/.med-run/workspaces/r23-3bb0daf6",
+    "status": "active",
+    "createdAt": "2026-09-09T02:19:36.515Z",
+    "updatedAt": "2026-09-09T02:19:36.515Z"
+  }
+}
