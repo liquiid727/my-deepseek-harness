@@ -1,0 +1,45 @@
+# Med Research Workspace bundle layer (SPEC §4.1, §15.1). Applied after
+# dsh-base and dsh-web-app. Every row restates its whole config because a
+# patch replaces the matched row's config instead of deep-merging it.
+#
+# This layer inserts the SQLite backend only. The domain facility itself is the
+# base bundle's `storage-domain` row: a second `dsh-storage-domain` row provides
+# its facility inside its own fiber scope, invisible to sibling plugins, so the
+# med services would silently keep the base JSON medium (SPEC §15.1 requires
+# SQLite). The profile's user patch layer therefore overrides the base row's
+# `backend` to `sqlite`, and supplies workspaceRoot, the NCBI tool/email, and
+# artifactRoot. A missing required field fails loud at load.
+
+- insert:
+    - id: med-storage-sqlite
+      name: '@deepseek-ai/dsh-storage-sqlite'
+
+    - id: med-runner
+      name: '@medresearch/dsh-medical-runner-container'
+
+    - id: med-project
+      name: '@medresearch/dsh-plugin-project'
+
+    - id: med-literature
+      name: '@medresearch/dsh-plugin-literature'
+
+    - id: med-fulltext
+      name: '@medresearch/dsh-plugin-fulltext'
+
+    - id: med-paper
+      name: '@medresearch/dsh-plugin-paper'
+
+    - id: med-evidence
+      name: '@medresearch/dsh-plugin-evidence'
+
+    - id: med-dataset
+      name: '@medresearch/dsh-plugin-dataset'
+
+    - id: med-statistics
+      name: '@medresearch/dsh-plugin-statistics'
+
+    - id: med-artifact
+      name: '@medresearch/dsh-plugin-artifact'
+
+    - id: med-ui
+      name: '@medresearch/dsh-plugin-medical-ui'

@@ -1,0 +1,31 @@
+{
+  "name": "@medresearch/dsh-medical-adapter-dsh",
+  "version": "1.1.0",
+  "description": "DSH compatibility surface: the exact packages, versions, and exports this repository depends on",
+  "type": "module",
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./src/*": "./src/*"
+  },
+  "dependencies": {
+    "@deepseek-ai/cordis": "4.0.2",
+    "@deepseek-ai/dsh-fs": "0.1.3-alpha.2",
+    "@deepseek-ai/dsh-fs-local": "0.1.3-alpha.2",
+    "@deepseek-ai/dsh-storage": "0.1.3-alpha.2",
+    "@deepseek-ai/dsh-storage-domain": "0.1.3-alpha.2",
+    "@deepseek-ai/dsh-storage-sqlite": "0.1.3-alpha.2",
+    "@deepseek-ai/dsh-tools": "0.1.3-alpha.2",
+    "@deepseek-ai/dsh-web": "0.1.3-alpha.2",
+    "@deepseek-ai/dsh-workspace": "0.1.3-alpha.2",
+    "@deepseek-ai/schemastery": "3.18.2"
+  }
+}

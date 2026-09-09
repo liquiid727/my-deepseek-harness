@@ -1,0 +1,6 @@
+# Bilingual-pair consistency record: the git blob hash of each side as of the
+# last confirmed-consistent state. Both languages carry equal authority; after
+# editing either side, bring the other along and re-record with:
+#   git hash-object packages/medical-contracts/README.md packages/medical-contracts/README.zh.md
+README.md: 309ee1e7ef08571af4d13ed4c093a31168da02c7
+README.zh.md: 87392c3107c918a5d60b1e2f021057b417a46234

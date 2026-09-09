@@ -1,0 +1,10 @@
+node_modules/
+lib/
+dist/
+coverage/
+*.tsbuildinfo
+.DS_Store
+*.log
+
+# Local med-research profile runtime (sqlite db, project workspaces, artifacts, screenshots)
+.med-run/
