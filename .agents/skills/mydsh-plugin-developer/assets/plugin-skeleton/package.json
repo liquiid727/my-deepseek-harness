@@ -1,0 +1,65 @@
+{
+  "name": "@yourscope/your-plugin",
+  "version": "0.1.0",
+  "description": "A dsh plugin that demonstrates the canonical structure (tool + skill + system prompt + client view).",
+  "license": "MIT",
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./client": "./lib/client.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "assets",
+    "cordis.patch.yml"
+  ],
+  "engines": {
+    "dsh": ">=0.0.1"
+  },
+  "dshx": {
+    "contributes": {
+      "tools": [
+        "my_query"
+      ],
+      "skills": [
+        "my-writing-style"
+      ]
+    }
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-runtime"
+      ],
+      "platform": "web"
+    }
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.1-rc.1",
+    "@deepseek-ai/dsh-llm": "*",
+    "@deepseek-ai/dsh-session": "*",
+    "@deepseek-ai/dsh-skill": "*",
+    "@deepseek-ai/dsh-system-prompt": "*",
+    "@deepseek-ai/dsh-tools": "*",
+    "@deepseek-ai/schemastery": "^3.18.1-rc.1",
+    "react": "^18.2.0"
+  },
+  "devDependencies": {
+    "tsdown": "^0.19.0",
+    "typescript": "^5.9.0"
+  },
+  "scripts": {
+    "build": "powershell -ExecutionPolicy Bypass -File scripts/build.ps1",
+    "typecheck": "tsc -p tsconfig.json"
+  }
+}
