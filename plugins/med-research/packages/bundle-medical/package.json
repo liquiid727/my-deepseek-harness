@@ -1,0 +1,30 @@
+{
+  "name": "@medresearch/dsh-bundle-medical",
+  "version": "1.1.0",
+  "description": "Med Research Workspace bundle: the host plugin rows the med-research profile applies",
+  "type": "module",
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "dependencies": {
+    "@medresearch/dsh-medical-runner-container": "workspace:*",
+    "@medresearch/dsh-plugin-artifact": "workspace:*",
+    "@medresearch/dsh-plugin-dataset": "workspace:*",
+    "@medresearch/dsh-plugin-evidence": "workspace:*",
+    "@medresearch/dsh-plugin-fulltext": "workspace:*",
+    "@medresearch/dsh-plugin-literature": "workspace:*",
+    "@medresearch/dsh-plugin-medical-ui": "workspace:*",
+    "@medresearch/dsh-plugin-paper": "workspace:*",
+    "@medresearch/dsh-plugin-project": "workspace:*",
+    "@medresearch/dsh-plugin-statistics": "workspace:*"
+  },
+  "devDependencies": {
+    "yaml": "^2.8.1"
+  }
+}

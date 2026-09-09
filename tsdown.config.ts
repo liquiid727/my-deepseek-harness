@@ -16,8 +16,13 @@ function isBuildFaceClient(value: unknown): boolean {
 export default defineConfig(({ env }) => {
   const client = isBuildFaceClient(env?.DSH_BUILD_FACE)
   return {
-    workspace: ['vendor/*', 'packages/*/*', 'apps/cli'],
-    entry: client ? '' : ['lib/types/{index,invariant,startup}.js'],
+    workspace: client
+      ? ['vendor/*', 'packages/*/*', 'apps/cli']
+      : ['vendor/*', 'packages/*/*', 'apps/cli', 'apps/desktop', 'apps/desktop-host'],
+    // The repository root is a private workspace coordinator, not a runtime
+    // package. Its tsconfig is type-check-only, so it has no runtime entry;
+    // package-local configs provide every bundle input.
+    entry: client ? '' : undefined,
     outDir: 'lib',
     format: ['esm'],
     platform: 'node',

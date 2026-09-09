@@ -1,0 +1,64 @@
+/**
+ * English dictionary. Every product-visible string in the Med Research client
+ * comes from here (AGENTS.md §2.7); components never hardcode copy. Keys use the
+ * flat dotted form the DSH locale service looks up.
+ * @module @medresearch/dsh-plugin-medical-ui/src/i18n/en
+ */
+
+/** Key-set source of truth; `zh` must satisfy it exactly. */
+export const en = {
+  'view.research': 'Research',
+  'view.papers': 'Papers',
+  'view.evidence': 'Evidence',
+  'view.statistics': 'Statistics',
+  'research.IDLE': 'Ready',
+  'research.PLANNING': 'Planning the query',
+  'research.PLAN_READY': 'Review the query plan',
+  'research.SEARCHING': 'Searching PubMed',
+  'research.PAPERS_READY': 'Papers ready',
+  'research.RETRIEVING_EVIDENCE': 'Retrieving evidence',
+  'research.LOCATING': 'Locating quotes',
+  'research.VERIFYING': 'Verifying claims',
+  'research.ANSWER_READY': 'Answer ready',
+  'research.ERROR_PARTIAL': 'Partial results — some steps failed',
+  'statistics.NO_DATASET': 'No dataset',
+  'statistics.PROFILING': 'Profiling the dataset',
+  'statistics.READY': 'Dataset ready',
+  'statistics.PLANNING': 'Planning the analysis',
+  'statistics.PLAN_READY': 'Review the analysis plan',
+  'statistics.WAITING_APPROVAL': 'Waiting for approval',
+  'statistics.GENERATING_CODE': 'Generating code',
+  'statistics.EXECUTING': 'Executing in the isolated runner',
+  'statistics.SUCCEEDED': 'Analysis complete',
+  'statistics.FAILED': 'Analysis failed — code and stderr kept',
+  'statistics.MISSING_VALUES': 'Missing values by column',
+  'evidence.FULLTEXT_FOUND': 'Full text located',
+  'evidence.FULLTEXT_PARTIAL': 'Full text located, not an exact match',
+  'evidence.ABSTRACT_FOUND': 'Abstract located',
+  'evidence.ABSTRACT_PARTIAL': 'Abstract located, not an exact match',
+  'evidence.SECONDARY': 'Secondary citation',
+  'evidence.NOT_FOUND': 'Quote not found',
+  'evidence.REJECTED': 'Rejected',
+  'action.approve': 'Approve and run',
+  'action.retry': 'Retry',
+  'action.editQuery': 'Edit query',
+  'action.openSource': 'Open source',
+  'action.download': 'Download',
+  'action.reload': 'Reload',
+  'empty.projects': 'No projects yet',
+  'empty.papers': 'No papers yet',
+  'empty.evidence': 'No evidence yet',
+  'empty.datasets': 'No datasets yet',
+  'error.load': 'Could not load the data',
+  'tool.running': 'Running…',
+  'tool.done': 'Done',
+  'tool.failed': 'Failed',
+  'settings.title': 'Med Research',
+  'settings.intro': 'Evidence Chain and Statistics Chain settings are supplied by the deployment profile.',
+} as const
+
+/** Dictionary shape every locale must provide. */
+export type Dictionary = Record<keyof typeof en, string>
+
+/** Every dictionary key of the Med Research namespace. */
+export type MedUiKey = keyof typeof en

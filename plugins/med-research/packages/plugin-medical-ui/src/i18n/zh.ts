@@ -1,0 +1,58 @@
+/**
+ * 中文字典。所有产品文案都来自这里（AGENTS.md §2.7）。
+ * @module @medresearch/dsh-plugin-medical-ui/src/i18n/zh
+ */
+
+import type { Dictionary } from './en.ts'
+
+/** 中文字典，键集与英文完全一致。 */
+export const zh: Dictionary = {
+  'view.research': '研究',
+  'view.papers': '论文',
+  'view.evidence': '证据',
+  'view.statistics': '统计',
+  'research.IDLE': '就绪',
+  'research.PLANNING': '正在生成检索式',
+  'research.PLAN_READY': '请审阅检索式',
+  'research.SEARCHING': '正在检索 PubMed',
+  'research.PAPERS_READY': '论文已就绪',
+  'research.RETRIEVING_EVIDENCE': '正在检索证据',
+  'research.LOCATING': '正在定位原文',
+  'research.VERIFYING': '正在校验结论',
+  'research.ANSWER_READY': '回答已就绪',
+  'research.ERROR_PARTIAL': '部分成功——有步骤失败',
+  'statistics.NO_DATASET': '尚无数据集',
+  'statistics.PROFILING': '正在生成数据概览',
+  'statistics.READY': '数据集就绪',
+  'statistics.PLANNING': '正在生成分析计划',
+  'statistics.PLAN_READY': '请审阅分析计划',
+  'statistics.WAITING_APPROVAL': '等待确认',
+  'statistics.GENERATING_CODE': '正在生成代码',
+  'statistics.EXECUTING': '正在隔离环境中执行',
+  'statistics.SUCCEEDED': '分析完成',
+  'statistics.FAILED': '分析失败——已保留代码与 stderr',
+  'statistics.MISSING_VALUES': '各列缺失值',
+  'evidence.FULLTEXT_FOUND': '已定位到全文',
+  'evidence.FULLTEXT_PARTIAL': '已定位到全文，但非精确匹配',
+  'evidence.ABSTRACT_FOUND': '已定位到摘要',
+  'evidence.ABSTRACT_PARTIAL': '已定位到摘要，但非精确匹配',
+  'evidence.SECONDARY': '可能为二手引用',
+  'evidence.NOT_FOUND': '未找到该引文',
+  'evidence.REJECTED': '已拒绝',
+  'action.approve': '确认并执行',
+  'action.retry': '重试',
+  'action.editQuery': '编辑检索式',
+  'action.openSource': '打开原文',
+  'action.download': '下载',
+  'action.reload': '重新加载',
+  'empty.projects': '尚无项目',
+  'empty.papers': '尚无论文',
+  'empty.evidence': '尚无证据',
+  'empty.datasets': '尚无数据集',
+  'error.load': '数据加载失败',
+  'tool.running': '执行中…',
+  'tool.done': '已完成',
+  'tool.failed': '失败',
+  'settings.title': 'Med Research',
+  'settings.intro': 'Evidence Chain 与 Statistics Chain 的配置由部署 profile 提供。',
+}

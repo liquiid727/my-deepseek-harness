@@ -1,0 +1,5 @@
+# dsh bundle patch: inserts this plugin into a profile's layer stack.
+# `id` is the plugin id (used by Config/apply), `name` is the npm package name.
+- insert:
+    - id: my-plugin
+      name: '@yourscope/your-plugin'

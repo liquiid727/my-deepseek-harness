@@ -1,0 +1,22 @@
+{
+  "name": "@medresearch/dsh-medical-domain",
+  "version": "1.1.0",
+  "description": "Pure Med Research domain logic: normalization, alignment, evidence state, dedup, Claim Gate",
+  "type": "module",
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./src/*": "./src/*"
+  },
+  "dependencies": {
+    "@medresearch/dsh-medical-contracts": "workspace:*"
+  }
+}
