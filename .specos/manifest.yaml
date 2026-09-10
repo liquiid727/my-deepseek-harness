@@ -1,0 +1,18 @@
+schemaVersion: specos/goalspec
+project:
+  name: deepseek-harness-med-research
+  type: spec-only
+stacks:
+  frontend: none
+  backend: none
+artifacts:
+  requirementsDir: .requirements/requirements
+  templatesDir: .requirements/templates
+rulePacks:
+  - spec-driven-delivery
+agentTemplates:
+  - spec-editor
+workflows:
+  - default-spec-only
+ci:
+  checkCommand: npx specos check

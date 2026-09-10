@@ -1,0 +1,5 @@
+id: default-spec-only
+name: Default Spec-Only Workflow
+steps:
+  - id: check
+    run: npx specos check

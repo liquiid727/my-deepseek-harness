@@ -1,0 +1,22 @@
+id: R001
+title: <Requirement Title>
+type: feature # feature | change | bug | refactor
+version: 1.0.0
+status: draft # draft | review | approved | implementing | accepted | blocked | done
+owner: <owner>
+source_prd: ./prd.md
+source_prd_version: 1.0.0
+updated_at: YYYY-MM-DD
+
+# Aggregate only: child packages own their own contract, test, Issue, review,
+# evidence, and QA decision.
+specs:
+  - id: S01
+    path: ./specs/S01-<slug>/
+    status: draft # draft | review | approved | implementing | accepted | blocked
+    owner: <owner>
+    required: true
+    depends_on: []
+    covers:
+      - REQ-R001-001
+    business_outcome: <independently deliverable outcome>
