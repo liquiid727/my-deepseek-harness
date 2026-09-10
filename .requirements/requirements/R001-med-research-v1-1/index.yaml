@@ -1,0 +1,15 @@
+id: R001
+title: Med Research Workspace V1.1
+type: feature
+version: 1.0.0
+status: implementing
+owner: med-research
+source_prd: ./prd.md
+source_prd_version: 1.0.0
+updated_at: 2026-09-10
+specs:
+  - { id: S01, path: ./specs/S01-project-workspace/, status: implementing, owner: med-research, required: true, depends_on: [], covers: [REQ-R001-001, REQ-R001-009, REQ-R001-010], business_outcome: "Create, select, restore, and safely operate an accurate Project workspace." }
+  - { id: S02, path: ./specs/S02-literature-discovery/, status: implementing, owner: med-research, required: true, depends_on: [S01], covers: [REQ-R001-002, REQ-R001-003, REQ-R001-009], business_outcome: "Approve a search, inspect authentic PubMed results, and save papers." }
+  - { id: S03, path: ./specs/S03-paper-reading/, status: implementing, owner: med-research, required: true, depends_on: [S01, S02], covers: [REQ-R001-004, REQ-R001-009], business_outcome: "Read the best source and return to exact cited passages." }
+  - { id: S04, path: ./specs/S04-evidence-claims/, status: implementing, owner: med-research, required: true, depends_on: [S02, S03], covers: [REQ-R001-005, REQ-R001-006, REQ-R001-009], business_outcome: "Receive balanced claims with independently verifiable Evidence and citations." }
+  - { id: S05, path: ./specs/S05-reproducible-statistics/, status: implementing, owner: med-research, required: true, depends_on: [S01], covers: [REQ-R001-007, REQ-R001-008, REQ-R001-009, REQ-R001-010], business_outcome: "Approve, execute, inspect, export, and reproduce analyses safely." }
