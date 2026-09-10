@@ -1,9 +1,17 @@
 # Med Research Workspace — 会话交接
 
-- 更新：2026-09-09
-- 仓库：`/Users/mac_liquiid/Desktop/code/my-deepseek-harness/plugins/med-research`
+- 更新：2026-09-11
+- 仓库：当前 checkout 的 `plugins/med-research/`
 - 待裁决事项集中记录：`.todo/0909-implement`
 - 验证基线：`pnpm run typecheck` 退出码 0（node + client 两面）；`pnpm run test` = 45 files / 255 passed + 1 skipped（macOS 内存强制断言）；`pnpm run verify:client` 通过
+- GoalSpec 入口：`../../../.requirements/requirements/R001-med-research-v1-1/`；该 Workspace 将 V1.1 PRD/SPEC 规范化为五个业务结果包，矩阵仍是长期路线图
+
+## 2026-09-10 复验
+
+- 阶段 1 已按当前 checkout 复验：contracts、domain、storage、Project 共 15 个测试文件 / 96 个测试通过。
+- `pnpm run typecheck` 通过 Host 与 Client 两面。
+- 因阶段 1 已实现且证据有效，不重复创建同名业务包；后续从阶段 7–8 的 `partial` / `blocked` 项继续。
+- R001 的 S01-S05 已建立批准的 Spec 和 draft Test Design；Test Design 经人工批准且历史测试与运行记录按各包 `evidence/index.yaml` 规范化后，才能用于 QA Acceptance。
 
 ## 已完成
 
