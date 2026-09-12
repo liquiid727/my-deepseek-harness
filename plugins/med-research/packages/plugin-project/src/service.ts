@@ -6,7 +6,9 @@
  * @module @medresearch/dsh-plugin-project/src/service
  */
 
+import { agentModeSchema, projectCreateInputSchema, projectSchema } from '@medresearch/dsh-medical-contracts'
 import type {
+  AgentMode,
   MedProjectsService,
   PaperId,
   Project,
@@ -20,6 +22,7 @@ import type {
 import { createAuditWriter, type AuditWriter, type MedStorage } from '@medresearch/dsh-medical-storage'
 import { bindTypertRemote, Remote } from '@deepseek-ai/dsh-typert-protocol'
 import { projectDirectory, projectJsonPath, projectSlug, serializeProjectFile } from './project-file.ts'
+import { AgentModeController, type ModeAgentRegistry } from './mode.ts'
 
 /** File access the service needs; the implementation must create parent directories. */
 export interface ProjectFileStore {
@@ -53,6 +56,8 @@ export interface ProjectsServiceOptions {
   now: () => string
   /** New project identity; injectable for deterministic tests. */
   newId: () => ProjectId
+  /** Live agent registry; omitted by storage-only compositions. */
+  agents?: ModeAgentRegistry
 }
 
 /** Stable failure codes of the project service. */
@@ -82,6 +87,7 @@ export class ProjectsService implements MedProjectsService {
   private readonly options: ProjectsServiceOptions
   /** Audit trail for the two audited project operations (SPEC §49). */
   private readonly audit: AuditWriter
+  private readonly modes: AgentModeController
 
   /**
    * @param options - Storage, file and workspace capabilities, and identity/clock.
@@ -89,6 +95,7 @@ export class ProjectsService implements MedProjectsService {
   constructor(options: ProjectsServiceOptions) {
     this.options = options
     this.audit = createAuditWriter({ storage: options.storage, now: options.now })
+    this.modes = new AgentModeController(options.agents)
   }
 
   /**
@@ -99,19 +106,20 @@ export class ProjectsService implements MedProjectsService {
    */
   @Remote
   async create(input: ProjectCreateInput): Promise<Project> {
+    const validated = projectCreateInputSchema.parse(input)
     const id = this.options.newId()
     const timestamp = this.options.now()
-    const workspacePath = projectDirectory(this.options.workspaceRoot, projectSlug(input.name, id))
+    const workspacePath = projectDirectory(this.options.workspaceRoot, projectSlug(validated.name, id))
     const project: Project = {
       id,
-      name: input.name,
-      ...input.researchQuestion === undefined ? {} : { researchQuestion: input.researchQuestion },
-      ...input.background === undefined ? {} : { background: input.background },
-      ...input.population === undefined ? {} : { population: input.population },
-      ...input.interventionOrExposure === undefined ? {} : { interventionOrExposure: input.interventionOrExposure },
-      ...input.comparison === undefined ? {} : { comparison: input.comparison },
-      ...input.outcome === undefined ? {} : { outcome: input.outcome },
-      keywords: input.keywords ?? [],
+      name: validated.name,
+      ...validated.researchQuestion === undefined ? {} : { researchQuestion: validated.researchQuestion },
+      ...validated.background === undefined ? {} : { background: validated.background },
+      ...validated.population === undefined ? {} : { population: validated.population },
+      ...validated.interventionOrExposure === undefined ? {} : { interventionOrExposure: validated.interventionOrExposure },
+      ...validated.comparison === undefined ? {} : { comparison: validated.comparison },
+      ...validated.outcome === undefined ? {} : { outcome: validated.outcome },
+      keywords: validated.keywords ?? [],
       workspacePath,
       status: 'active',
       createdAt: timestamp,
@@ -157,7 +165,13 @@ export class ProjectsService implements MedProjectsService {
   async update(id: ProjectId, patch: ProjectPatch): Promise<Project> {
     const current = this.options.storage.projects.get(id)
     if (current === undefined) throw new ProjectError('PROJECT_NOT_FOUND', `no project ${id}`)
-    const updated: Project = { ...current, ...patch, id: current.id, workspacePath: current.workspacePath, updatedAt: this.options.now() }
+    const updated = projectSchema.parse({
+      ...current,
+      ...patch,
+      id: current.id,
+      workspacePath: current.workspacePath,
+      updatedAt: this.options.now(),
+    })
     await this.options.storage.projects.put(id, updated)
     await this.options.files.write(projectJsonPath(updated.workspacePath), serializeProjectFile(updated))
     return updated
@@ -233,6 +247,70 @@ export class ProjectsService implements MedProjectsService {
    */
   async sessionProject(sessionId: string): Promise<SessionProject | undefined> {
     return this.options.storage.sessionProjects.get(sessionId)
+  }
+
+  /** Read the latest persisted mode selection for one session. */
+  private persistedMode(sessionId: string): AgentMode {
+    let latest: { at: string; id: string; mode: AgentMode } | undefined
+    for (const [, row] of this.options.storage.auditLogs.entries()) {
+      if (row.action !== 'mode.change' || row.sessionId !== sessionId) continue
+      const candidate = agentModeSchema.safeParse(row.detail.mode)
+      if (!candidate.success) continue
+      if (latest === undefined || row.at > latest.at || (row.at === latest.at && row.id > latest.id)) {
+        latest = { at: row.at, id: row.id, mode: candidate.data }
+      }
+    }
+    return latest?.mode ?? 'research'
+  }
+
+  /**
+   * Apply a persisted mode when an agent is created or resumed. Host-only.
+   * @param sessionId - DSH session id.
+   */
+  activateMode(sessionId: string): void {
+    this.modes.apply(sessionId, this.persistedMode(sessionId))
+  }
+
+  /**
+   * Release the mode restriction when an agent is disposed. Host-only.
+   * @param sessionId - DSH session id.
+   */
+  deactivateMode(sessionId: string): void {
+    this.modes.release(sessionId)
+  }
+
+  /**
+   * Read the current session mode; persisted selections survive a restart.
+   * @param sessionId - DSH session id.
+   * @returns the active or persisted mode.
+   */
+  @Remote
+  async getMode(sessionId: string): Promise<AgentMode> {
+    const id = sessionId.trim()
+    if (id === '') throw new Error('sessionId must not be empty')
+    return this.modes.has(id) ? this.modes.current(id) : this.persistedMode(id)
+  }
+
+  /**
+   * Change and audit the session mode, then enforce its tool allowlist.
+   * @param sessionId - DSH session id.
+   * @param mode - Mode whose tool allowlist should be installed.
+   * @returns the validated mode.
+   */
+  @Remote
+  async setMode(sessionId: string, mode: AgentMode): Promise<AgentMode> {
+    const id = sessionId.trim()
+    if (id === '') throw new Error('sessionId must not be empty')
+    const parsed = agentModeSchema.parse(mode)
+    const previous = await this.getMode(id)
+    this.modes.apply(id, parsed)
+    try {
+      await this.audit.append({ action: 'mode.change', sessionId: id, detail: { mode: parsed } })
+    } catch (error) {
+      this.modes.apply(id, previous)
+      throw error
+    }
+    return parsed
   }
 
   /**

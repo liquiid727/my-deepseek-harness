@@ -61,6 +61,11 @@ export const sessionProjectSchema = z.strictObject({
 /** `sessionId → projectId` binding (SPEC §41). */
 export type SessionProject = z.infer<typeof sessionProjectSchema>
 
+/** Agent mode used to restrict the model-visible Med Research tools. */
+export const agentModeSchema = z.enum(['research', 'paper', 'statistics'])
+/** Agent mode used to restrict the model-visible Med Research tools. */
+export type AgentMode = z.infer<typeof agentModeSchema>
+
 /** Origin connector of a paper (SPEC §8). */
 export const paperSourceSchema = z.enum(['pubmed', 'pmc', 'europe_pmc', 'upload'])
 /** Origin connector of a paper (SPEC §8). */
@@ -316,7 +321,7 @@ export const queryConceptSchema = z.strictObject({
 export type QueryConcept = z.infer<typeof queryConceptSchema>
 
 /** Purpose of one generated query (SPEC §18). */
-export const queryPurposeSchema = z.enum(['primary', 'broad', 'counter'])
+export const queryPurposeSchema = z.enum(['primary', 'broad', 'counter', 'related'])
 /** Purpose of one generated query (SPEC §18). */
 export type QueryPurpose = z.infer<typeof queryPurposeSchema>
 
@@ -371,6 +376,7 @@ export const researchQuerySchema = z.strictObject({
   queries: z.array(querySchema),
   filters: researchQueryFiltersSchema,
   createdAt: z.string(),
+  approvedAt: z.string().optional(),
 })
 /** One persisted research query and the plan generated for it (SPEC §12, §17–§18). */
 export type ResearchQuery = z.infer<typeof researchQuerySchema>

@@ -19,6 +19,8 @@ import { en, zh } from '../i18n/index.ts'
 import { NS } from './locales.ts'
 import { createMedRemote } from './remote.ts'
 import { MedSettingsSection } from './settings.tsx'
+import { MedResearchLaunch, MedResearchRootLaunch } from './hero-action.tsx'
+import { MedModeAction } from './mode-action.tsx'
 import { MED_TOOL_NAMES, MedToolCard } from './toolview.tsx'
 import { EvidenceView, PapersView, ResearchView, StatisticsView } from './views.tsx'
 
@@ -64,6 +66,20 @@ export function apply(ctx: ClientContext): void {
     }, View)), `med-research-ui: view ${id}`)
   }
 
+  ctx.effect(() => ctx.slots.inject('conversation.hero.actions', () => ctx.slots.register({
+    name: 'conversation.hero.actions',
+    id: 'med-research',
+    order: 30,
+    locale: NS,
+  }, MedResearchLaunch)), 'med-research-ui: Hero launch')
+
+  ctx.effect(() => ctx.slots.inject('conversation.hero.launch', () => ctx.slots.register({
+    name: 'conversation.hero.launch',
+    id: 'med-research',
+    order: 30,
+    locale: NS,
+  }, MedResearchRootLaunch)), 'med-research-ui: root Hero launch')
+
   for (const toolName of MED_TOOL_NAMES) {
     ctx.effect(() => ctx.slots.inject('tool.call.toolview', () => ctx.slots.register({
       name: 'tool.call.toolview',
@@ -79,4 +95,12 @@ export function apply(ctx: ClientContext): void {
     locale: NS,
     label: () => t('settings.title'),
   }, MedSettingsSection)), 'med-research-ui: settings page')
+
+  ctx.effect(() => ctx.slots.inject('conversation.session.header.actions', () => ctx.slots.register({
+    name: 'conversation.session.header.actions',
+    id: 'med.mode',
+    order: 40,
+    locale: NS,
+    inject: () => ({ remote }),
+  }, MedModeAction)), 'med-research-ui: mode action')
 }

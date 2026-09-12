@@ -52,7 +52,9 @@ describe('install-local-profile composition (SPEC §4.1)', () => {
     const names = publishablePackages()
     const bundleDsh = bundleDshPackages()
     expect(Object.keys(composition.profileManifest.dependencies).sort())
-      .toEqual(['@deepseek-ai/dsh-web-app', ...bundleDsh, ...names].sort())
+      .toEqual(['@deepseek-ai/dsh-web-app', '@deepseek-ai/dsh-web-frontend', ...bundleDsh, ...names].sort())
+    expect(composition.profileManifest.dependencies['@deepseek-ai/dsh-web-frontend']).toMatch(/^file:.*\.tgz$/)
+    expect(composition.profileWorkspace).toContain("'@deepseek-ai/dsh-web-frontend': 'file:")
     for (const name of names) {
       expect(composition.profileManifest.dependencies[name]).toMatch(/^file:.*\.tgz$/)
       expect(composition.profileWorkspace).toContain(`'${name}': 'file:`)

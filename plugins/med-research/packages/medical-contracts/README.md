@@ -9,11 +9,11 @@ English | [中文](README.zh.md)
 ## Scope
 
 - `ids.ts` — branded `ProjectId`, `PaperId`, `DocumentId`, `SectionId`, `ParagraphId`, `EvidenceChunkId`, `EvidenceId`, `ClaimId`, `ResearchQueryId`, `DatasetId`, `AnalysisRunId`, `ArtifactId`, `AuditLogId`.
-- `research.ts` — project, paper, source record, document, section, paragraph, chunk, evidence, claim, query plan, full-text resolution (SPEC §7–§12, §17–§18, §20–§23).
+- `research.ts` — project, paper, source record, document, section, paragraph, chunk, evidence, claim, query plan, full-text resolution, and the session Agent Mode union (SPEC §7–§12, §17–§18, §20–§23).
 - `statistics.ts` — dataset, dataset column, analysis plan, analysis run, artifact, runner input/result, and the `StatisticsRunner` seam (SPEC §13–§14, §34–§38).
 - `audit.ts` — append-only audit rows (SPEC §49).
 - `errors.ts` — `DomainError` and the stable code vocabulary (SPEC §46).
-- `services.ts` — the nine `med` service definitions (SPEC §5, §30–§38).
+- `services.ts` — the nine `med` service definitions, including project mode reads and writes (SPEC §5, §30–§38).
 
 Every entity schema is `z.strictObject`: an undeclared field is rejected at the durable boundary rather than silently stripped.
 

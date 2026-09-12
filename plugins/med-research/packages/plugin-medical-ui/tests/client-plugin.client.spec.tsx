@@ -91,6 +91,8 @@ function declareParents(ctx: Context): void {
     name: 'root',
     children: {
       'conversation.view': { kind: 'list', scope: 'session' },
+      'conversation.hero.actions': { kind: 'list', scope: 'session' },
+      'conversation.session.header.actions': { kind: 'list', scope: 'session' },
       'tool.call.toolview': { kind: 'keyed', scope: 'session' },
       'settings.section': { kind: 'list', scope: 'root' },
     },
@@ -117,13 +119,18 @@ describe('plugin-medical-ui browser half', () => {
     declareParents(app.ctx)
     expect(entries(app.ctx, 'conversation.view').map(entry => entry.options.id))
       .toEqual(['med-research', 'med-papers', 'med-evidence', 'med-statistics'])
+    expect(entries(app.ctx, 'conversation.hero.actions').map(entry => entry.options.id))
+      .toEqual(['med-research'])
     expect(entries(app.ctx, 'tool.call.toolview').map(entry => entry.options.key).sort())
       .toEqual([...MED_TOOL_NAMES].sort())
     expect(entries(app.ctx, 'settings.section').map(entry => entry.options.id)).toEqual(['med-research'])
+    expect(entries(app.ctx, 'conversation.session.header.actions').map(entry => entry.options.id)).toEqual(['med.mode'])
 
     await fiber.dispose()
     expect(entries(app.ctx, 'conversation.view')).toEqual([])
+    expect(entries(app.ctx, 'conversation.hero.actions')).toEqual([])
     expect(entries(app.ctx, 'tool.call.toolview')).toEqual([])
+    expect(entries(app.ctx, 'conversation.session.header.actions')).toEqual([])
     await app.ctx.fiber.dispose()
   })
 

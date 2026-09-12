@@ -8,4 +8,4 @@
 
 ## 已知限制与后续工作
 
-Statistics 链与浏览器可见的 UI 链尚未覆盖。
+`tests/statistics-chain.spec.ts` 已覆盖 Statistics 链；浏览器可见的 UI 链尚未覆盖。

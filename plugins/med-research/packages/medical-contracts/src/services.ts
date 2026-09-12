@@ -7,6 +7,7 @@
  * @module @medresearch/dsh-medical-contracts/src/services
  */
 
+import { z } from 'zod'
 import type { ArtifactId, ClaimId, DatasetId, DocumentId, EvidenceId, PaperId, ParagraphId, ProjectId, ResearchQueryId } from './ids.ts'
 import type {
   Evidence,
@@ -27,6 +28,7 @@ import type {
   ResearchQueryFilters,
   ResearchQueryInput,
   SupportStatus,
+  AgentMode,
 } from './research.ts'
 import type {
   AnalysisPlan,
@@ -49,6 +51,18 @@ export interface ProjectCreateInput {
   outcome?: string
   keywords?: string[]
 }
+
+/** Runtime schema input for project creation at service boundaries. */
+export const projectCreateInputSchema = z.strictObject({
+  name: z.string().trim().min(1),
+  researchQuestion: z.string().optional(),
+  background: z.string().optional(),
+  population: z.string().optional(),
+  interventionOrExposure: z.string().optional(),
+  comparison: z.string().optional(),
+  outcome: z.string().optional(),
+  keywords: z.array(z.string()).optional(),
+})
 
 /** Mutable project fields; identity, workspace binding, and timestamps are owned by the service. */
 export type ProjectPatch = Partial<Omit<Project, 'id' | 'workspacePath' | 'createdAt' | 'updatedAt'>>
@@ -80,6 +94,19 @@ export interface MedProjectsService {
   overview(id: ProjectId): Promise<ProjectOverview>
   /** Save one already-fetched paper into the project library. */
   savePaper(id: ProjectId, paperId: PaperId): Promise<ProjectPaper>
+  /**
+   * Read the current session mode; defaults to research.
+   * @param sessionId - DSH session id.
+   * @returns the active or persisted mode.
+   */
+  getMode(sessionId: string): Promise<AgentMode>
+  /**
+   * Set and enforce the current session mode.
+   * @param sessionId - DSH session id.
+   * @param mode - Mode whose tool allowlist should be installed.
+   * @returns the validated mode.
+   */
+  setMode(sessionId: string, mode: AgentMode): Promise<AgentMode>
 }
 
 /** One page of PubMed search results (SPEC §12). */
@@ -93,6 +120,10 @@ export interface LiteratureSearchResult {
   warnings: string[]
   /** Present when the search returned fewer results than requested. */
   partialReason?: string
+  /** Deterministic filter decisions, in connector order. */
+  filterTrace?: Array<{ paperId: PaperId; included: boolean; reasons: string[] }>
+  /** Final ranking metadata; at most twenty entries. */
+  ranking?: Array<{ paperId: PaperId; originalRank: number; score?: number; reason: string }>
 }
 
 /** Input of one query-plan persistence call (SPEC §18). */
@@ -128,6 +159,14 @@ export interface MedLiteratureService {
    * request, so nothing reaches PubMed before the user confirms (FR-2).
    */
   planQuery(input: PlanQueryInput): Promise<ResearchQuery>
+  /** Update a stored plan before it is executed. */
+  editQuery(id: ResearchQueryId, input: PlanQueryInput['plan'] & { filters?: ResearchQueryFilters }): Promise<ResearchQuery>
+  /** Confirm the current plan revision for connector execution. */
+  approveQuery(id: ResearchQueryId): Promise<ResearchQuery>
+  /** Execute an approved counter-evidence query with independent provenance. */
+  counterSearch(input: LiteratureSearchInput): Promise<LiteratureSearchResult>
+  /** Execute an approved related-paper query with independent provenance. */
+  relatedSearch(input: LiteratureSearchInput): Promise<LiteratureSearchResult>
   /** Execute one confirmed query against PubMed. */
   search(input: LiteratureSearchInput): Promise<LiteratureSearchResult>
   /** Read one paper by PMID from the connector. */

@@ -26,12 +26,12 @@ interface Surface {
 const surfaces: readonly Surface[] = [{
   service: 'ProjectsService',
   namespace: 'medProjects',
-  methods: ['create', 'delete', 'get', 'list', 'overview', 'savePaper', 'update'],
+  methods: ['create', 'delete', 'get', 'getMode', 'list', 'overview', 'savePaper', 'setMode', 'update'],
   create: () => new ProjectsService({} as never),
 }, {
   service: 'LiteratureService',
   namespace: 'medLiterature',
-  methods: ['getPaper', 'planQuery', 'search'],
+  methods: ['approveQuery', 'counterSearch', 'editQuery', 'getPaper', 'planQuery', 'relatedSearch', 'search'],
   create: () => new LiteratureService({} as never),
 }, {
   service: 'PapersService',

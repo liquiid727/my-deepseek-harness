@@ -4,14 +4,14 @@
 - 仓库：当前 checkout 的 `plugins/med-research/`
 - 待裁决事项集中记录：`.todo/0909-implement`
 - 验证基线：`pnpm run typecheck` 退出码 0（node + client 两面）；`pnpm run test` = 45 files / 255 passed + 1 skipped（macOS 内存强制断言）；`pnpm run verify:client` 通过
-- GoalSpec 入口：`../../../.requirements/requirements/R001-med-research-v1-1/`；该 Workspace 将 V1.1 PRD/SPEC 规范化为五个业务结果包，矩阵仍是长期路线图
+- GoalSpec 入口：`../../../.requirements/requirements/R001-med-research-v1-1/`；R001 2.0 用八个业务结果包覆盖能力矩阵全部 P0/P1，旧 Test Designs 已失效
 
 ## 2026-09-10 复验
 
 - 阶段 1 已按当前 checkout 复验：contracts、domain、storage、Project 共 15 个测试文件 / 96 个测试通过。
 - `pnpm run typecheck` 通过 Host 与 Client 两面。
 - 因阶段 1 已实现且证据有效，不重复创建同名业务包；后续从阶段 7–8 的 `partial` / `blocked` 项继续。
-- R001 的 S01-S05 已建立批准的 Spec 和 draft Test Design；Test Design 经人工批准且历史测试与运行记录按各包 `evidence/index.yaml` 规范化后，才能用于 QA Acceptance。
+- R001 的 S01-S08 处于 2.0 review；S01-S05 的旧 Test Designs 为 stale。只有新 Spec 获批并重新生成 Test Design 后，历史运行记录才能按新合同判断是否可复用。
 
 ## 已完成
 
@@ -28,7 +28,7 @@
 | 7（部分） | 客户端席位与打包 | 4 视图 + 21 个工具卡片 + 设置页；自带 `lib/client.js` 与产物校验；见 `docs/decisions/2026-09-08-phase7-client-ui.md` |
 | 7（部分） | 真实 profile 启动 + 浏览器可见验证 | `dsh --profile med-research --port 3099` 加载成功；4 视图切换、输入框可用、设置分节均实测；见 `docs/decisions/2026-09-08-shared-med-storage-and-profile-install.md` |
 | 7（部分） | 引用定位（Evidence → Papers focus） | 组件层已覆盖：`openView('med-papers', paperId\|documentId\|paragraphId\|start\|end)`，Papers 视图高亮并滚动到引文段；见 `docs/decisions/2026-09-08-citation-focus.md` |
-| 8（部分） | `scripts/install-local-profile.mjs` | tarball + overrides 的可复现安装；2026-09-09 `pnpm run install:profile --profile med-research --force`、`--print-only` 成功；用本地 checkout 的 `pnpm dsh --profile med-research --dump-config` 成功；3099 端口已有运行中的 profile 进程（重复启动按预期 `EADDRINUSE` 失败） |
+| 8（部分） | `scripts/install-local-profile.mjs` | tarball + overrides 的可复现安装；脚本现在先执行 `build:web` 和 `build:client` 再打包，并校验 Web tarball 携带刚构建的 `dist`；2026-09-11 在全新 `/tmp/med-dsh-fresh.RRZrLH` home 安装 `med-research-fresh` 成功，`pnpm dsh --profile med-research-fresh --dump-config` 成功，工作区/ tarball / 已安装 profile 的 `dist/index.html` SHA-256 均为 `00c54a0f138168988bcf6eb03e3167344eb05e96a27535121ea1da17c1f1602a` |
 | 8（部分） | 真实 Research 链（live PubMed） | 9 次工具调用 / 10 步 / 220K tok：project_create → literature_plan_query → literature_search_pubmed（真实 NCBI）→ paper_get_document → evidence_retrieve → project_save_paper → evidence_retrieve → evidence_save → evidence_verify；最终 `done <evidence id>` |
 | 8（部分） | 产物下载路由 | `medArtifacts/export` 改走精确 Fetch 路由 `/api/medArtifact.export`（宿主纯函数 + 客户端卡片下载链接）；路径常量在 contracts 共用 |
 | 8（部分） | 真实 Statistics 链（隔离执行 + 审批） | 5 次工具调用 / 6 步 / 116K tok：dataset_profile → statistics_plan → statistics_generate_code → statistics_execute（浏览器点「允许一次」）→ run succeeded，`resultJson={n:8,rates:{drug_a:0.5,drug_b:0.25}}`，artifact 已注册 |
@@ -54,14 +54,13 @@
    - `@deepseek-ai/dsh-client-ui-sidebar-right` 未发布到 npm → 右栏 Paper Reader / Evidence 详情无法注册；当前用 `openView('med-papers', paperId)` 在 Papers 视图内读原文。（运行时该包存在，仅缺类型声明。）
    - Remote 面缺列表读取（项目论文 / 文档段落 / 项目证据 / 数据集 / 分析运行）→ 视图只能 focus-driven；另有 SPEC §30 的 `medResearch/.../papers` 与 §5/PRD 的 `medLiterature` + `medPapers` 命名漂移，见 `docs/decisions/2026-09-09-remote-surface-spec-drift.md`，需确认 canonical surface。
    - **Claim Gate + 引用序列化器没有模型入口**：`verifyClaim` / `serializeCitations` 已实现并有单测，但 SPEC §6 无对应工具名、SPEC §27–§29 未说明调用路径。需要裁决：新增 `evidence_verify_claim` 工具，还是把序列化接进答案管线。
-   - **FR-22 / SPEC §39 的 Agent Mode 允许列表未实现**：PRD §31 定义了三种 mode 的前缀允许列表，但没有定义用户如何切换 mode（DSH 命令？设置项？）；PRD §31 还写了 `paper_get_content`，SPEC §6 里没有这个名字（实际是 `paper_get_document`）。需要你确认切换入口与以哪份文档的工具名为准。
    - **P0 图表结果接线尚未完成**：PRD §26 / §36 已明确为 Histogram、Box Plot、Bar Chart、Scatter；统计插件提供四类无依赖 SVG 模板，Statistics 视图已展示 profile 缺失值 Bar Chart，但尚未接入分析结果生成代码/Remote 结果视图（见 `docs/decisions/2026-09-09-p0-chart-types.md`）。
 3. 浏览器可见验证的剩余项：点引用定位原文（需要数据）；真实 Research/Statistics 链的完整演示；GIF 录制（本机缺 `ffmpeg`/`ffprobe`，需先装或用其他编码路径）。FR-25（无活跃会话不渲染且不报错）已在 hero 上实测通过。
 4. 阶段 8 收尾：两条 DoD 的浏览器 E2E（需要模型轮次）。
-5. 已知缺口：容器 provider（Linux/CI 验证）；Typert 生成产物（严格 schema）；`shell.overlay` 长任务进度；P0 四类图表模板/客户端渲染；Gold Set 人工评估；审计的 `claim.verify` 与 `sessionId` 待 Claim Gate 服务入口。统计规划/代码生成的未知 dataset/run 已映射为 SPEC §46 稳定 code 信封（见 `docs/decisions/2026-09-09-statistics-error-envelope-research.md`）。
+5. 已知缺口：容器 provider（Linux/CI 验证）；Typert 生成产物（严格 schema）；`shell.overlay` 长任务进度；P0 图表的分析结果 Remote/UI 接线；Gold Set 人工评估；审计的 `claim.verify` 与 `sessionId` 待 Claim Gate 服务入口。统计规划/代码生成的未知 dataset/run 已映射为 SPEC §46 稳定 code 信封（见 `docs/decisions/2026-09-09-statistics-error-envelope-research.md`）。
 
 ## 约束提醒
 
-- `AGENTS.md` 常驻，不得违反（不改 DSH checkout、工具名 snake_case、模型可见⟺已记录、文案走 zh/en 字典等）。
+- `AGENTS.md` 常驻，不得违反（医学业务不改 DSH Core；R001 S01 可在主仓增加通用 additive UI 扩展；工具名 snake_case、模型可见⟺已记录、文案走 zh/en 字典）。
 - 每阶段完成后按 `AGENTS.md` §7 汇报，等确认再进下一阶段。
 - `.med-run/` 是本地 profile 运行态（sqlite、workspaces、截图），已 gitignore，不要提交。

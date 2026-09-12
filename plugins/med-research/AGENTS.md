@@ -7,11 +7,11 @@
 
 ## 1. 事实来源（Source of Truth）
 
-- 需求：`docs/prd/med-research-workspace-ultimate-prd-v1.1.md`
-- 技术规格：`docs/spec/med-research-workspace-ultimate-spec-v1.1.md`
-- 原始评审留档：DSH checkout 的 `.todo/` 下 v1.0 两份文档。
+- 产品合同：DSH checkout 的 `.requirements/requirements/R001-med-research-v1-1/prd.md`
+- 可执行规格：同一 Requirement Workspace 的 `specs/S01-*` 至 `specs/S08-*`
+- 实现事实来源：`docs/prd/med-research-workspace-ultimate-prd-v1.1.md`、`docs/spec/med-research-workspace-ultimate-spec-v1.1.md` 与本仓库代码/测试
 
-规则：需求缺失、矛盾或与本文冲突时，**停下来报告**，不要自行发挥或改需求。文档是唯一权威，不要凭记忆实现。
+规则：R001 2.0 拥有完整 V1 范围和验收。旧 PRD/SPEC 只提供实现事实；出现冲突时按当前子 Spec 执行，缺失行为必须先修订 Spec，不能按现有实现缩小范围。
 
 ---
 
@@ -60,8 +60,8 @@
 
 ### 2.7 UI
 
-24. **UI 用方案 A**：`conversation.view` 视图 + `ctx.sidebarRightTabs` / `sidebar.right.pane.tab` + `tool.call.toolview` + `settings.section` + `shell.overlay`（SPEC §42）。
-25. **不做 URL 路由，不建独立前端，不替换 shell**（`root` / `sidebar.workspaces` 为 single 且已被占用）。
+24. **UI 使用 R001 S01 声明的 DSH 扩展**：additive 主导航 + `conversation.view` + `sidebar.right.pane.tab` + `tool.call.toolview` + `settings.section` + `shell.overlay`。
+25. **不做 URL 路由，不建独立前端，不替换 shell**；DSH 主仓只增加可复用的 additive Slot 和公开 client face，医学插件消费它们。
 26. **视图是会话作用域**：无活跃会话时不渲染且不报错（FR-25）。
 27. **客户端文案全部走 zh/en 类型化字典**，禁止硬编码产品文案；不运行时 import 其它 `@deepseek-ai/dsh-client-*` feature 包的值。
 28. **客户端打包配置自带**（DSH 未对外发布 client bundle preset）。

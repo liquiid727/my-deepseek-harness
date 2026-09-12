@@ -13,6 +13,21 @@ import type { StatisticsUiState } from '../state/statistics.ts'
 import type { MedRemote } from './remote.ts'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
+  interface SlotMap {
+    /** Root-level launch control exposed by the Conversation Hero. */
+    'conversation.hero.launch': {
+      kind: 'list'
+      scope: 'root'
+      owner: { startSession: (view: string) => void }
+    }
+    /** Session-owned launch control exposed by the Conversation Hero. */
+    'conversation.hero.actions': {
+      kind: 'list'
+      scope: 'session'
+      owner: { openView: (view: string, focus: string) => void }
+    }
+  }
+
   interface LocaleNamespaceMap {
     /** Med Research view, state, action, and empty-state copy. */
     medResearch: MedUiKey

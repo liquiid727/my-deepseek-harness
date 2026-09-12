@@ -109,6 +109,14 @@ describe('ProjectsService (SPEC §32)', () => {
     await expect(app.service.delete(missing)).rejects.toMatchObject({ code: 'PROJECT_NOT_FOUND' })
   })
 
+  it('rejects invalid project input before writing any state', async () => {
+    const app = await harness('/tmp/root')
+    await expect(app.service.create({ name: '   ' })).rejects.toThrow()
+    expect(app.writes).toHaveLength(0)
+    expect(app.workspaces).toHaveLength(0)
+    expect(await app.service.list()).toEqual([])
+  })
+
   it('deletes one project and audits the deletion (SPEC §49)', async () => {
     const app = await harness('/tmp/root')
     const project = await app.service.create({ name: 'One' })

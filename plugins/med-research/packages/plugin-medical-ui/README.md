@@ -4,7 +4,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-Med Research client UI. It ships the view state machines (SPEC §43–§45), the zh/en dictionaries (AGENTS.md §2.7), the typed Remote data layer (SPEC §30), and the browser registrations: four `conversation.view` views, keyed `tool.call.toolview` cards, and a `settings.section` page.
+Med Research client UI. It ships the view state machines (SPEC §43–§45), the zh/en dictionaries (AGENTS.md §2.7), the typed Remote data layer (SPEC §30), and the browser registrations: a blank-session Research launch action, four `conversation.view` views, a session-header Agent Mode action, keyed `tool.call.toolview` cards, and a `settings.section` page.
 
 ## Scope
 
@@ -20,6 +20,8 @@ Med Research client UI. It ships the view state machines (SPEC §43–§45), the
 - `src/client/toolview.tsx` — one card for every `med` Tool name.
 - `src/client/settings.tsx` — the settings page; deployment configuration is stated, never read back.
 - `src/client/index.tsx` — the plugin entry: dictionaries, view/card/settings registrations, each owned by `ctx.effect`.
+- `src/client/hero-action.tsx` — the blank-session entry point that opens the S01 project workspace without a model turn.
+- `src/client/mode-action.tsx` — the localized session-header selector that reads and changes the active Agent Mode through `medProjects` Remote methods.
 
 ## Build
 
@@ -39,7 +41,7 @@ Nothing: the client half registers no tool, prompt, or session event.
 ## Known Limitations and Deferred Work
 
 - **Right-pane seats are not implemented**: `@deepseek-ai/dsh-client-ui-sidebar-right` and its `dsh-client-ui-dockkit` dependency are not published to npm, so an out-of-tree client plugin cannot declare `sidebar.right.pane.tab`. Citations open the Papers view through the `med-papers` focus contract instead; see `docs/decisions/2026-09-08-citation-focus.md`.
-- **Views are focus-driven, not list-driven**: the published Remote surface has no list reads for project papers, per-project evidence, datasets, analysis runs, or document paragraphs. Reading a whole paper therefore needs a paragraph-list method; locating one cited span does not.
+- **Views are focus-driven, not list-driven**: the published Remote surface has no list reads for project papers, per-project evidence, datasets, analysis runs, or document paragraphs. Reading a whole paper therefore needs a paragraph-list method; locating one cited span does not. The Home view lists projects and reads the persisted project overview counters.
 - **`shell.overlay` is not contributed**: no long-running client task reports progress yet.
 - The client surface calls generated-free SRC endpoints through `ctx.connection.rpc`; moving to generated `ctx.remote` descriptors is deferred with the Typert artifact build.
 - Browser-visible verification of the citation highlight is deferred to a real Research-chain run; the component test covers the focus encoding, highlight, and scroll.

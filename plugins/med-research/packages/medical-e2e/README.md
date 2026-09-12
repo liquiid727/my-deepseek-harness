@@ -8,4 +8,4 @@ Keyless end-to-end chains over the real services. `tests/research-chain.spec.ts`
 
 ## Known Limitations and Deferred Work
 
-The Statistics chain and the browser-visible UI chain are not covered here yet.
+`tests/statistics-chain.spec.ts` covers the Statistics chain. The browser-visible UI chain is not covered here yet.

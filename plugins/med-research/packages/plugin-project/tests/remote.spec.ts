@@ -79,7 +79,7 @@ describe('medProjects Remote surface (SPEC §30, §32)', () => {
     const app = await remoteHarness()
     expect(app.service.typertRemote.namespace).toBe('medProjects')
     expect(remoteMethods(app.service).map(marker => marker.method).sort())
-      .toEqual(['create', 'delete', 'get', 'list', 'overview', 'savePaper', 'update'])
+      .toEqual(['create', 'delete', 'get', 'getMode', 'list', 'overview', 'savePaper', 'setMode', 'update'])
   })
 
   it('creates and lists through the Gateway SRC path', async () => {
@@ -113,6 +113,17 @@ describe('medProjects Remote surface (SPEC §30, §32)', () => {
       args: { id: created.id },
     }) as { projectId: string; papers: number }
     expect(overview).toMatchObject({ projectId: created.id, papers: 0 })
+
+    await expect(app.ctx.typertGateway.invoke({
+      namespace: 'medProjects',
+      method: 'setMode',
+      args: { sessionId: 'session-1', mode: 'paper' },
+    })).resolves.toBe('paper')
+    await expect(app.ctx.typertGateway.invoke({
+      namespace: 'medProjects',
+      method: 'getMode',
+      args: { sessionId: 'session-1' },
+    })).resolves.toBe('paper')
   })
 
   it('rejects an endpoint outside the published surface', async () => {

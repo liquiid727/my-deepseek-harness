@@ -1,52 +1,38 @@
 # Med Research Workspace 能力矩阵基线
 
-## 定位
+## 当前合同
 
-仓库根目录的 [能力与功能矩阵](../../../../.todo/0909/med-research-workspace-capability-feature-matrix-v1.0.md) 是产品长期路线图。[R001 GoalSpec Workspace](../../../../.requirements/requirements/R001-med-research-v1-1/prd.md) 把 V1.1 [PRD](../prd/med-research-workspace-ultimate-prd-v1.1.md) 与 [SPEC](../spec/med-research-workspace-ultimate-spec-v1.1.md) 规范化为当前实现与验收入口。矩阵条目不会仅因标记为 P0 而自动进入 V1.1。
+仓库根目录的 [能力与功能矩阵](../../../../.todo/0909/med-research-workspace-capability-feature-matrix-v1.0.md) 由 [R001 2.0 PRD](../../../../.requirements/requirements/R001-med-research-v1-1/prd.md) 转换为当前 V1 产品合同。矩阵中全部 P0/P1 均属于最终 V1；P0 是阶段里程碑，P1 完成后 Requirement 才能 accepted。
 
-## 状态定义
+旧 PRD/SPEC 和本目录的阶段决策记录提供当前代码的实现事实，不能缩小 R001。R002 保留永久 ID，但 [S07 Skills Center](../../../../.requirements/requirements/R001-med-research-v1-1/specs/S07-skills-center/spec.md) 是 V1 Skills 的唯一实现合同。
 
-| 状态 | 含义 | 后续动作 |
+## 当前实现状态
+
+| 能力域 | 实现状态 | R001 owner |
 |---|---|---|
-| `implemented` | 当前代码已提供，且有对应测试或运行证据 | 保持与 V1.1 契约一致 |
-| `partial` | 已有部分实现，但尚未满足完整用户结果或验收标准 | 进入 V1.1 收尾 Spec |
-| `roadmap` | 矩阵提出，但当前 PRD/SPEC 未批准 | 先建立或修订 PRD，再生成 Spec |
-| `blocked` | 已有契约，但缺少上游能力或待决公共接口 | 记录恢复条件，不建立替代实现 |
+| Project / Workspace / Workbench Shell | partial | S01 |
+| Research / PubMed / Advanced Discovery | partial | S02 |
+| Paper Reader / AI Reading / Selection | partial | S03 |
+| Evidence / Claim / Evidence Table | partial | S04 |
+| Statistics Lab | partial | S05 |
+| Knowledge / Library / Notes / Drafts | partial | S06 |
+| Skills Center / Builder | not implemented | S07 |
+| Writing / Citation Export | partial | S08 |
 
-## 当前能力状态
-
-| 能力域 | 状态 | 当前证据或缺口 |
-|---|---|---|
-| Project / Workspace | `implemented` | Project 创建、持久化、Workspace 注册、Session 绑定与上下文读取已有集成测试 |
-| Research / PubMed | `implemented` | QueryPlan、PubMed fixture、去重、论文保存和真实 Research 链已有测试与运行记录 |
-| Paper Reader | `partial` | 解析、归一化、定位和 Papers focus 已实现；右栏 Reader 受未发布 DSH 客户端包阻塞 |
-| Evidence / Claim | `partial` | Evidence 状态、定位、验证和 citation serializer 已实现；Claim Gate 尚无模型入口 |
-| Statistics Lab | `partial` | Dataset、审批、隔离执行、结果与 provenance 已实现；P0 图表结果契约和结果视图未接通 |
-| Medical UI | `partial` | 四视图、工具卡片、设置和类型化 zh/en 文案已实现；列表读取与右栏席位未完成 |
-| Skills | `roadmap` | Skill Center、Marketplace 与 Builder 不属于当前 V1.1 实现契约 |
-| Writing / Collaboration / Advanced Sources | `roadmap` | Draft、团队协作、扩展数据源和高级统计按后续 PRD 管理 |
-
-## PRD → Spec 规则
-
-矩阵中的新能力按一个独立用户结果建立 PRD，PRD 必须定义范围、非目标、业务流程、可观察验收和优先级。PRD 批准后，Spec 定义服务接口、工具输入输出、持久化、错误、UI 状态与测试映射。实现只接受批准的 Spec，不从矩阵表格直接拆技术任务。
-
-V1.1 收尾按 R001 的五个子 Spec 执行；原 PRD/SPEC 保留为来源文档。长期能力按以下业务结果分别进入后续 PRD：
-
-- 完整 Paper Reader 与 Knowledge 浏览。
-- [R002 Skill Center、Marketplace 与 Skill Builder](../../../../.requirements/requirements/R002-med-research-skills/prd.md)。
-- Project RAG、扩展文献来源与 Reference Chasing。
-- Draft / Writing、系统综述、Meta-analysis 与协作。
+状态只描述代码事实，不改变 Spec 范围或验收要求。
 
 ## UI 素材映射
 
-根目录 `asset/` 中的效果图是视觉和交互参考，不是独立前端授权：
-
-| 素材 | 当前工作面 | 验收重点 |
+| 素材 | Spec owner | 阻塞验收 |
 |---|---|---|
-| `首页.png` | Project / Overview | 项目切换、真实计数、空状态 |
-| `搜索研究.png` | Research / Evidence | 查询确认、部分失败、证据关系和原文定位 |
-| `论文阅读器.png` | Paper Reader | 原文真源、翻译/双语、选区、笔记和 Evidence |
-| `统计lab.png` | Statistics | 审批、代码执行、结果、图表和 provenance |
-| `skill工作台.png` | Skills roadmap | 后续 PRD 的 Builder 与安装体验参考 |
+| `首页.png` | S01 | 工作台壳、Project、输入、概览、核心能力和状态 |
+| `搜索研究.png` | S02/S04/S03 | Research 主区、Evidence 分组和右侧 Reader 联动 |
+| `论文阅读器.png` | S03 | 章节、正文模式、选区工具、AI 阅读、Notes 和 Evidence |
+| `统计lab.png` | S05 | Dataset、Plan、Approval、Code、Result、Charts 和 provenance |
+| `skill工作台.png` | S07 | Inventory、Builder、Preview、test 和生命周期操作 |
 
-所有 UI 继续使用 DSH 客户端插件扩展点，不增加 URL 路由、独立 Web 应用或替代 Shell。
+每张图在 1672×941 与真实 profile 并排评审，并补 1440×900 和 390×844。布局、间距、字体、颜色、图标、密度、滚动、主操作和遮挡均是阻塞项；实现不得用静态 mock 或仅组件存在断言替代。
+
+## 执行规则
+
+实现只接受 review 通过的子 Spec。每个矩阵功能行必须映射到 Requirement、Spec 行为和 AC；发现缺口先修订合同。旧 S01-S05 Test Designs 为 stale，必须在 2.0 Specs 获批后重新生成和绑定。

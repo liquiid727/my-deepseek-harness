@@ -9,11 +9,11 @@
 ## 范围
 
 - `ids.ts` — 品牌化 id（Project / Paper / Document / Section / Paragraph / EvidenceChunk / Evidence / Claim / ResearchQuery / Dataset / AnalysisRun / Artifact / AuditLog）。
-- `research.ts` — Project、Paper、来源记录、Document、Section、Paragraph、Chunk、Evidence、Claim、QueryPlan、FulltextResolution（SPEC §7–§12、§17–§18、§20–§23）。
+- `research.ts` — Project、Paper、来源记录、Document、Section、Paragraph、Chunk、Evidence、Claim、QueryPlan、FulltextResolution，以及会话 Agent Mode 联合类型（SPEC §7–§12、§17–§18、§20–§23）。
 - `statistics.ts` — Dataset、DatasetColumn、AnalysisPlan、AnalysisRun、Artifact、Runner 输入/输出，以及 `StatisticsRunner` 能力接缝（SPEC §13–§14、§34–§38）。
 - `audit.ts` — 追加式审计行（SPEC §49）。
 - `errors.ts` — `DomainError` 与稳定错误码表（SPEC §46）。
-- `services.ts` — 九个 `med` 服务定义（SPEC §5、§30–§38）。
+- `services.ts` — 九个 `med` 服务定义，含项目模式读写（SPEC §5、§30–§38）。
 
 所有实体 schema 都是 `z.strictObject`：未声明字段在持久化边界被拒绝，而不是被静默丢弃。
 

@@ -1,10 +1,12 @@
 # 决策：能力矩阵作为长期路线图
 
-- 状态：已实施
+- 状态：已被 [R001 2.0](../../../../.requirements/requirements/R001-med-research-v1-1/prd.md) 取代
 - 日期：2026-09-10
 - 依据：V1.1 PRD §34、V1.1 SPEC §61/§64、`AGENTS.md` §1/§6
 
 ## 问题
+
+本记录保留原范围决策的背景，不再是当前实现入口。R001 2.0 已把能力矩阵全部 P0/P1 纳入 V1，并由 S01-S08 提供当前合同。
 
 能力矩阵扩大了 Paper Reader、Knowledge、Statistics、Skills 和 Writing 的产品范围，其中部分 P0 标记与 V1.1 PRD 的收敛范围及 SPEC 的 Slice 顺序冲突。直接按矩阵实现会形成第二套需求权威，并把缺少验收契约的长期能力混入 V1.1。
 

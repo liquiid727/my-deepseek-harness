@@ -8,6 +8,7 @@
   "include": [
     "packages/*/src/client/**/*.ts",
     "packages/*/src/client/**/*.tsx",
+    "packages/*/src/**/*.d.ts",
     "packages/*/tests/**/*.client.spec.ts",
     "packages/*/tests/**/*.client.spec.tsx"
   ]

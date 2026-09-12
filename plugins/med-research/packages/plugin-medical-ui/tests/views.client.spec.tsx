@@ -6,7 +6,7 @@
  * browser bundle (see the package README's Known Limitations).
  */
 
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createElement } from 'react'
 import type { Evidence, Paper, Project } from '@medresearch/dsh-medical-contracts'
@@ -84,7 +84,7 @@ function viewProps(overrides: Record<string, unknown> = {}) {
     viewRequest: null,
     openView: vi.fn(),
     completeViewRequest: vi.fn(),
-    useSession: () => undefined,
+    useSession: () => ({}),
     sessionId: 'session-1',
     useProjection: () => undefined,
     ...overrides,
@@ -96,6 +96,12 @@ function remoteWith(overrides: Partial<MedRemote>): MedRemote {
 }
 
 describe('ResearchView', () => {
+  it('does not render outside a conversation session', () => {
+    const remote = remoteWith({ projects: { list: vi.fn() } as never })
+    render(createElement(ResearchView, viewProps({ remote, useSession: () => undefined }) as never))
+    expect(screen.queryByRole('heading', { name: en['view.research'] })).toBeNull()
+  })
+
   it('lists projects and opens the Papers view for the selected project', async () => {
     const openView = vi.fn()
     const remote = remoteWith({
@@ -112,6 +118,9 @@ describe('ResearchView', () => {
     const button = await screen.findByRole('button', { name: 'PONV 研究' })
     button.click()
     await screen.findByText('2')
+    expect(screen.getByRole('navigation', { name: en['home.capabilities'] })).toBeDefined()
+    expect(screen.getByRole('button', { name: en['view.evidence'] })).toBeDefined()
+    expect(screen.getByRole('button', { name: en['view.statistics'] })).toBeDefined()
     screen.getByRole('button', { name: en['view.papers'] }).click()
     expect(openView).toHaveBeenCalledWith('med-papers', '')
   })
@@ -120,6 +129,27 @@ describe('ResearchView', () => {
     const remote = remoteWith({ projects: { list: async () => [] } as never })
     render(createElement(ResearchView, viewProps({ remote }) as never))
     expect(await screen.findByText(en['empty.projects'])).toBeDefined()
+  })
+
+  it('creates a project through the Remote form', async () => {
+    const create = vi.fn().mockResolvedValue(project())
+    const remote = remoteWith({
+      projects: {
+        list: async () => [],
+        create,
+        overview: async () => ({
+          projectId: 'project-1' as never,
+          questions: 0, papers: 0, evidences: 0, datasets: 0, analyses: 0, charts: 0,
+        }),
+      } as never,
+    })
+    render(createElement(ResearchView, viewProps({ remote }) as never))
+    await screen.findByText(en['empty.projects'])
+    fireEvent.change(screen.getByLabelText(en['home.name']), { target: { value: 'New project' } })
+    fireEvent.submit(screen.getByRole('button', { name: en['home.create'] }).closest('form')!)
+    await waitFor(() => {
+      expect(create).toHaveBeenCalledWith({ name: 'New project' })
+    })
   })
 
   it('shows the failure and reloads on demand', async () => {

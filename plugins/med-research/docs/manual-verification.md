@@ -92,5 +92,5 @@ dataset_profile
 - P0 四类图表的分析结果 Remote/UI 接线尚未完成；当前只验证模板、profile 图表和 figure artifact 链。
 - 列表驱动的论文、证据、数据集、分析运行视图尚未完成。
 - 右栏 Paper Reader/Evidence tab 依赖的上游 DSH 包尚未发布。
-- Agent Mode 动态允许列表尚未有切换入口契约。
+- Agent Mode 动态允许列表已有服务与组件证据；其浏览器可见验证仍纳入完整 UI 矩阵。
 - 生产级 Linux 容器/bwrap provider 和 Gold Set 人工评估尚未完成。

@@ -102,6 +102,17 @@ describe('LiteratureService', () => {
     expect(boot.storage.researchQueries.get(stored.id)).toEqual(stored)
   })
 
+  it('persists approval and requires it when a search references the plan', async () => {
+    const transport = new ReplayTransport([{ test: () => true, body: '' }])
+    const boot = await bootStorage()
+    booted.push(boot)
+    const client = service(boot.storage, transport)
+    const plan = await client.planQuery({ projectId: PROJECT, question: 'q', plan: PLAN })
+    await expect(client.search({ projectId: PROJECT, researchQueryId: plan.id, query: PLAN.queries[0]!.query, purpose: 'primary' })).rejects.toThrow(/approved/)
+    const approved = await client.approveQuery(plan.id)
+    expect(approved.approvedAt).toBeDefined()
+  })
+
   it('rejects a plan that lacks a primary or broad query (SPEC §18)', async () => {
     const transport = new ReplayTransport([{ test: () => true, body: '' }])
     const boot = await bootStorage()
@@ -133,6 +144,7 @@ describe('LiteratureService', () => {
     expect(result.papers).toHaveLength(2)
     expect(result.totalCount).toBe(9713)
     expect(boot.storage.papers.size).toBe(2)
+    expect(boot.storage.paperSources.size).toBe(2)
     expect(result.papers[0]!.pmid).toBe('42705006')
     expect(boot.storage.papers.get(result.papers[0]!.id)).toEqual(result.papers[0])
   })

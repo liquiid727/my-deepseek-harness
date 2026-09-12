@@ -46,6 +46,8 @@ describe('med Remote client (SPEC §30)', () => {
     await remote.datasets.profile('dataset-1' as never)
     await remote.statistics.generateCode('run-1' as never, 'print(1)')
     await remote.artifacts.get('artifact-1' as never)
+    await remote.projects.getMode('session-1')
+    await remote.projects.setMode('session-1', 'paper')
 
     expect(calls.map(call => [call.channel, call.endpoint])).toEqual([
       ['/api', 'medProjects/list'],
@@ -58,12 +60,16 @@ describe('med Remote client (SPEC §30)', () => {
       ['/api', 'medDatasets/profile'],
       ['/api', 'medStatistics/generateCode'],
       ['/api', 'medArtifacts/get'],
+      ['/api', 'medProjects/getMode'],
+      ['/api', 'medProjects/setMode'],
     ])
     expect(calls[1]!.payload).toEqual({ args: { id: 'project-1' } })
     expect(calls[2]!.payload).toEqual({ args: { input: { name: 'PONV' } } })
     expect(calls[5]!.payload).toEqual({ args: { id: 'paper-1', query: 'nausea' } })
     expect(calls[6]!.payload).toEqual({ args: { id: 'evidence-1', verdict: 'VERIFIED' } })
     expect(calls[8]!.payload).toEqual({ args: { id: 'run-1', code: 'print(1)' } })
+    expect(calls[10]!.payload).toEqual({ args: { sessionId: 'session-1' } })
+    expect(calls[11]!.payload).toEqual({ args: { sessionId: 'session-1', mode: 'paper' } })
   })
 
   it('forwards cancellation to the connection caller', async () => {

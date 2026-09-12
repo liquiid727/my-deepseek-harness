@@ -82,7 +82,7 @@ export function literatureTools(service: LiteratureService): ToolDefinition[] {
         purpose: {
           type: 'string',
           required: true,
-          enum: ['primary', 'broad', 'counter'],
+          enum: ['primary', 'broad', 'counter', 'related'],
           description: 'Why this query is run.',
         },
         maxResults: { type: 'integer', description: 'Page cap; the deployment default applies when omitted.' },

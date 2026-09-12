@@ -10,6 +10,7 @@
 
 import type {
   AnalysisPlan,
+  AgentMode,
   AnalysisRun,
   Artifact,
   ArtifactId,
@@ -107,9 +108,15 @@ export interface MedRemote {
     delete(id: ProjectId, signal?: AbortSignal): Promise<void>
     overview(id: ProjectId, signal?: AbortSignal): Promise<ProjectOverview>
     savePaper(id: ProjectId, paperId: PaperId, signal?: AbortSignal): Promise<ProjectPaper>
+    getMode(sessionId: string, signal?: AbortSignal): Promise<AgentMode>
+    setMode(sessionId: string, mode: AgentMode, signal?: AbortSignal): Promise<AgentMode>
   }
   readonly literature: {
     planQuery(input: PlanQueryInput, signal?: AbortSignal): Promise<ResearchQuery>
+    editQuery(id: ResearchQuery['id'], plan: PlanQueryInput['plan'] & { filters?: ResearchQuery['filters'] }, signal?: AbortSignal): Promise<ResearchQuery>
+    approveQuery(id: ResearchQuery['id'], signal?: AbortSignal): Promise<ResearchQuery>
+    counterSearch(input: LiteratureSearchInput, signal?: AbortSignal): Promise<LiteratureSearchResult>
+    relatedSearch(input: LiteratureSearchInput, signal?: AbortSignal): Promise<LiteratureSearchResult>
     search(input: LiteratureSearchInput, signal?: AbortSignal): Promise<LiteratureSearchResult>
     getPaper(pmid: string, signal?: AbortSignal): Promise<Paper | undefined>
   }
@@ -178,9 +185,15 @@ export function createMedRemote(caller: RemoteCaller): MedRemote {
       delete: (id, signal) => invoke<void>('medProjects/delete', { id }, signal),
       overview: (id, signal) => invoke<ProjectOverview>('medProjects/overview', { id }, signal),
       savePaper: (id, paperId, signal) => invoke<ProjectPaper>('medProjects/savePaper', { id, paperId }, signal),
+      getMode: (sessionId, signal) => invoke<AgentMode>('medProjects/getMode', { sessionId }, signal),
+      setMode: (sessionId, mode, signal) => invoke<AgentMode>('medProjects/setMode', { sessionId, mode }, signal),
     },
     literature: {
       planQuery: (input, signal) => invoke<ResearchQuery>('medLiterature/planQuery', { input }, signal),
+      editQuery: (id, plan, signal) => invoke<ResearchQuery>('medLiterature/editQuery', { id, input: plan }, signal),
+      approveQuery: (id, signal) => invoke<ResearchQuery>('medLiterature/approveQuery', { id }, signal),
+      counterSearch: (input, signal) => invoke<LiteratureSearchResult>('medLiterature/counterSearch', { input }, signal),
+      relatedSearch: (input, signal) => invoke<LiteratureSearchResult>('medLiterature/relatedSearch', { input }, signal),
       search: (input, signal) => invoke<LiteratureSearchResult>('medLiterature/search', { input }, signal),
       getPaper: (pmid, signal) => invoke<Paper | undefined>('medLiterature/getPaper', { pmid }, signal),
     },

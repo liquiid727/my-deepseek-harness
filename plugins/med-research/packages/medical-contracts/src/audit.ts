@@ -18,6 +18,7 @@ export const auditActionSchema = z.enum([
   'statistics.approve',
   'code.execute',
   'artifact.export',
+  'mode.change',
 ])
 /** Audited operations (SPEC §49). */
 export type AuditAction = z.infer<typeof auditActionSchema>

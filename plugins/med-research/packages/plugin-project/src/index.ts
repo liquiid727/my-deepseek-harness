@@ -8,8 +8,10 @@
 
 import type { Context } from '@deepseek-ai/cordis'
 import { randomUUID } from 'node:crypto'
+import { isAbsolute } from 'node:path'
 // Type-only: resolves the required ctx.fs and ctx.workspaceRegistry declarations.
 import type {} from '@deepseek-ai/dsh-fs'
+import type {} from '@deepseek-ai/dsh-agent'
 import type {} from '@deepseek-ai/dsh-workspace'
 import { projectIdSchema } from '@medresearch/dsh-medical-contracts'
 import { openMedStorage } from '@medresearch/dsh-medical-storage'
@@ -26,6 +28,7 @@ import {
 import type { Config } from './config.ts'
 import { ProjectsService } from './service.ts'
 import { projectTools } from './tools.ts'
+import type { ModeAgentRegistry } from './mode.ts'
 
 export { Config } from './config.ts'
 export { MED_EXPORT_COMMAND, MED_IMPORT_COMMAND, runMedExport, runMedImport } from './backup.ts'
@@ -62,6 +65,9 @@ interface CommandRegistry {
  * @param config - Validated plugin configuration.
  */
 export async function apply(ctx: Context, config: Config): Promise<void> {
+  if (!isAbsolute(config.workspaceRoot)) {
+    throw new Error('med-project: workspaceRoot must be an absolute path')
+  }
   const storage = await openMedStorage(ctx.storageDomain)
   ctx.effect(() => () => storage.close(), 'med.project.storage')
 
@@ -87,8 +93,14 @@ export async function apply(ctx: Context, config: Config): Promise<void> {
     workspaceRoot: config.workspaceRoot,
     now: () => new Date().toISOString(),
     newId: () => projectIdSchema.parse(randomUUID()),
+    ...(() => {
+      const agents = ctx.get('agents') as ModeAgentRegistry | undefined
+      return agents === undefined ? {} : { agents }
+    })(),
   })
   ctx.effect(() => ctx.provide('medProjects', service), 'med.project.service')
+  ctx.on('agent/created', ({ agent }) => { service.activateMode(String(agent.id)) })
+  ctx.on('agent/disposed', ({ agent }) => { service.deactivateMode(String(agent.id)) })
   for (const tool of projectTools(service)) ctx.tools.register(tool)
 
   // Backup and restore are human commands (SPEC §15.2); they exist only where

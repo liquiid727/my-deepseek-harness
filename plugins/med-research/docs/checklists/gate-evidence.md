@@ -114,7 +114,7 @@
 | 真实 PubMed 网络链路 | 已覆盖 | 2026-09-09 在 med-research profile 实测（真实 NCBI E-utilities 200 + 9 次工具调用） |
 | 两条 DoD 的真实模型演示 | 已覆盖（数据面） | 2026-09-09 在 med-research profile 各跑一次真实轮次：Research 链 9 次工具调用、Statistics 链 5 次工具调用 + 审批；证据见上表 |
 | 浏览器里从引用点回原文 | 组件层已覆盖，浏览器入口未覆盖 | 需要列表读取才能让视图发现 claimId/paperId；右栏席位类型包亦未发布；Remote 还存在 SPEC §30 `medResearch` 与 §5/PRD `medLiterature` + `medPapers` 命名漂移，见 `docs/decisions/2026-09-09-remote-surface-spec-drift.md` |
-| Agent Mode 允许列表（FR-22 / SPEC §39） | 未实现 | PRD §31 定义了三种 mode 的工具前缀允许列表，但没有定义用户如何切换 mode；`ctx.tools.restrict()` 只接受 agent 作用域 ctx，插件 apply 阶段无法全局调用。需要裁决切换入口与工具名基准 |
+| Agent Mode 允许列表（FR-22 / SPEC §39） | 服务与组件已覆盖；完整浏览器矩阵待验收 | `medProjects.getMode` / `setMode` 通过会话审计恢复模式，并在活动 Agent 上替换 `ctx.tools.restrict()` 允许列表；会话头部选择器通过 Remote 读写模式。见 `plugin-project/tests/mode.spec.ts` 与 `plugin-medical-ui/tests/mode-action.client.spec.tsx`。 |
 | P0 四类图表（PRD §26、§36） | 模板、profile 视图与 figure 产物链已覆盖，分析结果视图未覆盖 | `plugin-statistics/src/charts.ts` 提供四类无依赖 SVG 模板；`plugin-medical-ui/src/client/profile-chart.tsx` 展示真实 profile 缺失值 Bar Chart；`medical-e2e/tests/statistics-chain.spec.ts` 验证 SVG figure 的执行、provenance 与导出；尚未接入分析结果生成代码/Remote 结果视图，见 `docs/decisions/2026-09-09-p0-chart-types.md` |
 | 审计的 `claim.verify` 与 `sessionId` | 部分 | `claim.verify` 没有服务入口（Claim Gate 是库函数，见上一行），无法留痕；`sessionId` 服务层拿不到，字段保持可选。其余 7 个 SPEC §49 动作已覆盖 |
 | 统计工具失败信封的稳定性 | 已覆盖 | `medical-e2e/tests/composition.spec.ts` 经真实注册表断言未知 dataset → `DATASET_NOT_FOUND`、未知 analysis run → `STATISTICS_PLAN_INVALID`，均为 `isError: false` 的 `{ ok:false,error }` 信封；执行入口的未知/未审批 run 也复用该稳定码并有服务层边界测试；未捕获异常仍保持真实失败。 |

@@ -22,6 +22,7 @@ import { evidenceUiState } from '../state/evidence.ts'
 import { nextResearchState, type ResearchUiEvent, type ResearchUiState } from '../state/research.ts'
 import { nextStatisticsState, type StatisticsUiEvent, type StatisticsUiState } from '../state/statistics.ts'
 import { MissingValuesChart } from './profile-chart.tsx'
+import { RESEARCH_HOME_STYLES } from './views.styles.ts'
 import { decodePaperFocus, encodePaperFocus } from './focus.ts'
 import {
   EVIDENCE_STATE_KEY, NS, RESEARCH_STATE_KEY, STATISTICS_STATE_KEY, type MedViewInjected,
@@ -110,12 +111,15 @@ function MedPanel({ title, state, children }: {
   readonly children: ReactNode
 }) {
   return (
-    <section style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '12px 16px' }}>
-      <header style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-        <h2 style={{ margin: 0, fontSize: 14 }}>{title}</h2>
-        <span style={{ fontSize: 12, opacity: 0.7 }}>{state}</span>
+    <section className="researchPanel">
+      <style>{RESEARCH_HOME_STYLES}</style>
+      <div className="researchShell">
+      <header className="sectionHeader">
+        <h2 className="sectionTitle">{title}</h2>
+        <span className="state">{state}</span>
       </header>
       {children}
+      </div>
     </section>
   )
 }
@@ -127,16 +131,21 @@ function MedFailure({ message, label, onReload }: {
   readonly onReload: () => void
 }) {
   return (
-    <p role="alert" style={{ margin: 0, color: 'var(--dsh-color-danger, #b3261e)' }}>
+    <p role="alert" className="alert">
       {label}: {message} <button type="button" onClick={onReload}>{label}</button>
     </p>
   )
 }
 
 /** Research view: the project roster, the entry point of the Evidence Chain. */
-export function ResearchView({ remote, t, openView }: MedViewProps) {
+export function ResearchView({ remote, t, openView, useSession }: MedViewProps) {
+  const session = useSession(snapshot => snapshot)
   const [state, advance] = useUiMachine<ResearchUiState, ResearchUiEvent>('IDLE', nextResearchState)
   const [selected, setSelected] = useState<ProjectId | undefined>()
+  const [name, setName] = useState('')
+  const [researchQuestion, setResearchQuestion] = useState('')
+  const [creating, setCreating] = useState(false)
+  const [createError, setCreateError] = useState<string>()
   const load = useCallback(async (signal: AbortSignal): Promise<Project[]> => {
     advance(['reset', 'plan'])
     try {
@@ -157,34 +166,79 @@ export function ResearchView({ remote, t, openView }: MedViewProps) {
     ),
     [selected],
   )
+  const createProject = async (): Promise<void> => {
+    setCreating(true)
+    setCreateError(undefined)
+    try {
+      const project = await remote.projects.create({
+        name: name.trim(),
+        ...researchQuestion.trim() === '' ? {} : { researchQuestion: researchQuestion.trim() },
+      })
+      setName('')
+      setResearchQuestion('')
+      setSelected(project.id)
+      projects.reload()
+    } catch (cause) {
+      setCreateError(cause instanceof Error ? cause.message : String(cause))
+    } finally {
+      setCreating(false)
+    }
+  }
 
   return (
+    session === undefined ? null : (
     <MedPanel title={t('view.research')} state={t(RESEARCH_STATE_KEY[state])}>
+      <header className="hero">
+        <span className="eyebrow">{t('home.eyebrow')}</span>
+        <h1 className="title">{t('home.title')}</h1>
+        <p className="subtitle">{t('home.prompt')}</p>
+      </header>
+      <form className="promptCard" onSubmit={(event) => { event.preventDefault(); void createProject() }}>
+        <h2 className="promptHeading">{t('home.createTitle')}</h2>
+        <div className="formGrid">
+        <label className="field">{t('home.name')} <input className="input" required value={name} onChange={event => { setName(event.currentTarget.value) }} /></label>
+        <label className="field">{t('home.question')} <input className="input" value={researchQuestion} onChange={event => { setResearchQuestion(event.currentTarget.value) }} /></label>
+        <button className="primaryButton" type="submit" disabled={creating}>{creating ? t('home.creating') : t('home.create')}</button>
+        </div>
+        {createError === undefined ? null : <p role="alert">{createError}</p>}
+      </form>
       {projects.loading ? <p>{t('research.PLANNING')}</p> : null}
       {projects.error === undefined ? null : (
         <MedFailure message={projects.error} label={t('error.load')} onReload={projects.reload} />
       )}
+      <section className="section">
+      <div className="sectionHeader"><h2 className="sectionTitle">{t('home.overview')}</h2><span className="sectionMeta">{t('home.overviewHint')}</span></div>
       {!projects.loading && projects.error === undefined && (projects.value ?? []).length === 0
-        ? <p>{t('empty.projects')}</p>
+        ? <p className="empty">{t('empty.projects')}</p>
         : null}
-      <ul style={{ margin: 0, paddingLeft: 18 }}>
+      <div className="projectGrid">
         {(projects.value ?? []).map(project => (
-          <li key={project.id}>
-            <button type="button" onClick={() => { setSelected(project.id) }}>{project.name}</button>
-          </li>
+          <button aria-label={project.name} className="projectCard" data-selected={selected === project.id} key={project.id} type="button" onClick={() => { setSelected(project.id) }}>
+            <span className="projectName">{project.name}</span><span className="projectHint">{t('home.projectHint')}</span>
+          </button>
         ))}
-      </ul>
+      </div>
+      </section>
       {selected === undefined ? null : (
-        <dl style={{ display: 'grid', gridTemplateColumns: 'auto auto', gap: 4, margin: 0 }}>
-          <dt>{t('view.papers')}</dt><dd>{overview.value?.papers ?? 0}</dd>
-          <dt>{t('view.evidence')}</dt><dd>{overview.value?.evidences ?? 0}</dd>
-          <dt>{t('view.statistics')}</dt><dd>{overview.value?.analyses ?? 0}</dd>
-        </dl>
+        <>
+          {overview.loading ? <p>{t('home.loading')}</p> : null}
+          {overview.error === undefined ? null : (
+            <MedFailure message={overview.error} label={t('error.load')} onReload={overview.reload} />
+          )}
+          {overview.error === undefined && overview.value !== undefined ? (
+            <div className="metrics">
+              {[[t('home.questions'), overview.value.questions], [t('home.papers'), overview.value.papers], [t('home.evidence'), overview.value.evidences], [t('home.datasets'), overview.value.datasets], [t('home.analyses'), overview.value.analyses], [t('home.charts'), overview.value.charts]].map(([label, value]) => <div className="metric" key={label}><span className="metricValue">{value}</span><span className="metricLabel">{label}</span></div>)}
+            </div>
+          ) : null}
+        </>
       )}
-      <button type="button" onClick={() => { openView('med-papers', '') }}>
-        {t('view.papers')}
-      </button>
+      <nav className="section" aria-label={t('home.capabilities')}><div className="sectionHeader"><h2 className="sectionTitle">{t('home.capabilities')}</h2></div><div className="capabilityGrid">
+        <button aria-label={t('view.papers')} className="capability" type="button" onClick={() => { openView('med-papers', '') }}><span className="capabilityIcon" aria-hidden="true">⌕</span><span className="capabilityTitle">{t('view.papers')}</span><span className="capabilityText">{t('home.papersDescription')}</span></button>
+        <button aria-label={t('view.evidence')} className="capability" type="button" onClick={() => { openView('med-evidence', '') }}><span className="capabilityIcon" aria-hidden="true">✓</span><span className="capabilityTitle">{t('view.evidence')}</span><span className="capabilityText">{t('home.evidenceDescription')}</span></button>
+        <button aria-label={t('view.statistics')} className="capability" type="button" onClick={() => { openView('med-statistics', '') }}><span className="capabilityIcon" aria-hidden="true">▥</span><span className="capabilityTitle">{t('view.statistics')}</span><span className="capabilityText">{t('home.statisticsDescription')}</span></button>
+      </div></nav>
     </MedPanel>
+    )
   )
 }
 
