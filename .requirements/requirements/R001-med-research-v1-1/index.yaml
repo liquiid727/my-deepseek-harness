@@ -1,15 +1,18 @@
 id: R001
-title: Med Research Workspace V1.1
+title: Med Research Workspace V1
 type: feature
-version: 1.0.0
-status: implementing
+version: 2.1.0
+status: approved
 owner: med-research
 source_prd: ./prd.md
-source_prd_version: 1.0.0
-updated_at: 2026-09-10
+source_prd_version: 2.1.0
+updated_at: 2026-09-12
 specs:
-  - { id: S01, path: ./specs/S01-project-workspace/, status: implementing, owner: med-research, required: true, depends_on: [], covers: [REQ-R001-001, REQ-R001-009, REQ-R001-010], business_outcome: "Create, select, restore, and safely operate an accurate Project workspace." }
-  - { id: S02, path: ./specs/S02-literature-discovery/, status: implementing, owner: med-research, required: true, depends_on: [S01], covers: [REQ-R001-002, REQ-R001-003, REQ-R001-009], business_outcome: "Approve a search, inspect authentic PubMed results, and save papers." }
-  - { id: S03, path: ./specs/S03-paper-reading/, status: implementing, owner: med-research, required: true, depends_on: [S01, S02], covers: [REQ-R001-004, REQ-R001-009], business_outcome: "Read the best source and return to exact cited passages." }
-  - { id: S04, path: ./specs/S04-evidence-claims/, status: implementing, owner: med-research, required: true, depends_on: [S02, S03], covers: [REQ-R001-005, REQ-R001-006, REQ-R001-009], business_outcome: "Receive balanced claims with independently verifiable Evidence and citations." }
-  - { id: S05, path: ./specs/S05-reproducible-statistics/, status: implementing, owner: med-research, required: true, depends_on: [S01], covers: [REQ-R001-007, REQ-R001-008, REQ-R001-009, REQ-R001-010], business_outcome: "Approve, execute, inspect, export, and reproduce analyses safely." }
+  - { id: S01, path: ./specs/S01-project-workspace/, status: approved, owner: med-research, required: true, depends_on: [], covers: [REQ-R001-001, REQ-R001-009, REQ-R001-010, REQ-R001-011, REQ-R001-018], business_outcome: "Create, switch, and recover Projects through the prototype-aligned workbench shell." }
+  - { id: S02, path: ./specs/S02-literature-discovery/, status: approved, owner: med-research, required: true, depends_on: [S01], covers: [REQ-R001-002, REQ-R001-003, REQ-R001-009, REQ-R001-013, REQ-R001-018], business_outcome: "Approve queries and discover, filter, rank, and save authentic literature." }
+  - { id: S03, path: ./specs/S03-paper-reading/, status: approved, owner: med-research, required: true, depends_on: [S01, S02], covers: [REQ-R001-004, REQ-R001-009, REQ-R001-012, REQ-R001-014, REQ-R001-015, REQ-R001-018], business_outcome: "Read authentic sources and create traceable translations, summaries, annotations, notes, and Evidence." }
+  - { id: S04, path: ./specs/S04-evidence-claims/, status: approved, owner: med-research, required: true, depends_on: [S02, S03], covers: [REQ-R001-004, REQ-R001-005, REQ-R001-006, REQ-R001-009, REQ-R001-014, REQ-R001-015, REQ-R001-018], business_outcome: "Verify, compare, and organize Evidence and emit grounded Claims and citations." }
+  - { id: S05, path: ./specs/S05-reproducible-statistics/, status: approved, owner: med-research, required: true, depends_on: [S01], covers: [REQ-R001-001, REQ-R001-007, REQ-R001-008, REQ-R001-009, REQ-R001-010, REQ-R001-011, REQ-R001-018], business_outcome: "Approve, execute, inspect, export, and reproduce statistical analyses." }
+  - { id: S06, path: ./specs/S06-knowledge-library/, status: approved, owner: med-research, required: true, depends_on: [S01, S03, S04], covers: [REQ-R001-001, REQ-R001-009, REQ-R001-012, REQ-R001-015, REQ-R001-017, REQ-R001-018], business_outcome: "Manage and retrieve Project Papers, Evidence, Notes, Tags, and Drafts." }
+  - { id: S07, path: ./specs/S07-skills-center/, status: approved, owner: med-research, required: true, depends_on: [S01, S02, S03, S04, S05, S08], covers: [REQ-R001-009, REQ-R001-010, REQ-R001-016, REQ-R001-018], business_outcome: "Safely discover, create, test, install, and manage research Skills." }
+  - { id: S08, path: ./specs/S08-evidence-writing/, status: approved, owner: med-research, required: true, depends_on: [S04, S06], covers: [REQ-R001-006, REQ-R001-009, REQ-R001-012, REQ-R001-017, REQ-R001-018], business_outcome: "Write and translate with Verified Evidence and export authentic citations." }

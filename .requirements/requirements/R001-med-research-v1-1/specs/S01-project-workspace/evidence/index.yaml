@@ -1,9 +1,83 @@
 standardVersion: specos-test-standard/v2
 requirement: R001
 spec_package: S01
-updated_at: 2026-09-10
+updated_at: 2026-09-11
 plans: []
 schedules: []
-runs: []
+runs:
+  - run_id: S01-implementation-typecheck-20260911
+    test_id: TEST-R001-S01-001
+    spec_id: SPEC-R001-S01
+    command: pnpm --dir plugins/med-research typecheck
+    result: PASS
+    assertions: TypeScript host and client programs typechecked successfully.
+    revision: 2c2fa8b998da49a0899cef3e97768d635cdd997f
+  - run_id: S01-implementation-tests-20260911
+    test_id: TEST-R001-S01-001
+    spec_id: SPEC-R001-S01
+    command: pnpm --dir plugins/med-research test
+    result: PASS
+    assertions: 48 files; 265 passed; 1 skipped; 266 total.
+    revision: worktree-20260911
+  - run_id: S01-implementation-typecheck-20260911-rerun
+    test_id: TEST-R001-S01-001
+    spec_id: SPEC-R001-S01
+    command: pnpm --dir plugins/med-research typecheck
+    result: PASS
+    assertions: TypeScript host and client programs typechecked successfully.
+    revision: worktree-20260911
+  - run_id: S01-implementation-tests-20260911-rerun
+    test_id: TEST-R001-S01-001
+    spec_id: SPEC-R001-S01
+    command: pnpm --dir plugins/med-research test
+    result: PASS
+    assertions: 48 files; 265 passed; 1 skipped; 266 total.
+    revision: worktree-20260911
+  - run_id: S01-implementation-client-build-20260911
+    test_id: TEST-R001-S01-005
+    spec_id: SPEC-R001-S01
+    command: pnpm --dir plugins/med-research verify:client
+    result: PASS
+    assertions: Client bundle emitted and module-loader artifact contract verified.
+    revision: worktree-20260911
+  - run_id: S01-implementation-client-build-20260911-rerun
+    test_id: TEST-R001-S01-005
+    spec_id: SPEC-R001-S01
+    command: pnpm --dir plugins/med-research build:client
+    result: PASS
+    assertions: Client bundle emitted successfully.
+    revision: worktree-20260911
+  - run_id: S01-implementation-client-verify-20260911-rerun
+    test_id: TEST-R001-S01-005
+    spec_id: SPEC-R001-S01
+    command: pnpm --dir plugins/med-research verify:client
+    result: PASS
+    assertions: Client bundle and module-loader artifact contract verified.
+    revision: worktree-20260911
+  - run_id: S01-browser-hero-entry-20260911
+    test_id: TEST-R001-S01-004
+    spec_id: SPEC-R001-S01
+    command: ego-browser against http://127.0.0.1:3099/
+    result: BLOCKED
+    assertions: Hero and localized open-research-workspace control rendered; clicking the control did not transition to Research Home in the reused profile process.
+    environment: ego-browser Chromium; viewport 1492x748; existing DSH process PID 58003; port 3099
+    flaky: unclassified
+    revision: worktree-20260911
+  - run_id: S01-browser-research-home-20260911
+    test_id: TEST-R001-S01-004
+    spec_id: SPEC-R001-S01
+    command: ego-browser against clean dsh --profile med-research --port 3099
+    result: PASS
+    assertions: Root Hero launch transitioned to Research Home; project form and empty state rendered; project creation produced a persisted project with zeroed overview counts.
+    environment: ego-browser Chromium; desktop 1492x748 and narrow 390x844; clean profile process; project S01 Browser Verification
+    flaky: no
+    revision: worktree-20260911
+  - run_id: S01-implementation-readme-pairing-20260911
+    test_id: TEST-R001-S01-005
+    spec_id: SPEC-R001-S01
+    command: pnpm run verify-translation-pairing plugins/med-research/packages/medical-contracts/README.md plugins/med-research/packages/plugin-medical-ui/README.md plugins/med-research/packages/plugin-project/README.md
+    result: PASS
+    assertions: Three touched bilingual README pairs are consistent.
+    revision: 2c2fa8b998da49a0899cef3e97768d635cdd997f
 gates: []
 artifacts: []

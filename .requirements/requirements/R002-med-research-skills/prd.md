@@ -2,12 +2,12 @@
 id: R002
 title: Med Research Skills Workspace
 type: feature
-version: 0.1.0
-status: draft
+version: 0.2.0
+status: blocked
 priority: P1
 owner: med-research
 created_at: 2026-09-10
-updated_at: 2026-09-10
+updated_at: 2026-09-12
 affects: [plugins/med-research, asset/skill工作台.png]
 ---
 
@@ -15,7 +15,9 @@ affects: [plugins/med-research, asset/skill工作台.png]
 
 ## 1. Summary
 
-R002 owns the future Skill Center, Marketplace, and Skill Builder suggested by the capability matrix and `asset/skill工作台.png`. It is separate from R001 because authoring, installing, publishing, and executing Skills introduce distinct trust, permission, version, and evaluation decisions. It remains draft until those decisions are approved.
+R002 保留永久 Requirement ID，但不再提供实现授权。完整 V1 的 Skill Center、Builder、本地发布、Workspace 安装、权限和生命周期由 [R001 2.0 S07](../R001-med-research-v1-1/specs/S07-skills-center/spec.md) 统一拥有；实现者不得从本草案生成并行 Spec 或第二套产品合同。
+
+本 Workspace 保持 blocked，直到维护者决定删除其重复正文或为 R001 范围之外的新 Skills 产品结果重新立项。其余内容仅保留原草案问题记录，不覆盖 R001。
 
 ## 2. Background
 

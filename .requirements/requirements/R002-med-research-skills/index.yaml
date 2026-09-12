@@ -1,10 +1,10 @@
 id: R002
 title: Med Research Skills Workspace
 type: feature
-version: 0.1.0
-status: draft
+version: 0.2.0
+status: blocked
 owner: med-research
 source_prd: ./prd.md
-source_prd_version: 0.1.0
-updated_at: 2026-09-10
+source_prd_version: 0.2.0
+updated_at: 2026-09-12
 specs: []

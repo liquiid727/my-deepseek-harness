@@ -2,7 +2,7 @@
 requirement: R002
 source_prd: ./prd.md
 source_index: ./index.yaml
-source_prd_version: 0.1.0
+source_prd_version: 0.2.0
 decision: blocked
 qa_owner: unassigned
 product_approver: unassigned
@@ -14,15 +14,15 @@ promotion: denied
 
 ## Acceptance Scope and Version
 
-- PRD version: 0.1.0 draft
+- PRD version: 0.2.0 blocked；R001 2.0 S07 是完整 V1 Skills 的唯一实现合同
 - Product approver: unassigned
 - UAT scope: inventory, authoring, controlled test, publication, installation,
   upgrade, revocation, and prototype-aligned desktop/narrow UI
 
 ## Required Spec Package Decisions
 
-No child Spec Package is authorized while Q-R002-001 through Q-R002-005 remain
-open and the PRD remains draft.
+No child Spec Package is authorized. R001 2.0 S07 owns the approved V1 outcome;
+this Workspace cannot create a competing contract.
 
 ## PRD Acceptance Criteria
 

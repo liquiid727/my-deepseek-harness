@@ -5,103 +5,167 @@ test_spec_id: TEST-R001-S05
 source_prd: ../../prd.md
 source_spec: ./spec.md
 source_spec_id: SPEC-R001-S05
-source_spec_version: 1.0.0
-source_spec_hash: 3bf3d9bb165d12b147db838555a890867fa8256900ee74ac62582033638db7a6
-version: 1.0.0
-status: draft
+source_spec_version: 2.1.0
+source_spec_hash: 86e828a36ac5a0ac134d23fd0ad35347e52195945da468e5c4b84d1473f7c4e6
+version: 2.0.0
+status: review
 owner: med-research-testing
 qualityProfile: fullstack-flow
 riskTier: P0
 ---
 
-# Test Design - S05 Reproducible Statistics
+# Test Design — S05 Statistics Lab
 
 ## 1. Purpose and Scope
 
-Prove the approved Reproducible Statistics Spec at its public service/tool/Remote/browser seams. Execution results belong in `evidence/`.
+验证 [Spec](spec.md) 的全部 V1 P0/P1 行为，含[逐项能力](../../coverage.md)、[共享接口](../../interfaces.md)、[UI 约束](../../ui-acceptance.md)和[内置 Skill](../../builtin-skills.md)。本文件只定义计划，未执行且未获人工测试设计批准；历史 evidence 不能视为本版本结果。
 
-In scope: REQ-R001-007, REQ-R001-008, REQ-R001-009, REQ-R001-010, AC-R001-007, AC-R001-008, AC-R001-009, AC-R001-010, AC-R001-011. Out of scope: R002 and R001 Non-Goals.
+In scope: REQ-R001-001, REQ-R001-007, REQ-R001-008, REQ-R001-009, REQ-R001-010, REQ-R001-011, REQ-R001-018；AC-R001-009, AC-R001-010, AC-R001-013, AC-R001-014, AC-R001-015。实现耦合单测覆盖数据/算法，独立 Service/Remote、profile、浏览器、Runner 与医学评审分别覆盖实际消费行为。代码实现、生产上线、真实患者数据和 R001 Non-Goals 不属于此文档操作范围。
 
 ## 2. Coverage Matrix
 
-| Requirement | Spec | Test | Category / level | Required Evidence | Gate |
-|---|---|---|---|---|---|
-| REQ-R001-007, REQ-R001-008, REQ-R001-009, REQ-R001-010 | SPEC-R001-S05-001 | TEST-R001-S05-001 | happy / integration | assertion report + persisted state | blocking |
-| REQ-R001-007, REQ-R001-008, REQ-R001-009, REQ-R001-010 | SPEC-R001-S05-001, SPEC-R001-S05-002, SPEC-R001-S05-003 | TEST-R001-S05-002 | negative / contract | error and no-illegal-side-effect assertions | blocking |
-| INV/EDGE mapped by Spec | SPEC-R001-S05-001, SPEC-R001-S05-002, SPEC-R001-S05-003 | TEST-R001-S05-003 | invariant / E2E | trace + domain state | blocking |
-| REQ-R001-009 | SPEC-R001-S05-001, SPEC-R001-S05-002, SPEC-R001-S05-003 | TEST-R001-S05-004 | UI / browser | screenshots + trace at desktop/narrow | blocking |
-| AC-R001-007, AC-R001-008, AC-R001-009, AC-R001-010, AC-R001-011 | SPEC-R001-S05-001, SPEC-R001-S05-002, SPEC-R001-S05-003 | TEST-R001-S05-005 | release scenario | normalized run + raw refs | blocking |
+| Requirement | Spec behavior | Planned Test | Level / evidence / gate |
+|---|---|---|---|
+| REQ-R001-001, REQ-R001-007, REQ-R001-008, REQ-R001-009, REQ-R001-010, REQ-R001-011, REQ-R001-018 | SPEC-R001-S05-001 | TEST-R001-S05-006 | 独立 Service/Remote + 持久化；逐 feature 断言、响应/状态记录；blocking |
+| REQ-R001-001, REQ-R001-007, REQ-R001-008, REQ-R001-009, REQ-R001-010, REQ-R001-011, REQ-R001-018 | SPEC-R001-S05-002 | TEST-R001-S05-007 | 独立 Service/Remote + 持久化；逐 feature 断言、响应/状态记录；blocking |
+| REQ-R001-001, REQ-R001-007, REQ-R001-008, REQ-R001-009, REQ-R001-010, REQ-R001-011, REQ-R001-018 | SPEC-R001-S05-003 | TEST-R001-S05-008 | 独立 Service/Remote + 持久化；逐 feature 断言、响应/状态记录；blocking |
+| REQ-R001-001, REQ-R001-007, REQ-R001-008, REQ-R001-009, REQ-R001-010, REQ-R001-011, REQ-R001-018 | SPEC-R001-S05-004 | TEST-R001-S05-009 | 独立 Service/Remote + 持久化；逐 feature 断言、响应/状态记录；blocking |
+| REQ-R001-009 | 全部 UI 行为 | TEST-R001-S05-004 | 真实浏览器截图/操作 trace/console；blocking |
+| REQ-R001-018 | 全部注册与模型可见行为 | TEST-R001-S05-003, TEST-R001-S05-005 | profile/Session replay/disposal；blocking |
+
+BR-R001-001..005、INV-R001-001..007、EDGE-R001-001..010 按责任适用：所有包承担范围/来源/回放/并发/窄屏，S01 承担无 Session/导入，S02/S04 承担 Connector partial，S03/S04/S06/S08 承担 anchor/Claim/Draft，S05 承担 Runner/行隐私，S07 承担 Skill 扩权。无该领域 API 的包不重复执行其负例，但 TEST-R001-S05-005 必须引用对应 owner 的集成结果。每项 AC-R001-009, AC-R001-010, AC-R001-013, AC-R001-014, AC-R001-015 都需当前绑定结果。
 
 ## 3. Test Environment and Data
 
-- Fixtures / dependencies: dataset/statistics/runner/artifact tests; statistics-chain; browser.
-- Dependency mode: recorded for deterministic connector cases; real service/storage/profile for E2E; live PubMed only in explicit E2E.
-- Environment: Node supported by root package, med-research profile, temporary isolated workspace/storage, Chrome desktop 1440x900 and narrow 390x844.
-- Isolation/cleanup: unique temp root and database per run; abort requests and stop processes; preserve failed artifacts.
-- PII/secrets: synthetic/public literature data only; redact keys; no patient row data in model/browser evidence.
-- Baseline: record commit, dirty-tree fingerprint, platform, dependencies, Spec hash, and timestamp.
+- 数据集计划名称 R001-S05-contract-v1，包含下方每个命名输入与负例；实现测试资产时记录精确文件/hash。这些名称是待创建的验证数据，不声称现有 fixture 已覆盖。
+- 公共文献样本使用有许可的 Abstract、PDF 与 PMC XML，保存真实 PMID/DOI/source response；录制网络只用于确定性负例，live Connector/模型是完整流程独立证据。
+- 统计预览用 8 行合成数据；方法/图表用 seed=20260912、400 行合成数据，含 numeric/categorical/binary/time/event 和明确 missing。验证者用独立参考脚本冻结结果与数据 hash，数值绝对/相对容差均 1e-6；不直接复制产品结果作 expected。若平台数值误差需调整，先记录依据并人工批准设计版本。
+- Node 使用仓库支持版本、实际 med-research profile、真实 service/storage 与构建产物。浏览器环境和三种 viewport 由 UI 约束固定。启动须经 dsh profile；执行记录必须写实际 launcher 命令、参数、配置 hash，不用凭空指定的 package bin。
+- 每个 run 用独立临时目录、数据库、Project/Session/port；异步阶段用可观测事件屏障，不用固定 sleep。取消/测试失败也等待 Agent、Runner、网络请求与监听器释放；保留失败证据后清理本 run 所有资源。
+- 医学案例与 Skill 语义数据由 [评估协议](../../evaluation.md)冻结；样本与阈值未批准时记录 BLOCKED，不能自动接受。密钥只由部署提供，日志脱敏；真实患者行禁止作为截图或 fixture。
 
 ## 4. Affected Observable Surfaces
 
-| Surface | Consumer / entry | Verification | Evidence | Gate |
-|---|---|---|---|---|
-| package-api | owning med services/tools | focused package and contract assertions | raw test report | blocking |
-| browser-ui | supported dsh med-research profile | 统计lab.png desktop/narrow result and failure states | screenshots, console, interaction trace | blocking |
-| persistence-protocol | med storage/project files | round-trip and invalid-version rejection | state dump/hash | blocking |
-| model-visible-output | real tool registry/session | reconstruct inputs/results; no invented data | keyless snapshot/session refs | blocking |
-| security-concurrency-cleanup | protected actions and lifecycle | rejection, retry/duplicate, cleanup | assertion/trace | blocking |
-| build-release-artifact | client bundle/profile | built-load smoke | build/load report | blocking |
+| Surface | Consumer | Evidence |
+|---|---|---|
+| API / storage | 下方明确列出的公开操作及真实 Provider | response、前后 state、ID/version/audit 对照 |
+| UI | med-research profile 中对应 view/action | 三视口截图、焦点/布局断言、trace/console |
+| Model / Session | 实际 Agent/Tool pipeline 与不可变内容引用 | 版本化 keyless session replay、逐输入重建比对 |
+| Security / lifecycle | 真实工具权限与任务释放 | 拒绝时零调用/零非法写、资源清理记录 |
+| Build / delivery | Loader 装载的真实 profile 包 | module export 与 client 注册 smoke、缺依赖负例 |
+
+以上均为 blocking；源码单测不代替构建装载，静态组件截图不代替真实服务流程。涉及 SessionEventMap 时同时计划 TypeScript/Python SDK 预期输出，记录受影响项；无事件变化时说明不适用理由。
 
 ## 5. Test Scenarios
 
 ### TEST-R001-S05-001 Primary outcome
-Covers: REQ-R001-007, REQ-R001-008, REQ-R001-009, REQ-R001-010; SPEC-R001-S05-001, SPEC-R001-S05-002, SPEC-R001-S05-003; AC-R001-007, AC-R001-008, AC-R001-009, AC-R001-010, AC-R001-011.
-Given valid versioned inputs and an isolated Project, when Upload-profile-plan-approve-execute-result-chart-provenance, then public output, persisted state, UI state, audit, and identifiers agree.
-Required evidence / gate: raw assertions plus normalized mapping / blocking.
+
+Given 下方正例输入与独立 Project，When 通过 medDatasets.import/profile/correct 完成该业务并重载，Then 用户可见结果与各 owned record 的 ID/version/来源一致；不能只检查模型声称成功。覆盖本包全部 REQ/AC 的主流程，由 006 起的精确行为用例提供分项断言。
 
 ### TEST-R001-S05-002 Failure honesty
-Covers: mapped BR/INV/EDGE and SPEC-R001-S05-001, SPEC-R001-S05-002, SPEC-R001-S05-003.
-Given No approval; network/import/resource/code/figure failure, when the public seam runs, then it returns the declared stable failure/partial state and creates no forbidden state, source, result, or success feedback.
-Required evidence / gate: negative assertion and before/after state / blocking.
+
+Given 下方每项负例（合成 8 行 CSV 与双 sheet XLSX，列含 numeric/category/missing；另有重复列名/公式无缓存；合成 binary Outcome 与 numeric/categorical covariates；当前 profile；成功代码、异常/timeout/network/path/secret/资源/不允许 import；进程中断；对应七类图的适用数据，线性/Logistic/RR/Survival/Meta 独立参考数值），When 调用对应公开操作，Then 返回 Spec 声明错误/partial，成功记录保留、非法写为零。每个负例单列输入、实际 code、前后状态，不把一次通用失败代表所有失败分支。
 
 ### TEST-R001-S05-003 Invariant, retry, and isolation
-Covers: INV-R001-001..006 as applicable.
-Given duplicate/concurrent/cancelled actions and scoped Project/session state, when operations race or retry, then one valid final state remains, cross-project access is absent, cleanup completes, and logged model state is reconstructable.
-Required evidence / gate: test report and correlation IDs / blocking.
+
+Given 相同 requestId 的重复输入/不同输入、相同 expectedVersion 的并发写、Project 切换和取消屏障，When 调用本包写操作与跨 Project 伪造请求，Then 相同请求复用、异输入 REQUEST_CONFLICT、落后写 VERSION_CONFLICT、越权 SCOPE_DENIED；没有双终态或旧 Project 回包污染。随后释放贡献并重装，数量不累积；逐个重建模型输入，不含 Dataset 行/密钥。
 
 ### TEST-R001-S05-004 Asset-aligned browser UI
-Covers: REQ-R001-009 and AC-R001-009.
-Given real service data for loading, empty, success, partial, and failure, when rendered at desktop and narrow viewports, then 统计lab.png desktop/narrow result and failure states; primary actions remain keyboard reachable, localized, readable, and non-overlapping; console has no uncaught errors.
-Required evidence / gate: same-run screenshots, trace, console, and semantic checklist / blocking.
+
+Given [UI 验收](../../ui-acceptance.md)规定的真实数据与本包页面，When 执行对应截图场景及所有 loading/empty/partial/failure/窄屏/键盘/zh-en 操作，Then 每个规定区域、控件、密度、来源状态与焦点断言分别通过。S06/S08 按共享 list/editor 约束验收；跨包 Research 截图允许引用同一集成 run，但不能省去本包断言。
 
 ### TEST-R001-S05-005 Supported-profile release scenario
-Covers: AC-R001-007, AC-R001-008, AC-R001-009, AC-R001-010, AC-R001-011.
-Given the built client/plugin and supported profile, when the representative user journey runs through real public seams, then the terminal user outcome completes and every claimed result links to current raw evidence.
-Required evidence / gate: normalized run, raw report/trace, commit and Spec hash / blocking.
+
+Given 构建后的全部 required contributions 与获准模型/Connector/Runner，When 从用户入口完成本包主流程并在新进程重开，Then 真实终态、持久数据与 keyless Session 回放一致；scope/平台缺依赖时明确失败。按 [医学评估](../../evaluation.md)提供 live 模型/来源及 reviewer 结果，缺凭据/数据/依赖记录 BLOCKED 或 NOT_RUN，不能用 self-skip 视为验收通过。
+
+### TEST-R001-S05-006 Dataset profile
+
+Covers: SPEC-R001-S05-001；REQ-R001-007, REQ-R001-008, REQ-R001-009, REQ-R001-010, REQ-R001-018；AC-R001-009, AC-R001-010, AC-R001-013, AC-R001-014, AC-R001-015。关联 [coverage](../../coverage.md) 中指向此 TEST 的每一行。
+
+Category / level: 独立 Service/Remote 集成与负例；Owner: med-research-testing；Gate: blocking。
+
+Given: 合成 8 行 CSV 与双 sheet XLSX，列含 numeric/category/missing；另有重复列名/公式无缓存。
+
+When: 通过 medDatasets.import/profile/correct，选择 sheet、看前五行、修正类型，拒绝无效列，重载。
+
+Then: schema/profile 与实际文件一致，缺失/排除数量准确；原文件 hash 不改；模型/Session 无 preview 行。
+
+Required evidence: 分项输入/输出断言、服务响应、操作与审计 ID、前后持久状态；UI 行为同时引用 TEST-R001-S05-004，医学判断引用冻结评审结果。每个 coverage feature 单列 PASS/FAIL/BLOCKED/NOT_RUN；无执行结果不得填 PASS。
+
+### TEST-R001-S05-007 Plan/code/approval
+
+Covers: SPEC-R001-S05-002；REQ-R001-007, REQ-R001-008, REQ-R001-009, REQ-R001-010, REQ-R001-018；AC-R001-009, AC-R001-010, AC-R001-013, AC-R001-014, AC-R001-015。关联 [coverage](../../coverage.md) 中指向此 TEST 的每一行。
+
+Category / level: 独立 Service/Remote 集成与负例；Owner: med-research-testing；Gate: blocking。
+
+Given: 合成 binary Outcome 与 numeric/categorical covariates；当前 profile。
+
+When: 通过 statistics_plan/generate_code、approval，逐方法生成计划/代码，未审批 execute，审批后修改任一输入/策略。
+
+Then: 明确编码/方法/缺失处理；WAITING_APPROVAL 在代码后；无批准零执行，旧批准失效；相同 request 幂等。
+
+Required evidence: 分项输入/输出断言、服务响应、操作与审计 ID、前后持久状态；UI 行为同时引用 TEST-R001-S05-004，医学判断引用冻结评审结果。每个 coverage feature 单列 PASS/FAIL/BLOCKED/NOT_RUN；无执行结果不得填 PASS。
+
+### TEST-R001-S05-008 Runner and history
+
+Covers: SPEC-R001-S05-003；REQ-R001-007, REQ-R001-008, REQ-R001-009, REQ-R001-010, REQ-R001-018；AC-R001-009, AC-R001-010, AC-R001-013, AC-R001-014, AC-R001-015。关联 [coverage](../../coverage.md) 中指向此 TEST 的每一行。
+
+Category / level: 独立 Service/Remote 集成与负例；Owner: med-research-testing；Gate: blocking。
+
+Given: 成功代码、异常/timeout/network/path/secret/资源/不允许 import；进程中断。
+
+When: 通过 statistics_execute、medRunner、listRuns/getRun，执行、双击、取消、重启恢复、查看历史。
+
+Then: 隔离真实生效；同批准一次执行；失败保留代码脱敏日志无结果/artifact；终止后无子进程，history 可重开。
+
+Required evidence: 分项输入/输出断言、服务响应、操作与审计 ID、前后持久状态；UI 行为同时引用 TEST-R001-S05-004，医学判断引用冻结评审结果。每个 coverage feature 单列 PASS/FAIL/BLOCKED/NOT_RUN；无执行结果不得填 PASS。
+
+### TEST-R001-S05-009 Results/charts/export
+
+Covers: SPEC-R001-S05-004；REQ-R001-007, REQ-R001-008, REQ-R001-009, REQ-R001-010, REQ-R001-018；AC-R001-009, AC-R001-010, AC-R001-013, AC-R001-014, AC-R001-015。关联 [coverage](../../coverage.md) 中指向此 TEST 的每一行。
+
+Category / level: 独立 Service/Remote 集成与负例；Owner: med-research-testing；Gate: blocking。
+
+Given: 对应七类图的适用数据，线性/Logistic/RR/Survival/Meta 独立参考数值。
+
+When: 通过 Statistics results/interpretation/export，每种方法运行并比对数值，生成七图并各导出 PNG/SVG；注入坏 hash/SVG/解释失败。
+
+Then: 效应/CI/P 与独立参考在预先声明数值容差内；每类至少一个成功图；坏产物不发布；解释失败保留成功数据且标错。
+
+Required evidence: 分项输入/输出断言、服务响应、操作与审计 ID、前后持久状态；UI 行为同时引用 TEST-R001-S05-004，医学判断引用冻结评审结果。每个 coverage feature 单列 PASS/FAIL/BLOCKED/NOT_RUN；无执行结果不得填 PASS。
 
 ## 6. Required Coverage and Regression
 
-- Required: unit/contract/integration, negative/failure, persistence, audit, duplicate/cancel, browser/E2E, bundle/profile compatibility; security and performance where the Spec applies.
-- Regression: dataset/statistics/runner/artifact tests; statistics-chain; browser; adjacent shared contracts and med profile composition.
-- Exploratory: dense/long localized content, narrow layout, partial dependencies, and recovery.
+回归范围为本包全部行为与共享接口消费者；每次输入/版本/权限变更覆盖重试、取消、并发、外部失败与原状态保留。Source/API 验证、独立 profile/持久化验证、UI/模型评估分层执行，不复用同一内部实现作为预期 oracle。性能由 S02 完整 Research 集成计时，本包引入同步 UI 阻塞或未释放任务同样失败。
+
+非平凡产品/模型可见实现必须交付 keyless recorded-session snapshot；UI-only expected output 属于拥有者本地，不占顶层 Session fixture。图形演示随后续 GUI PR 的真实 server/model flow 记录；本次只写计划，不生成伪运行证据。
 
 ## 7. Evidence, Gates, and Flaky Policy
 
-Every run records TEST/SPEC IDs, Spec hash, commit/worktree, environment, time, command/runner, result, assertions, raw artifacts, correlation IDs, and flaky classification in `evidence/index.yaml`. Passing totals alone are insufficient. A retry never converts an unexplained blocking failure to PASS.
+每条结果登记 evidence/index.yaml，携带 TEST/SPEC IDs、Spec/Test version/hash、PRD 及规范附件 hash、源代码 commit 和 dirty-tree fingerprint、命令/runner、环境/配置/依赖版本、时间、断言、实际状态、artifact 与 correlation IDs。同一集成 run 可供多个 TEST 引用，必须逐项映射；任一相关输入/代码/配置变化使受影响证据 stale。
 
-| Stage | Required checks | Blocking |
+| Stage | Owner / checks | Invalidated by / result |
 |---|---|---|
-| PR | focused unit/contract, changed critical path, typecheck | yes |
-| Merge/nightly | full package regression, profile scenario, applicable Eval | yes |
-| Pre-production | real browser journey, live dependency where required, platform security/performance | yes |
+| 实现 PR | 实现者执行受影响单测、类型与公开消费 smoke；QA 执行改变行为的正负例 | 相关 source/config/Spec 变化；阻塞 |
+| 包验证 / merge | med-research-testing 独立执行 001–009（S08 至 008）及需要的模型/安全/性能案例 | 当前绑定或环境不符；阻塞 |
+| 完整 V1 验收 | 产品/医学 reviewer 汇总八包、五原型、13 Skill、全部冻结 Gold Set | 缺 required 结果/人工审批；blocked，禁止 promotion |
+
+每次失败保留原 attempt；重试通过不抹掉 flaky。产品缺陷回到实现，测试缺陷依据 Spec 修正，环境失败只阻塞依赖该环境的检查；未分类 flaky 不能通过 required gate。完整证据不足不能用通过总数掩盖。
 
 ## 8. Agent Eval Plan
 
-Not applicable: this package is verified through deterministic full-stack behavior; any Agent-mediated fields use the owning R001 requirement contract.
+本包模型行为遵循[医学评估协议](../../evaluation.md)与[内置目录](../../builtin-skills.md)，PR smoke 选择改变行为的冻结正例/反例/不足/越权案例，发布执行完整集合。统计数值由独立确定性参考验算，AI 解释不得新增结果；provenance=100%，未审批执行/行暴露=0。
+
+AI 生成的本设计与案例需人工评审 coverage、assertions、risk、数据、隔离与 gate 后才能 status=approved；当前 status=review。线上观察仅作为未来执行协议，实际采样需获准脱敏数据，不授权本轮访问生产数据。
 
 ## 9. Exit Criteria
 
-- [ ] Every mapped P0 REQ/SPEC/BR/INV/EDGE/AC has evidence.
-- [ ] Blocking behavior, security, compatibility, and UI checks pass.
-- [ ] Evidence binds this Spec hash and tested revision.
-- [ ] No unresolved P0/P1 defect or unclassified flaky result remains.
+- [ ] 测试设计已获人工批准并绑定当前 Spec 与附件。
+- [ ] 每条 P0/P1 功能及 applicable REQ/AC/BR/INV/EDGE 有当前结果。
+- [ ] 所有 blocking 行为、安全、profile、UI 与医学门槛通过。
+- [ ] 无未解释的 flaky、失败或旧版本证据复用。
+- [ ] 独立 Review 与 QA 完成；本设计不自行作 accepted 决定。
+
+## Normative Source Binding
+
+本设计除 Spec hash 外同时绑定[规范文件清单](../../contract-manifest.yaml)，bundle SHA-256 为 a9a491f65eb02d94a111241db410934e7a25aa5388ac4ea2e0df502a317716c6。清单任一文件变化使受影响用例 stale；必须重新评审并更新绑定，不能只比 spec.md 判断证据可复用。

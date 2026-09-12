@@ -1,0 +1,22 @@
+requirement: R001
+source_prd_version: 2.1.0
+approved_at: 2026-09-12
+algorithm: sha256
+bundle_algorithm: "SHA-256 of sorted relativePath + NUL + fileSHA256 + LF entries"
+bundle_sha256: a9a491f65eb02d94a111241db410934e7a25aa5388ac4ea2e0df502a317716c6
+files:
+  builtin-skills.md: 36bb3e690069d73aaabf37241d812b200481f2a7a4848a5061ccbc86c8dc5060
+  coverage.md: 8e51bf30083fc31b729e189df7665876f25cb034a43ba75bad87a35bfe702301
+  evaluation.md: 591bc81311f81c7938c61c98a92fe5d4790993f1a42dcc9f92f50f7930551cc8
+  index.yaml: a6f96f5af2ac09145b23c98157632ede3cf9e8ef5e817deeedee027e18374893
+  interfaces.md: 5103f91b9fa06155463900a3670ac6293c5f8ce844ffb6ce9e890d2308ab7903
+  prd.md: 7961c6481dda02e1f7cafb1487b3f7b145713fe6d483cbb2c807e34311366ba1
+  specs/S01-project-workspace/spec.md: 3d1fac01601985ad283ce24d7353e2ae28aec4445485bc230793b7c0ddbd201a
+  specs/S02-literature-discovery/spec.md: 79809d3272192f4fb499282875e200016dc1c7daa01aefa3b729aa749c72d1f6
+  specs/S03-paper-reading/spec.md: d94d55975c100da1c28fa503b93dd61888c582b3dccac635aba5f0e731be5ff4
+  specs/S04-evidence-claims/spec.md: ae8af8dafa116a6df0c5519965bd8e57176202fe22c5e38562fccf8a3388bba8
+  specs/S05-reproducible-statistics/spec.md: 86e828a36ac5a0ac134d23fd0ad35347e52195945da468e5c4b84d1473f7c4e6
+  specs/S06-knowledge-library/spec.md: e601d8bd2a367d7c5e1755b32b3cb690c63f0e65319d00ccf1433e53f43eb5a1
+  specs/S07-skills-center/spec.md: 78241219a2ecbbd97a16157304b6c926e17babc882a93908131fa3bbecc49b0a
+  specs/S08-evidence-writing/spec.md: e4e3eaf3775d5bd8c6a16df56f4be21401280ba5ba2ef8d2ec96e3ab228aa54c
+  ui-acceptance.md: 20c1fb93a72b5b987166c87b2d9fd8497127be7e7a245a1834fc90e2d18baf27
