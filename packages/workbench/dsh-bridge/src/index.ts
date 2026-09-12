@@ -1,6 +1,6 @@
 /** DSH durable-log projection for the runtime-neutral Workbench stream. @module @deepseek-ai/dsh-workbench-bridge */
 
-import { CallId, createAssistantMessage, createToolResultMessage, createUserMessage } from '@deepseek-ai/dsh-llm'
+import { createAssistantMessage, createToolResultMessage, createUserMessage, ToolCallId } from '@deepseek-ai/dsh-llm'
 import type { Session } from '@deepseek-ai/dsh-session'
 import { WorkbenchSessionId, type WorkbenchEvent } from '@deepseek-ai/dsh-workbench-contract'
 import { JsonWorkbenchSessionMappingStore, PiWorkbenchRuntime, createEmbeddedPiSessionFactory, type PiSessionFactory, type WorkbenchSessionMappingStore } from '@deepseek-ai/dsh-pi-adapter'
@@ -219,14 +219,14 @@ export class WorkbenchDshBridge {
       }
       case 'tool.start': {
         const state = this.messageState(event.sessionId)
-        session.append('tool/call', { turn: state.turn, step: state.step, callId: CallId(event.toolCallId), name: event.toolName, arguments: JSON.stringify(event.args ?? {}) })
+        session.append('tool/call', { turn: state.turn, step: state.step, callId: ToolCallId(event.toolCallId), name: event.toolName, arguments: JSON.stringify(event.args ?? {}) })
         break
       }
       case 'tool.end': {
         const state = this.messageState(event.sessionId)
         const error = event.error
         const output = error === undefined ? JSON.stringify(event.result ?? null) : error.message
-        session.append('tool/result', { turn: state.turn, step: state.step, message: createToolResultMessage({ callId: CallId(event.toolCallId), content: [{ type: 'text', text: output }], isError: error !== undefined }), ...(error === undefined ? {} : { error: { name: 'PiRuntimeError', code: error.code ?? 'PI_TOOL_ERROR' } }) }, { surfaceOp: 'append' })
+        session.append('tool/result', { turn: state.turn, step: state.step, message: createToolResultMessage({ callId: ToolCallId(event.toolCallId), content: [{ type: 'text', text: output }], isError: error !== undefined }), ...(error === undefined ? {} : { error: { name: 'PiRuntimeError', code: error.code ?? 'PI_TOOL_ERROR' } }) }, { surfaceOp: 'append' })
         break
       }
       case 'tool.update':

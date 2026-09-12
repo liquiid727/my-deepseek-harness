@@ -161,6 +161,14 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
     'conversation.hero.brand.mark': { kind: 'single'; scope: 'root'; owner: HeroBrandMarkOwnerProps }
     /** Agent-preset control staged for a New Session. */
     'conversation.hero.agentPreset': { kind: 'single'; scope: 'root'; owner: HeroAgentPresetOwnerProps }
+    /** Root-level launch controls shown before a Session exists. */
+    'conversation.hero.launch': { kind: 'list'; scope: 'root'; owner: ConversationHeroLaunchOwnerProps }
+    /** Session-owned launch controls shown while the blank-session Hero is visible. */
+    'conversation.hero.actions': {
+      kind: 'list'
+      scope: 'session'
+      owner: ConversationHeroActionOwnerProps
+    }
     /** Full-width entries above the composer card. */
     'conversation.input.dock': { kind: 'list'; scope: 'session'; owner: InputZone }
     /** Floating entries rendered inside the resident composer card. */
@@ -221,6 +229,18 @@ export interface ConversationHeaderActionOwnerProps {
   children?: never
 }
 
+/** Actions placed above the blank-session Hero composer. */
+export interface ConversationHeroActionOwnerProps {
+  /** Select one View and address one opaque focus identity to it. */
+  openView: (view: string, focus: string) => void
+}
+
+/** Owner values for Hero controls shown before a Session exists. */
+export interface ConversationHeroLaunchOwnerProps {
+  /** Start a Session and activate the requested View once it opens. */
+  startSession: (view: string) => void
+}
+
 /** The header corner's occupant derives its state from standard Session props. */
 export interface ConversationHeaderCornerOwnerProps {
   /** Marker field: the occupant receives no owner-specific values. */
@@ -260,6 +280,8 @@ export type ConvViewProps = PropsRuntime<'conversation.view'>
 export interface ConversationInjected {
   /** Connect and open a blank Session in the selected Workspace. */
   selectWorkspace: (workspaceId: WorkspaceId) => Promise<void>
+  /** Start a Session and optionally activate a registered View. */
+  startSession: (view?: string) => void
   /** Session-addressed composer block source, or the stable absent source. */
   hooks: { composerBlock: ObservableSnapshot<ComposerBlock | undefined> }
 }
@@ -372,6 +394,7 @@ export type ConversationSlotProps =
     | 'conversation.hero.brand.mark'
     | 'conversation.hero.workspace'
     | 'conversation.hero.agentPreset'
+    | 'conversation.hero.launch'
   >
   & InjectFace<ConversationInjected>
   & PropsLocale<'conversation'>
@@ -382,7 +405,7 @@ export type ConversationStore = ReturnType<typeof createConversationStore>
 /** Full props of the strict Session body. */
 export type ConversationSessionSlotProps =
   PropsRuntime<'conversation.session'>
-  & PropsRenderSlots<'conversation.view'>
+  & PropsRenderSlots<'conversation.view' | 'conversation.hero.actions'>
   & PropsStore<ConversationStore>
   & InjectFace<ConversationSessionInjected>
 

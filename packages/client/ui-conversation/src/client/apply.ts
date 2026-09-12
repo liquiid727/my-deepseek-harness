@@ -87,6 +87,7 @@ interface WorkspaceNavigation {
   connectWorkspace(
     workspaceId: Parameters<ConversationInjected['selectWorkspace']>[0],
   ): Promise<SessionId>
+  startSession(): void
 }
 
 /** Resolve the session-scoped Conversation action face, failing loud. */
@@ -156,10 +157,16 @@ export function apply(ctx: Context, config: Config = Config({})): void {
   const restoreView = (sessionId: SessionId): void => {
     activateView(sessionId, readConversationViewPreference(sessionId))
   }
+  let requestedView: string | undefined
   const restoreCurrentView = (): void => {
     const sessionId = sessions.list.getSnapshot().current
     if (sessionId !== undefined && sessions.binding(sessionId) !== undefined) {
-      restoreView(sessionId)
+      if (requestedView !== undefined) {
+        activateView(sessionId, requestedView)
+        requestedView = undefined
+      } else {
+        restoreView(sessionId)
+      }
     }
   }
   const conversationViews = createSnapshotStore<readonly ViewTab[]>(viewTabs())
@@ -225,6 +232,7 @@ export function apply(ctx: Context, config: Config = Config({})): void {
       'conversation.hero.brand.mark': { kind: 'single', scope: 'root' },
       'conversation.hero.workspace': { kind: 'single', scope: 'root' },
       'conversation.hero.agentPreset': { kind: 'single', scope: 'root' },
+      'conversation.hero.launch': { kind: 'list', scope: 'root' },
     },
     inject: (sessionId: SessionId | undefined): ConversationInjected => ({
       hooks: {
@@ -253,6 +261,14 @@ export function apply(ctx: Context, config: Config = Config({})): void {
         }
         sessions.open(nextId)
       },
+      startSession: (view) => {
+        requestedView = view
+        workspaceNavigation.startSession()
+        // Workspace session binding may be created synchronously before the
+        // session-list subscription observes it; restore the requested view
+        // after the binding has been installed.
+        queueMicrotask(restoreCurrentView)
+      },
     }),
   }, ConversationRoot)
 
@@ -260,6 +276,7 @@ export function apply(ctx: Context, config: Config = Config({})): void {
     name: 'conversation.session',
     children: {
       'conversation.view': { kind: 'list', scope: 'session' },
+      'conversation.hero.actions': { kind: 'list', scope: 'session' },
     },
     store: conversationStore,
     inject: (sessionId: SessionId, actions: BoundActions<typeof conversationStore>): ConversationSessionInjected => ({

@@ -163,7 +163,7 @@ export function ConversationSessionHeader({
  * Renders the active Session view inside the resident scrollport and keeps
  * the input draft mirrored while blank Hero chrome is visible.
  * @param props - Strict Session input/store, view ledger, and render shares.
- * @returns the active view area, or null while the Session remains blank.
+ * @returns blank-Hero launch controls or the active view area.
  */
 export function ConversationSession({
   useSession, useConversation, useConversationViews, useInput, inputActions, useStore, actions,
@@ -186,7 +186,14 @@ export function ConversationSession({
     // the machine mirror, not this seed effect.
   }, [inputActions])
 
-  if (session.blank && conversationPhase(session, conversation) === 'blank') return null
+  const blankHero = session.blank && conversationPhase(session, conversation) === 'blank'
+  if (blankHero && (active === undefined || active.id === 'chat')) {
+    return (
+      <div className={css.heroActions}>
+        {renderSlot('conversation.hero.actions', { openView })}
+      </div>
+    )
+  }
   return (
     <div className={css.viewArea}>
       {active !== undefined && renderSlot('conversation.view', {

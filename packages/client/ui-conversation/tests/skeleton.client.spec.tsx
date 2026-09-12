@@ -184,6 +184,10 @@ function mount(
       seatOwners.push({ key, owner })
     }
     if (key === 'conversation.hero.workspace') { pickerOwner = owner; return null }
+    if (key === 'conversation.hero.actions') {
+      const { openView } = owner as { openView(view: string, focus: string): void }
+      return <button type="button" onClick={() => { openView('research', '') }}>Open Research</button>
+    }
     if (key === 'conversation.session.header.lineage') {
       lineageOwners.push(owner as ConversationHeaderLineageOwnerProps)
       return opts?.fallback ?? null
@@ -310,6 +314,7 @@ function mount(
     renderSlot,
     renderSlotChain,
     selectWorkspace: retargetWorkspace,
+    startSession: vi.fn(),
     t,
   }
   const view = render(<ConversationRoot {...props} />)
@@ -474,6 +479,7 @@ describe('ConversationRoot resident composer', () => {
     expect(b.view.getByText('探索未至之境')).toBeTruthy()
     expect(b.view.getByText('预览版')).toBeTruthy()
     expect(b.view.queryByTestId('view-chat')).toBeNull()
+    expect(b.view.getByRole('button', { name: 'Open Research' })).toBeTruthy()
     // The same machine-backed textarea is live in the hero, and the
     // persistence mirror stays bound (ConversationSession mounts chrome-hidden
     // for blank sessions): hero typing reaches the Conversation store.
@@ -489,6 +495,16 @@ describe('ConversationRoot resident composer', () => {
     act(() => { owner.onPick(wid('second')) })
     expect(b.retargetWorkspace).toHaveBeenCalledWith(wid('second'))
     expect(b.view.getByText('Selected Folder')).toBeTruthy()
+  })
+
+  it('opens a chosen view from a blank Hero without sending a message', () => {
+    const b = mount(sessionSnapshotOf({ blank: true }), undefined, undefined, {
+      viewTabs: [{ id: 'chat', label: 'Chat' }, { id: 'research', label: 'Research' }],
+    })
+
+    fireEvent.click(b.view.getByRole('button', { name: 'Open Research' }))
+    expect(b.store.store.getSnapshot().view).toBe('research')
+    expect(b.view.getByTestId('view-research')).toBeTruthy()
   })
 
   it('keeps a rejected first prompt engaging instead of returning to the Hero', () => {

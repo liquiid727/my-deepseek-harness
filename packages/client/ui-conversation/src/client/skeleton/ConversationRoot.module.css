@@ -214,6 +214,13 @@
   min-height: 0;
 }
 
+/* Session-owned launch controls join the centered blank Hero without
+   activating an unselected Conversation view. */
+.heroActions {
+  display: flex;
+  justify-content: center;
+}
+
 /* Width handles: 40px col-resize strips beside the transcript, absolute in
    .body (NOT the scrollport: an absolute strip there would extend the
    scrollable range; NOT .root: a strip from the column top would paint its
