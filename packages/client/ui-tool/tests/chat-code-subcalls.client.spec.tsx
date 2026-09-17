@@ -82,6 +82,7 @@ type AppRootProps = PropsRenderSlots<'conversation.view'>
 const VIEW_OWNER: ConvViewOwnerProps = {
   mountComposer: () => () => {},
   viewRequest: null,
+  viewFocus: '',
   openView: () => {},
   completeViewRequest: () => {},
 }

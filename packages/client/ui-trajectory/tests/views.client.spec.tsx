@@ -234,6 +234,7 @@ function standaloneProps(
     inputActions,
     useProjection,
     viewRequest: null,
+    viewFocus: '',
     mountComposer: () => () => {},
     openView: () => {},
     completeViewRequest: () => {},
@@ -382,7 +383,7 @@ function mount(fixture: Awaited<ReturnType<typeof bench>>) {
         }
       })()
       : injected
-    const viewProps: ConvViewProps = { ...owner, ...standardProps, mountComposer: () => () => {} }
+    const viewProps: ConvViewProps = { ...owner, ...standardProps, mountComposer: () => () => {}, viewFocus: '' }
     return (
       <View
         {...viewProps}
