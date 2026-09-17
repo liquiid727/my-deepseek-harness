@@ -118,3 +118,72 @@ export function alignQuote(paragraph: string, quote: string, options: AlignmentO
   if (best === undefined) return { status: 'NOT_FOUND' }
   return { status: 'PARTIAL', startOffset: best.start, endOffset: best.end, similarity: best.similarity }
 }
+
+/** Shortest exact substring kept as a matched span of a PARTIAL locator. */
+export const MIN_MATCHED_SPAN_LENGTH = 8
+
+/** Partition of a matched window into exact spans and the gaps between them. */
+export interface MatchedSpanPartition {
+  /** Half-open `[start, end)` spans, relative to the partitioned window. */
+  matched: Array<{ start: number; end: number }>
+  /** Half-open `[start, end)` gaps not covered by any matched span, window-relative. */
+  unmatched: Array<{ start: number; end: number }>
+}
+
+/**
+ * Partition a candidate window into the exact substrings it shares with the
+ * quote and the regions it does not (interfaces.md §Reader, Note and Evidence:
+ * "PARTIAL 必须给出可精确高亮的 matched anchors 与未匹配区间").
+ *
+ * The algorithm is deterministic: repeatedly take the longest common substring
+ * between each unprocessed region and the quote, keep it when it is at least
+ * {@link MIN_MATCHED_SPAN_LENGTH} characters, and recurse on both sides.
+ * Ties resolve to the earliest occurrence so the same inputs always produce the
+ * same partition.
+ * @param window - Candidate text, already normalized.
+ * @param quote - Normalized quote that only partially matched.
+ * @returns matched spans and the gaps between them, both window-relative.
+ */
+export function partitionMatchedSpans(window: string, quote: string): MatchedSpanPartition {
+  const matched: Array<{ start: number; end: number }> = []
+  /** Longest common substring of two strings, earliest occurrence on ties. */
+  const longestCommonSubstring = (left: string, right: string): { start: number; length: number } => {
+    let bestStart = 0
+    let bestLength = 0
+    let previous = new Array<number>(right.length + 1).fill(0)
+    let current = new Array<number>(right.length + 1).fill(0)
+    for (let i = 1; i <= left.length; i += 1) {
+      for (let j = 1; j <= right.length; j += 1) {
+        current[j] = left[i - 1] === right[j - 1] ? previous[j - 1]! + 1 : 0
+        if (current[j]! > bestLength) {
+          bestLength = current[j]!
+          bestStart = i - bestLength
+        }
+      }
+      const swap = previous
+      previous = current
+      current = swap
+      current.fill(0)
+    }
+    return { start: bestStart, length: bestLength }
+  }
+  const collect = (from: number, to: number): void => {
+    if (to - from < MIN_MATCHED_SPAN_LENGTH) return
+    const best = longestCommonSubstring(window.slice(from, to), quote)
+    if (best.length < MIN_MATCHED_SPAN_LENGTH) return
+    const start = from + best.start
+    matched.push({ start, end: start + best.length })
+    collect(from, start)
+    collect(start + best.length, to)
+  }
+  collect(0, window.length)
+  matched.sort((left, right) => left.start - right.start)
+  const unmatched: Array<{ start: number; end: number }> = []
+  let cursor = 0
+  for (const span of matched) {
+    if (span.start > cursor) unmatched.push({ start: cursor, end: span.start })
+    cursor = span.end
+  }
+  if (cursor < window.length) unmatched.push({ start: cursor, end: window.length })
+  return { matched, unmatched }
+}

@@ -265,8 +265,12 @@ export interface InputZone {
 
 /** Conversation View entries obtain their data from registered standard hooks. */
 export interface ConvViewOwnerProps {
+  /** Mount the shell-owned composer inside this View; release on unmount. */
+  mountComposer: import('./composer-outlet.ts').MountComposer
   /** Focus request addressed to the selected View. */
   viewRequest: import('./views.ts').ConversationViewRequest | null
+  /** Last persisted opaque focus for the selected View, or an empty string. */
+  viewFocus: string
   /** Select a View and address one opaque focus identity to it. */
   openView: (view: string, focus: string) => void
   /** Acknowledge the current one-shot focus request. */
@@ -283,11 +287,25 @@ export interface ConversationInjected {
   /** Start a Session and optionally activate a registered View. */
   startSession: (view?: string) => void
   /** Session-addressed composer block source, or the stable absent source. */
-  hooks: { composerBlock: ObservableSnapshot<ComposerBlock | undefined> }
+  hooks: {
+    composerBlock: ObservableSnapshot<ComposerBlock | undefined>
+    /** Transient destination requested by the active View. */
+    composerOutlet: ObservableSnapshot<import('./composer-outlet.ts').ComposerOutlet | undefined>
+    /**
+     * Per-Session View selection source (draft, selected View, focus request),
+     * or the stable absent source without a Session. The shell reads the
+     * selected View to decide hero-versus-view presentation.
+     */
+    viewSelection: ObservableSnapshot<
+      import('./views.ts').ConversationStoreState | null
+    >
+  }
 }
 
 /** Business callbacks injected into the strict Session body. */
 export interface ConversationSessionInjected {
+  /** Register a mounted destination for one View of this Session. */
+  mountComposer: (view: string, ...args: Parameters<import('./composer-outlet.ts').MountComposer>) => () => void
   /** Package-owned View roster source bound only for the Conversation body. */
   readonly hooks: { readonly conversationViews: ObservableSnapshot<readonly ViewTab[]> }
   /** Bind input draft persistence to the Session-owned store instance. */
@@ -308,8 +326,8 @@ export interface ConversationSessionHeaderInjected {
 
 /** Owner share of the resident composer bar. */
 export interface ComposerBarOwnerProps {
-  /** Hero uses centered placement; composer uses the active bottom placement. */
-  variant: 'hero' | 'composer'
+  /** Hero is centered, composer is docked, and inline fits a View-owned destination. */
+  variant: 'hero' | 'composer' | 'inline'
   /** A feature-owned reason that makes message input inert while leaving model selection live. */
   blocked?: { readonly reason: string }
   /** Lock all message actions while preserving the resident composer surface. */

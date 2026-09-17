@@ -7,7 +7,9 @@
  * `sidebar.settings` registrant's (ui-settings), followed by optional footer
  * actions in `sidebar.footer.action`.
  */
-import type { PropsLocale, PropsRenderSlots, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
+import type {
+  InjectFace, PropsLocale, PropsRenderSlots, PropsRuntime,
+} from '@deepseek-ai/dsh-client-ui-slots'
 import type { WorkspaceId } from '@deepseek-ai/dsh-api-workspace-controller/client'
 // Type-only: pulls ui-layout's SlotMap merge (the 'sidebar' entry) into every
 // program that sees this contract, so PropsRuntime<'sidebar'> resolves.
@@ -26,6 +28,13 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
      * package's `sidebar` entry; the shell supplies a generic text fallback.
      */
     'sidebar.brand.name': { kind: 'single'; scope: 'root'; owner: SidebarBrandNameOwnerProps }
+    /**
+     * Additive primary-action strip between the New Session button and the
+     * workspace browsing region. Declared by this package's 'sidebar' entry;
+     * entries register with their own `id`/`order`/`label` and own their
+     * navigation behavior. With no entries the shell geometry is unchanged.
+     */
+    'sidebar.primary.action': { kind: 'list'; scope: 'root'; owner: SidebarPrimaryActionOwnerProps }
     /**
      * The workspace/session browsing region: section header, search, the
      * grouped/flat session list, and every workspace dialog. Declared by this
@@ -60,6 +69,15 @@ export interface SidebarBrandNameOwnerProps {
 }
 
 /**
+ * Owner share of one primary-action strip entry: the column display state.
+ * Entries own their icon, label, and navigation behavior.
+ */
+export interface SidebarPrimaryActionOwnerProps {
+  /** Whether the sidebar renders wide content (false = 56px rail). */
+  wide: boolean
+}
+
+/**
  * Owner share of the browser hole — the only facts crossing the shell/region
  * boundary. Business data and actions arrive through the region's own inject.
  */
@@ -88,7 +106,10 @@ export interface SidebarFooterActionOwnerProps {
 /**
  * Registrant-private injected share (arrives via the register inject
  * factory). The shell keeps only its own controls: starting a Session from
- * the New Session button and toggling the column.
+ * the New Session button, toggling the column, and the reactive flag that
+ * tells the shell whether the additive primary-action strip has live entries
+ * (the rail presentation mounts only then, so an empty strip leaves the
+ * sidebar geometry unchanged).
  */
 export type SidebarRootInjected = {
   /**
@@ -99,6 +120,10 @@ export type SidebarRootInjected = {
   startSession: (workspaceId?: WorkspaceId) => void
   /** Toggle the sidebar column through the layout service. */
   toggleSidebar: () => void
+  hooks: {
+    /** True while `sidebar.primary.action` has at least one live entry. */
+    primaryActions: import('@deepseek-ai/dsh-client-store').ObservableSnapshot<boolean>
+  }
 }
 
 /**
@@ -111,8 +136,9 @@ export type SidebarRootComponentProps =
   & PropsRenderSlots<
     | 'sidebar.brand.mark'
     | 'sidebar.brand.name'
+    | 'sidebar.primary.action'
     | 'sidebar.workspaces'
     | 'sidebar.settings'
     | 'sidebar.footer.action'
   >
-  & SidebarRootInjected & PropsLocale<'sidebar'>
+  & InjectFace<SidebarRootInjected> & PropsLocale<'sidebar'>

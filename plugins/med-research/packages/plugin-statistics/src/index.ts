@@ -149,6 +149,25 @@ function statisticsTools(service: StatisticsService): ToolDefinition[] {
         }
       },
     }),
+    defineTool({
+      name: 'statistics_approve_code',
+      description: 'Approve the exact generated code and dataset hash after human review.',
+      parameters: { analysisRunId: { type: 'string', required: true, description: 'Run waiting for approval.' } },
+      output: { schema: TOOL_ENVELOPE_SCHEMA, render: renderToolEnvelope },
+      async execute(args) {
+        try { return { ok: true, result: asToolJson(await service.approveCode(analysisRunIdSchema.parse(args.analysisRunId))) } } catch (error) {
+          if (error instanceof StatisticsError) return { ok: false, error: asToolJson(toDomainError(error)) }
+          throw error
+        }
+      },
+    }),
+    defineTool({
+      name: 'statistics_list_runs',
+      description: 'List immutable analysis history for a project.',
+      parameters: { projectId: { type: 'string', required: true, description: 'Project id.' } },
+      output: { schema: TOOL_ENVELOPE_SCHEMA, render: renderToolEnvelope },
+      async execute(args) { return { ok: true, result: asToolJson(await service.listRuns(projectIdSchema.parse(args.projectId))) } },
+    }),
   ]
 }
 

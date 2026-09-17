@@ -54,6 +54,7 @@ export function SidebarRoot({
   width,
   startSession,
   toggleSidebar,
+  usePrimaryActions,
   t,
   renderSlot,
 }: SidebarRootComponentProps) {
@@ -122,6 +123,12 @@ export function SidebarRoot({
   }, [pointerInside])
 
   const buildVersion = localBuildVersion()
+  // The primary rail presentation mounts only while the additive strip has
+  // live entries; with none, the region keeps the full column (unchanged
+  // geometry). The rail is icon-shaped in both column states — the prototype
+  // maps the independent icon track and the project list to two groups inside
+  // the host sidebar.
+  const hasPrimaryActions = usePrimaryActions(s => s)
 
   return (
     <div
@@ -199,14 +206,35 @@ export function SidebarRoot({
         </button>
       </Tooltip>
 
-      {/* The browsing region fills the column between the controls and the
-          foot in both states; its rail icon column rides the same slot. */}
-      <div className={css.regionArea}>
-        {renderSlot('sidebar.workspaces', {
-          wide,
-          expandSidebar: () => { if (collapsed) toggleSidebar() },
-        })}
-      </div>
+      {/* Additive primary-action strip. Wide, the entries form a distinct
+          icon rail left of the browsing region (two clear groups inside the
+          host column); the region keeps its full column when the strip is
+          empty. Collapsed, the icon rows stack above the region's own icon
+          column. Entries own their rendering and navigation; the shell only
+          hands down the presentation width. */}
+      {wide && hasPrimaryActions ? (
+        <div className={css.bodyRow}>
+          <nav className={css.primaryRail} aria-label={t('primary.nav.label')}>
+            {renderSlot('sidebar.primary.action', { wide: false })}
+          </nav>
+          <div className={css.regionArea}>
+            {renderSlot('sidebar.workspaces', {
+              wide,
+              expandSidebar: () => { if (collapsed) toggleSidebar() },
+            })}
+          </div>
+        </div>
+      ) : (
+        <>
+          {renderSlot('sidebar.primary.action', { wide: false })}
+          <div className={css.regionArea}>
+            {renderSlot('sidebar.workspaces', {
+              wide,
+              expandSidebar: () => { if (collapsed) toggleSidebar() },
+            })}
+          </div>
+        </>
+      )}
 
       {/* Footer actions stack above Settings in both sidebar widths. */}
       <div className={css.footArea}>

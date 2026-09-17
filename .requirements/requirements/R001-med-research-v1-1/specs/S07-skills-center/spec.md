@@ -7,7 +7,7 @@ source_entry: ../../prd.md
 source_entry_kind: prd
 source_prd: ../../prd.md
 source_prd_version: 2.1.0
-version: 1.1.0
+version: 1.1.1
 status: approved
 owner: med-research
 qualityProfile: fullstack-flow
@@ -32,6 +32,10 @@ In Scope: 内置目录、installed/my skills、search/category/detail、builder�
 Out of Scope: 商业 Marketplace、组织共享、未经审查的远程包、Skill 自带任意代码或直接凭据。
 
 Architecture: 复用 DSH Skill capability 的定义与加载流程；医学 Skill service 拥有产品生命周期、Project installation 和审计；test run 通过受限制 Agent/Tool registry 执行，不改变 active registry。
+
+### 2.1 Project/Session Context (S01 owner)
+
+S07 只消费 S01 提供的当前 Workspace/Session/Mode context。Skill installation、controlled test run、allowlist 与权限计算都使用该 context；S07 不自行绑定 Project，不注入第二份 Project context，也不创建 `medical/project-context` 自定义 Session event。Skill 运行需要 Project scope 时，缺少 binding 返回 `PROJECT_NOT_BOUND`，跨 Project 请求返回 `SCOPE_DENIED`，并沿用当前 binding；显式跨 Project 操作必须经过已有 scope 与授权规则。到达模型的 Project context 只包含当前 Project 允许暴露的摘要、PICO/PECO、Overview 和授权元数据；Dataset 行、未授权 Project 数据、秘密和完整原始文献不得进入 bundle。模型可见 Skill 工具输出通过标准 `tool/result` Session 事件记录，Session replay 依据 S01 binding、Workspace/Mode 和这些结果重建相同输入。
 
 ## 3. Contract Behaviors
 
@@ -84,7 +88,7 @@ catalog 接受 category/query/source/status/cursor，区分内置目录、已发
 
 drafts.save/validate 使用 expectedVersion；必填 name/description/semantic version/instructions，schemas 使用 JSON Schema 2020-12 且拒绝远程 $ref，examples 必须匹配 schemas，knowledge 引用必须在当前 Workspace 授权范围，unknown tool/model 在校验时失败。trigger 为 explicit/upload/keyword，upload/keyword 需安装授权后生效。修改任何内容生成新 revision 并清除 VALIDATED/test freshness。
 
-test 接受 validated revision、schema-valid input 和可选 PDF，临时 registry 与 Project 本地测试存储隔离；不得修改生产 Notes/Evidence/Drafts/installations。外部检索与统计执行仍需原审批，工具集合取共享权限交集。返回 testRunId、真实阶段/完成项、受控 tool trace、schema-valid output 或字段错误。取消释放任务/文件/临时 Agent，历史只保留允许的版本与脱敏证据；上传可删除并重试。
+test 接受 validated revision、schema-valid input 和可选 PDF，临时 registry 与当前 Project 本地测试存储隔离；Project scope、Workspace、Session 和 Mode 均由 S01 当前 context 提供，S07 不接受测试工具自行切换 binding。不得修改生产 Notes/Evidence/Drafts/installations。外部检索与统计执行仍需原审批，工具集合取共享权限交集。返回 testRunId、真实阶段/完成项、受控 tool trace、schema-valid output 或字段错误。取消释放任务/文件/临时 Agent，历史只保留允许的版本与脱敏证据；上传可删除并重试。
 
 publish 创建不可变本地版本；必须当前 revision 校验通过且至少一次当前 input/output schema 测试成功，重版本号不同内容返回 VERSION_EXISTS。install 默认 DISABLED，用户明确 enable 才 ACTIVE；一次“安装并启用”可作为显式联合动作。首次安装展示工具/触发器/model/knowledge 权限确认；升级任何新增工具、文件范围、自动触发或模型外发范围要求再次确认。
 

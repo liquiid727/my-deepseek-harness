@@ -95,6 +95,32 @@ export const auditDomain = defineDomain({
   },
 })
 
+/** Notes, highlights, tags, and draft revisions owned by the workspace. */
+export const knowledgeDomain = defineDomain({
+  name: 'med_knowledge',
+  version: MED_DOMAIN_VERSION,
+  tables: {
+    med_notes: domainTable<contracts.NoteId, contracts.Note>(contracts.noteSchema),
+    med_annotations: domainTable<contracts.AnnotationId, contracts.Annotation>(contracts.annotationSchema),
+    med_tags: domainTable<contracts.TagId, contracts.Tag>(contracts.tagSchema),
+    med_tag_links: domainTable<string, contracts.TagLink>(contracts.tagLinkSchema),
+    med_drafts: domainTable<contracts.DraftId, contracts.Draft>(contracts.draftSchema),
+    med_draft_revisions: domainTable<contracts.DraftRevisionId, contracts.DraftRevision>(contracts.draftRevisionSchema),
+  },
+})
+
+/** Skill definitions, immutable versions, controlled tests, and installs. */
+export const skillsDomain = defineDomain({
+  name: 'med_skills',
+  version: MED_DOMAIN_VERSION,
+  tables: {
+    med_skills: domainTable<contracts.SkillId, contracts.Skill>(contracts.skillSchema),
+    med_skill_versions: domainTable<contracts.SkillVersionId, contracts.SkillVersion>(contracts.skillVersionSchema),
+    med_skill_tests: domainTable<contracts.SkillTestRunId, contracts.SkillTestRun>(contracts.skillTestRunSchema),
+    med_skill_installations: domainTable<contracts.SkillInstallationId, contracts.SkillInstallation>(contracts.skillInstallationSchema),
+  },
+})
+
 /** Every declared domain, in dependency order. */
 export const medDomains = [
   projectDomain,
@@ -105,6 +131,8 @@ export const medDomains = [
   datasetDomain,
   analysisDomain,
   auditDomain,
+  knowledgeDomain,
+  skillsDomain,
 ] as const
 
 /**

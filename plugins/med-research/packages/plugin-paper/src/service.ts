@@ -8,6 +8,12 @@
 import { createHash } from 'node:crypto'
 import type {
   DocumentId,
+  Annotation,
+  AnnotationId,
+  AnnotationCreateInput,
+  Note,
+  NoteCreateInput,
+  NoteId,
   DocumentSourceType,
   EvidenceChunk,
   EvidenceChunkId,
@@ -21,12 +27,25 @@ import type {
   PaperSection,
   ParagraphId,
   ProjectId,
+  SourceAnchor,
+  PaperSummary,
+  PaperSummaryField,
+  PaperSummaryFieldKey,
+  TranslationCheck,
 } from '@medresearch/dsh-medical-contracts'
+import { annotationIdSchema, noteIdSchema, PAPER_SUMMARY_FIELD_KEYS } from '@medresearch/dsh-medical-contracts'
 import { createAuditWriter, type AuditWriter, type MedStorage } from '@medresearch/dsh-medical-storage'
 import { bindTypertRemote, Remote } from '@deepseek-ai/dsh-typert-protocol'
 import type { ParsedDocument } from './document.ts'
 import { parseJats } from './jats.ts'
 import { assemblePdfDocument, type PdfExtraction } from './pdf.ts'
+
+/**
+ * The literal a summary field carries when the source does not report it. The
+ * spec fixes this marker, so it is a spec constant rather than a tunable
+ * default: an unreported field must be visibly unreported, never inferred.
+ */
+const UNREPORTED_FIELD_VALUE = '未报告'
 
 /** Construction dependencies of {@link PapersService}. */
 export interface PapersServiceOptions {
@@ -46,6 +65,8 @@ export interface PapersServiceOptions {
   newSectionId: () => SectionId
   newParagraphId: () => ParagraphId
   newEvidenceChunkId: () => EvidenceChunkId
+  newNoteId?: () => NoteId
+  newAnnotationId?: () => AnnotationId
 }
 
 type SectionId = PaperSection['id']
@@ -218,6 +239,212 @@ export class PapersService implements MedPapersService {
       })
       .sort((left, right) => left.order - right.order)
       .slice(0, this.options.maxSearchResults)
+  }
+
+  /**
+   * Build a source-faithful summary from stored paragraphs. Missing sections
+   * are reported explicitly instead of being filled with model knowledge.
+   * @param input - Paper, optional document/section scope, and summary mode.
+   * @returns ordered source paragraphs grouped for the requested mode.
+   */
+  @Remote
+  async summary(input: { projectId: ProjectId; paperId: PaperId; documentId?: DocumentId; scope?: 'whole' | 'section'; mode: 'oneSentence' | 'threeMinute' | 'structured' }): Promise<PaperSummary> {
+    const documents = this.documentsOf(input.paperId)
+    const document = input.documentId === undefined ? documents[0] : documents.find(item => item.id === input.documentId)
+    if (document === undefined) throw new Error(`no parsed document for paper ${input.paperId}`)
+    const sections = (await this.sections(document.id)).map(section => {
+      const paragraphs = [...this.options.storage.paragraphs.entries()]
+        .map(([, paragraph]) => paragraph)
+        .filter(paragraph => paragraph.sectionId === section.id)
+        .sort((left, right) => left.order - right.order)
+      return {
+        title: section.title,
+        text: paragraphs.map(paragraph => paragraph.text).join(' '),
+        paragraphIds: paragraphs.map(paragraph => paragraph.id),
+        paragraphs,
+      }
+    }).filter(section => input.scope !== 'section' || section.title.toLowerCase() === 'abstract')
+
+    // Each field is filled from the section that reports it, and every value
+    // keeps the paragraph it came from. A field the document does not report is
+    // emitted as the placeholder with `reported: false`; it is never inferred.
+    const fieldSources = this.summaryFieldSections(sections)
+    const buildField = (key: PaperSummaryFieldKey, titleKey: string): PaperSummaryField => {
+      const source = fieldSources.get(key)
+      if (source === undefined || source.text.trim() === '') {
+        return { key, titleKey, value: UNREPORTED_FIELD_VALUE, reported: false }
+      }
+      const paragraph = source.paragraphs[0]
+      return {
+        key,
+        titleKey,
+        value: source.text,
+        reported: true,
+        ...paragraph === undefined ? {} : {
+          anchor: {
+            projectId: input.projectId,
+            paperId: input.paperId,
+            documentId: document.id,
+            paragraphId: paragraph.id,
+            startOffset: 0,
+            endOffset: paragraph.text.length,
+          },
+        },
+      }
+    }
+
+    const keys = input.mode === 'structured'
+      ? [...PAPER_SUMMARY_FIELD_KEYS]
+      : input.mode === 'threeMinute'
+        ? ['researchQuestion', 'studyDesign', 'population', 'keyResults', 'limitations', 'projectRelevance'] as PaperSummaryFieldKey[]
+        : ['researchQuestion'] as PaperSummaryFieldKey[]
+    const fields = keys.map(key => buildField(key, `summary.field.${key}`))
+    const selected = input.mode === 'oneSentence'
+      ? [{ title: 'Summary', text: sections.flatMap(section => section.text.split(/(?<=[.!?。！？])\s+/u)).find(Boolean) ?? UNREPORTED_FIELD_VALUE, paragraphIds: sections[0]?.paragraphIds ?? [] }]
+      : sections.map(({ title, text, paragraphIds }) => ({ title, text, paragraphIds }))
+    return {
+      paperId: input.paperId,
+      documentId: document.id,
+      mode: input.mode,
+      sections: selected,
+      fields,
+      missingFields: fields.filter(field => !field.reported).map(field => field.key),
+    }
+  }
+
+  /**
+   * Map each structured summary field to the section that reports it.
+   *
+   * Matching is a documented, deterministic title test: a field is reported
+   * only when the document has a section whose title names it. This keeps the
+   * summary honest — an unrecognized layout produces `未报告` rather than a
+   * guess — and it is the seam a model-backed extractor replaces later without
+   * changing the contract.
+   */
+  private summaryFieldSections(
+    sections: ReadonlyArray<{ title: string; text: string; paragraphIds: ParagraphId[]; paragraphs: PaperParagraph[] }>,
+  ): Map<PaperSummaryFieldKey, { text: string; paragraphs: PaperParagraph[] }> {
+    const patterns: Record<PaperSummaryFieldKey, readonly string[]> = {
+      researchQuestion: ['research question', 'objective', 'aim', 'background', 'purpose'],
+      studyDesign: ['study design', 'design', 'methods', 'method'],
+      population: ['population', 'participants', 'patients', 'cohort', 'setting'],
+      sampleSize: ['sample size', 'participants', 'population'],
+      interventionExposure: ['intervention', 'exposure', 'treatment'],
+      comparator: ['comparator', 'comparison', 'control'],
+      outcome: ['outcome', 'endpoint', 'results'],
+      methods: ['methods', 'materials', 'procedure'],
+      statistics: ['statistical', 'analysis', 'statistics'],
+      keyResults: ['results', 'findings'],
+      effectSize: ['results', 'findings', 'outcome'],
+      conclusion: ['conclusion', 'interpretation'],
+      limitations: ['limitation', 'weakness'],
+      bias: ['bias', 'risk of bias'],
+      projectRelevance: [],
+      references: ['reference', 'bibliography'],
+    }
+    const found = new Map<PaperSummaryFieldKey, { text: string; paragraphs: PaperParagraph[] }>()
+    for (const [key, titles] of Object.entries(patterns) as Array<[PaperSummaryFieldKey, readonly string[]]>) {
+      const section = sections.find(candidate => titles.some(title => candidate.title.toLowerCase().includes(title)))
+        // The abstract is the fallback the spec names for research-question and
+        // key-result style fields when the document has no dedicated section.
+        ?? (key === 'researchQuestion' || key === 'keyResults' ? sections.find(candidate => candidate.title.toLowerCase() === 'abstract') : undefined)
+      if (section !== undefined) found.set(key, { text: section.text, paragraphs: section.paragraphs })
+    }
+    return found
+  }
+
+  /** Validate a translation's numeric and citation tokens without mutating source text. */
+  @Remote
+  async translate(input: { documentId: DocumentId; paragraphIds?: ParagraphId[]; translatedText: string; targetLanguage: 'zh' | 'en' }): Promise<TranslationCheck> {
+    const document = this.options.storage.documents.get(input.documentId)
+    if (document === undefined) throw new Error(`no document ${input.documentId}`)
+    const paragraphs = [...this.options.storage.paragraphs.entries()]
+      .map(([, paragraph]) => paragraph)
+      .filter(paragraph => this.options.storage.sections.get(paragraph.sectionId)?.documentId === input.documentId)
+      .filter(paragraph => input.paragraphIds === undefined || input.paragraphIds.includes(paragraph.id))
+      .sort((left, right) => left.order - right.order)
+    const originalText = paragraphs.map(paragraph => paragraph.text).join('\n')
+    const tokens = (value: string) => value.match(/\d+(?:\.\d+)?%?|\[[0-9, -]+\]|\([^)]*\d[^)]*\)/gu) ?? []
+    const originalTokens = tokens(originalText)
+    const translatedTokens = tokens(input.translatedText)
+    const mismatches = originalTokens.length !== translatedTokens.length
+      ? [`numeric/citation token count ${originalTokens.length} != ${translatedTokens.length}`]
+      : originalTokens.filter((token, index) => token !== translatedTokens[index]).map((token, index) => `token ${index + 1} changed from ${token} to ${translatedTokens[index] ?? 'missing'}`)
+    return { originalText, translatedText: input.translatedText, targetLanguage: input.targetLanguage, status: mismatches.length === 0 ? 'VALID' : 'TRANSLATION_MISMATCH', mismatches }
+  }
+
+  /** Create a note, retaining the source anchor as independent data. */
+  @Remote
+  async createNote(input: NoteCreateInput): Promise<Note> {
+    if (this.options.storage.projects.get(input.projectId) === undefined) throw new Error(`no project ${input.projectId}`)
+    if (input.paperId !== undefined && this.options.storage.papers.get(input.paperId) === undefined) throw new Error(`no paper ${input.paperId}`)
+    const now = this.options.now()
+    const note: Note = { id: this.options.newNoteId?.() ?? noteIdSchema.parse(`note-${now}`), projectId: input.projectId, ...input.paperId === undefined ? {} : { paperId: input.paperId }, scope: input.scope, title: input.title.trim(), content: input.content, ...input.anchor === undefined ? {} : { anchor: input.anchor }, version: 1, createdAt: now, updatedAt: now }
+    await this.options.storage.notes.put(note.id, note)
+    return note
+  }
+
+  /** Update editable note fields using optimistic versioning. */
+  @Remote
+  async updateNote(id: NoteId, patch: { title?: string; content?: string }, expectedVersion?: number): Promise<Note> {
+    const current = this.options.storage.notes.get(id)
+    if (current === undefined || current.deletedAt !== undefined) throw new Error(`note ${id} not found`)
+    if (expectedVersion !== undefined && expectedVersion !== current.version) throw new Error(`note ${id} version conflict`)
+    const updated: Note = { ...current, ...patch.title === undefined ? {} : { title: patch.title.trim() }, ...patch.content === undefined ? {} : { content: patch.content }, version: current.version + 1, updatedAt: this.options.now() }
+    await this.options.storage.notes.put(id, updated)
+    return updated
+  }
+
+  /** Soft-delete a note so historical references remain resolvable. */
+  @Remote
+  async deleteNote(id: NoteId): Promise<void> {
+    const current = this.options.storage.notes.get(id)
+    if (current === undefined) throw new Error(`note ${id} not found`)
+    await this.options.storage.notes.put(id, { ...current, deletedAt: this.options.now(), updatedAt: this.options.now(), version: current.version + 1 })
+  }
+
+  /** Read one live note. */
+  @Remote
+  async getNote(id: NoteId): Promise<Note | undefined> {
+    const note = this.options.storage.notes.get(id)
+    return note?.deletedAt === undefined ? note : undefined
+  }
+
+  /** List live notes in project scope. */
+  @Remote
+  async listNotes(input: { projectId: ProjectId; paperId?: PaperId }): Promise<Note[]> {
+    return [...this.options.storage.notes.entries()].map(([, note]) => note).filter(note => note.projectId === input.projectId && note.deletedAt === undefined && (input.paperId === undefined || note.paperId === input.paperId)).sort((left, right) => left.updatedAt.localeCompare(right.updatedAt))
+  }
+
+  /** Create a reader highlight after checking its paragraph and offsets. */
+  @Remote
+  async createAnnotation(input: AnnotationCreateInput): Promise<Annotation> {
+    const paragraph = this.options.storage.paragraphs.get(input.paragraphId)
+    const section = paragraph === undefined ? undefined : this.options.storage.sections.get(paragraph.sectionId)
+    if (paragraph === undefined || section?.documentId !== input.documentId || this.options.storage.documents.get(input.documentId)?.paperId !== input.paperId) throw new Error('annotation source is not a paragraph in the selected paper')
+    if (input.startOffset >= input.endOffset || input.endOffset > paragraph.text.length) throw new Error('annotation offsets are outside the normalized paragraph')
+    const annotation: Annotation = { id: this.options.newAnnotationId?.() ?? annotationIdSchema.parse(`annotation-${this.options.now()}`), ...input, createdAt: this.options.now() }
+    await this.options.storage.annotations.put(annotation.id, annotation)
+    return annotation
+  }
+
+  /** Delete one highlight. */
+  @Remote
+  async deleteAnnotation(id: AnnotationId): Promise<void> { await this.options.storage.annotations.delete(id) }
+
+  /** List highlights for one project paper. */
+  @Remote
+  async listAnnotations(projectId: ProjectId, paperId: PaperId): Promise<Annotation[]> {
+    return [...this.options.storage.annotations.entries()].map(([, annotation]) => annotation).filter(annotation => annotation.projectId === projectId && annotation.paperId === paperId)
+  }
+
+  /** Resolve an anchor and verify its requested range still fits the paragraph. */
+  @Remote
+  async focus(anchor: SourceAnchor): Promise<{ status: 'FOUND' | 'STALE_ANCHOR'; paragraph?: PaperParagraph }> {
+    if (anchor.paragraphId === undefined) return { status: 'STALE_ANCHOR' }
+    const paragraph = this.options.storage.paragraphs.get(anchor.paragraphId)
+    const valid = paragraph !== undefined && this.options.storage.sections.get(paragraph.sectionId)?.documentId === anchor.documentId && (anchor.startOffset === undefined || anchor.endOffset === undefined || anchor.endOffset <= paragraph.text.length)
+    return valid ? { status: 'FOUND', paragraph } : { status: 'STALE_ANCHOR' }
   }
 
   /** Documents already stored for one paper. */

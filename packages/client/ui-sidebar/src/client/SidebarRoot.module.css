@@ -299,9 +299,32 @@
 /* Region seat: always mounted so the foot never moves. Its trailing margin
    cancels the wide shell inset so the nested scrollbar can sit at the sidebar
    edge; the browser restores that inset inside its own rows. */
+/* Rail-and-region row: the additive primary rail is a distinct 56px icon
+   group left of the browsing region; with no live strip entries this row
+   never mounts and the region keeps the whole column. */
+.bodyRow {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+.primaryRail {
+  flex: none;
+  width: 56px;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2px 0 6px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  border-right: 0.5px solid var(--dsw-alias-border-l3);
+}
+
 .regionArea {
   flex: 1;
   min-height: 0;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   margin-left: -4px;

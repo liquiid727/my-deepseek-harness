@@ -2,7 +2,7 @@
 export { apply, Config, inject } from './apply.ts'
 export type { Config as ConversationConfig } from './apply.ts'
 export { UiConversation } from './conversation/assembly.ts'
-export type { ConversationBinding } from './conversation/assembly.ts'
+export type { ConversationBinding, UiConversationNavigation } from './conversation/assembly.ts'
 export { ConversationController, UnsupportedImageMediaTypeError } from './service.ts'
 export type { IConversation } from './service.ts'
 export type {
@@ -68,6 +68,7 @@ export type {
   SubmitOutcome, TokenSpan,
 } from './contract/input.ts'
 export type { ComposerBlock, ComposerBlocks } from './contract/composer-blocks.ts'
+export type { ComposerOutletOptions, MountComposer } from './contract/composer-outlet.ts'
 
 declare module '@deepseek-ai/cordis' {
   interface Context {

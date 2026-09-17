@@ -39,7 +39,9 @@ function mountColumn(): { column: HTMLElement; quiet: () => boolean } {
   const view = render(
     <SidebarRoot
       collapsed={false} width={300}
-      useSessions={neverHook} useSessionPendingInteraction={useSessionPendingInteraction}
+      useSessions={neverHook}
+      usePrimaryActions={((select: <T,>(value: T) => T) => select(false)) as never}
+      useSessionPendingInteraction={useSessionPendingInteraction}
       useResource={useResource} useWorkspaces={neverHook}
       startSession={vi.fn()} toggleSidebar={vi.fn()} t={t}
       renderSlot={((_key: string, owner: SidebarSectionOwnerProps) =>

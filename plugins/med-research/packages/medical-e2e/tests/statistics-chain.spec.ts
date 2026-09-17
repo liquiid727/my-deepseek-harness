@@ -97,14 +97,15 @@ describe('Statistics chain (PRD §36 Statistics DoD)', () => {
     await expect(statistics.execute({ analysisRunId: planned.id, datasetPath: DATASET_FIXTURE }))
       .rejects.toThrow(/not approved/)
     const approved = await statistics.generateCode(planned.id, ANALYSIS)
-    expect(approved.status).toBe('approved')
+    expect(approved.status).toBe('waiting_approval')
+    await statistics.approveCode(planned.id)
 
     const result = await statistics.execute({ analysisRunId: planned.id, datasetPath: DATASET_FIXTURE })
     expect(result.status).toBe('succeeded')
     expect(result.resultJson).toMatchObject({ slope: 2, intercept: 1, n: 5 })
 
     // 4. Full provenance and a run-linked artifact.
-    const run = statistics.getRun(planned.id)!
+    const run = statistics.peekRun(planned.id)!
     expect(run.status).toBe('succeeded')
     expect(run.datasetHash).toBe(dataset.contentHash)
     expect(run.codeHash).toMatch(/^[0-9a-f]{64}$/)

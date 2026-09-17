@@ -1,0 +1,35 @@
+.field {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.heading {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.label {
+  color: var(--dsw-alias-label-primary);
+  font: var(--dsw-font-xs-strong-13);
+}
+
+.action {
+  flex: none;
+}
+
+.description,
+.error {
+  font: var(--dsw-font-xs-13);
+}
+
+.description {
+  color: var(--dsw-alias-label-secondary);
+}
+
+.error {
+  color: var(--dsw-alias-state-error-label);
+}

@@ -14,6 +14,30 @@ import type { MedRemote } from './remote.ts'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface SlotMap {
+    /**
+     * Host sidebar seats this plugin fills. The sidebar shell (ui-sidebar)
+     * declares the same rows in-tree; these structural restatements keep the
+     * med workspace typecheck self-contained, so they must stay identical to
+     * the declaring contract.
+     */
+    'sidebar.primary.action': {
+      kind: 'list'
+      scope: 'root'
+      owner: { wide: boolean }
+      inject: {
+        navigate: (view: string) => void
+        viewSelection:
+          | ((sessionId: string) =>
+            | {
+              getSnapshot(): { view?: string | null } | null
+              subscribe(listener: () => void): () => void
+            }
+            | undefined)
+          | undefined
+      }
+    }
+    'sidebar.brand.mark': { kind: 'single'; scope: 'root'; owner: { size: number } }
+    'sidebar.brand.name': { kind: 'single'; scope: 'root'; owner: { children?: never } }
     /** Root-level launch control exposed by the Conversation Hero. */
     'conversation.hero.launch': {
       kind: 'list'

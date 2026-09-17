@@ -20,6 +20,8 @@ export interface ConversationStoreState {
   draft: string
   /** Preferred `conversation.view` entry id; null resolves to Chat when registered. */
   view: string | null
+  /** Last opaque focus per View; feature Views use it to restore Session focus. */
+  viewFocus: Record<string, string>
   /** Focus request consumed and acknowledged by the addressed View. */
   viewRequest: ConversationViewRequest | null
 }

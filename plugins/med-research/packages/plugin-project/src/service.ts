@@ -15,6 +15,7 @@ import type {
   ProjectCreateInput,
   ProjectId,
   ProjectOverview,
+  ProjectOverviewCounter,
   ProjectPaper,
   ProjectPatch,
   SessionProject,
@@ -32,6 +33,15 @@ export interface ProjectFileStore {
    * @param content - Full file content.
    */
   write(path: string, content: string): Promise<void>
+}
+
+/**
+ * Case- and accent-fold a project name for duplicate detection.
+ * @param name - Raw project name.
+ * @returns the normalized comparison key.
+ */
+function normalizeName(name: string): string {
+  return name.normalize('NFKC').trim().toLowerCase()
 }
 
 /** Workspace registration the service needs. */
@@ -61,7 +71,12 @@ export interface ProjectsServiceOptions {
 }
 
 /** Stable failure codes of the project service. */
-export type ProjectErrorCode = 'PROJECT_NOT_FOUND' | 'PAPER_NOT_FOUND'
+export type ProjectErrorCode =
+  | 'PROJECT_NOT_FOUND'
+  | 'PAPER_NOT_FOUND'
+  | 'PROJECT_BUSY'
+  | 'PROJECT_DUPLICATE'
+  | 'PROJECT_VERSION_CONFLICT'
 
 /** Thrown when a project operation names a record that does not exist. */
 export class ProjectError extends Error {
@@ -103,10 +118,17 @@ export class ProjectsService implements MedProjectsService {
    * workspace binding, in that order.
    * @param input - Project fields from the tool or RPC call.
    * @returns the stored project.
+   * @throws ProjectError with `PROJECT_DUPLICATE` when a project with the same
+   *   normalized name already exists.
    */
   @Remote
   async create(input: ProjectCreateInput): Promise<Project> {
     const validated = projectCreateInputSchema.parse(input)
+    const duplicate = [...this.options.storage.projects.entries()]
+      .find(([, project]) => normalizeName(project.name) === normalizeName(validated.name))
+    if (duplicate !== undefined) {
+      throw new ProjectError('PROJECT_DUPLICATE', `a project named "${duplicate[1].name}" already exists`)
+    }
     const id = this.options.newId()
     const timestamp = this.options.now()
     const workspacePath = projectDirectory(this.options.workspaceRoot, projectSlug(validated.name, id))
@@ -158,13 +180,21 @@ export class ProjectsService implements MedProjectsService {
    * Apply a patch to one project.
    * @param id - Project id.
    * @param patch - Fields to replace.
+   * @param expectedVersion - `updatedAt` token of the caller's copy; a stale
+   *   token fails the write before any mutation.
    * @returns the updated project.
-   * @throws ProjectError when the project does not exist.
+   * @throws ProjectError when the project does not exist, is archived
+   *   (`PROJECT_BUSY`), or the version token is stale (`PROJECT_VERSION_CONFLICT`).
    */
   @Remote
-  async update(id: ProjectId, patch: ProjectPatch): Promise<Project> {
-    const current = this.options.storage.projects.get(id)
-    if (current === undefined) throw new ProjectError('PROJECT_NOT_FOUND', `no project ${id}`)
+  async update(id: ProjectId, patch: ProjectPatch, expectedVersion?: string): Promise<Project> {
+    const current = this.requireProject(id)
+    if (current.status === 'archived') {
+      throw new ProjectError('PROJECT_BUSY', `project ${id} is archived and read-only`)
+    }
+    if (expectedVersion !== undefined && expectedVersion !== current.updatedAt) {
+      throw new ProjectError('PROJECT_VERSION_CONFLICT', `project ${id} changed since the caller read it`)
+    }
     const updated = projectSchema.parse({
       ...current,
       ...patch,
@@ -175,6 +205,72 @@ export class ProjectsService implements MedProjectsService {
     await this.options.storage.projects.put(id, updated)
     await this.options.files.write(projectJsonPath(updated.workspacePath), serializeProjectFile(updated))
     return updated
+  }
+
+  /**
+   * Archive one project: read-only and removed from the active roster, while
+   * its sessions, sources, and run history stay in place.
+   * @param id - Project id.
+   * @returns the archived project.
+   * @throws ProjectError when the project does not exist, a protected
+   *   operation is still running, or it is already archived.
+   */
+  @Remote
+  async archive(id: ProjectId): Promise<Project> {
+    const current = this.requireProject(id)
+    if (current.status === 'archived') {
+      throw new ProjectError('PROJECT_BUSY', `project ${id} is already archived`)
+    }
+    for (const [, run] of this.options.storage.analysisRuns.entries()) {
+      if (run.projectId === id && run.status === 'running') {
+        throw new ProjectError('PROJECT_BUSY', `project ${id} has a running analysis (${run.id})`)
+      }
+    }
+    return this.writeStatus(id, current, 'archived', 'project.archive')
+  }
+
+  /**
+   * Restore an archived project under the same identity.
+   * @param id - Project id.
+   * @returns the restored project.
+   * @throws ProjectError when the project does not exist or is not archived.
+   */
+  @Remote
+  async restore(id: ProjectId): Promise<Project> {
+    const current = this.requireProject(id)
+    if (current.status !== 'archived') {
+      throw new ProjectError('PROJECT_BUSY', `project ${id} is not archived`)
+    }
+    return this.writeStatus(id, current, 'active', 'project.restore')
+  }
+
+  /**
+   * Flip one project's lifecycle status: storage first, then the on-disk
+   * mirror, then the audit row.
+   * @param id - Project id.
+   * @param current - Record the caller just read.
+   * @param status - Target status.
+   * @param action - Audited action name.
+   * @returns the stored project.
+   */
+  private async writeStatus(
+    id: ProjectId,
+    current: Project,
+    status: Project['status'],
+    action: 'project.archive' | 'project.restore',
+  ): Promise<Project> {
+    const updated = projectSchema.parse({ ...current, status, updatedAt: this.options.now() })
+    await this.options.storage.projects.put(id, updated)
+    await this.options.files.write(projectJsonPath(updated.workspacePath), serializeProjectFile(updated))
+    await this.audit.append({ action, projectId: id, detail: { name: updated.name } })
+    return updated
+  }
+
+  /** Read one project or fail with `PROJECT_NOT_FOUND`. */
+  private requireProject(id: ProjectId): Project {
+    const current = this.options.storage.projects.get(id)
+    if (current === undefined) throw new ProjectError('PROJECT_NOT_FOUND', `no project ${id}`)
+    return current
   }
 
   /**
@@ -193,30 +289,45 @@ export class ProjectsService implements MedProjectsService {
   }
 
   /**
-   * Count the records that belong to one project.
+   * Count the records that belong to one project, one domain at a time. A
+   * failing domain read reports `unavailable` instead of zero, so the client
+   * can show unknown plus a retry for exactly that domain.
    * @param id - Project id.
    * @returns overview counters.
    * @throws ProjectError when the project does not exist.
    */
   @Remote
   async overview(id: ProjectId): Promise<ProjectOverview> {
-    if (this.options.storage.projects.get(id) === undefined) {
-      throw new ProjectError('PROJECT_NOT_FOUND', `no project ${id}`)
-    }
+    this.requireProject(id)
+    const { storage } = this.options
     const count = <T extends { projectId?: string }>(entries: IterableIterator<[string, T]>): number => {
       let total = 0
       for (const [, record] of entries) if (record.projectId === id) total += 1
       return total
     }
-    const { storage } = this.options
+    const countDomain = (read: () => number): ProjectOverviewCounter => {
+      try {
+        return { status: 'counted', value: read() }
+      } catch {
+        // One domain's storage failure must not zero or fail the other four
+        // counters; the client renders this domain as unknown with a retry.
+        return { status: 'unavailable' }
+      }
+    }
     return {
       projectId: id,
-      questions: count(storage.researchQueries.entries()),
-      papers: count(storage.projectPapers.entries()),
-      evidences: count(storage.evidences.entries()),
-      datasets: count(storage.datasets.entries()),
-      analyses: count(storage.analysisRuns.entries()),
-      charts: count(storage.artifacts.entries()),
+      updatedAt: this.options.now(),
+      papers: countDomain(() => count(storage.projectPapers.entries())),
+      evidences: countDomain(() => count(storage.evidences.entries())),
+      datasets: countDomain(() => count(storage.datasets.entries())),
+      analyses: countDomain(() => count(storage.analysisRuns.entries())),
+      charts: countDomain(() => {
+        let total = 0
+        for (const [, artifact] of storage.artifacts.entries()) {
+          if (artifact.projectId === id && artifact.type === 'figure') total += 1
+        }
+        return total
+      }),
     }
   }
 
@@ -241,12 +352,47 @@ export class ProjectsService implements MedProjectsService {
   }
 
   /**
+   * Client-facing project selection: bind the session and audit the switch.
+   * @param sessionId - DSH session id.
+   * @param projectId - Project the session is working on.
+   * @returns the stored binding.
+   * @throws ProjectError when the project does not exist.
+   */
+  @Remote
+  async selectProject(sessionId: string, projectId: ProjectId): Promise<SessionProject> {
+    const binding = await this.bindSession(sessionId, projectId)
+    await this.audit.append({
+      action: 'project.select',
+      projectId,
+      sessionId,
+      detail: { updatedAt: binding.updatedAt },
+    })
+    return binding
+  }
+
+  /**
    * Read one session's project binding (SPEC §41).
    * @param sessionId - DSH session id.
    * @returns the binding, or `undefined` when the session has not selected a project.
    */
+  @Remote
   async sessionProject(sessionId: string): Promise<SessionProject | undefined> {
     return this.options.storage.sessionProjects.get(sessionId)
+  }
+
+  /**
+   * List the sessions bound to one project, oldest binding first.
+   * @param id - Project id.
+   * @returns the bindings.
+   * @throws ProjectError when the project does not exist.
+   */
+  @Remote
+  async sessions(id: ProjectId): Promise<SessionProject[]> {
+    this.requireProject(id)
+    return [...this.options.storage.sessionProjects.entries()]
+      .map(([, binding]) => binding)
+      .filter(binding => binding.projectId === id)
+      .sort((left, right) => left.updatedAt.localeCompare(right.updatedAt))
   }
 
   /** Read the latest persisted mode selection for one session. */
@@ -322,8 +468,9 @@ export class ProjectsService implements MedProjectsService {
    */
   @Remote
   async savePaper(id: ProjectId, paperId: PaperId): Promise<ProjectPaper> {
-    if (this.options.storage.projects.get(id) === undefined) {
-      throw new ProjectError('PROJECT_NOT_FOUND', `no project ${id}`)
+    const project = this.requireProject(id)
+    if (project.status === 'archived') {
+      throw new ProjectError('PROJECT_BUSY', `project ${id} is archived and read-only`)
     }
     if (this.options.storage.papers.get(paperId) === undefined) {
       throw new ProjectError('PAPER_NOT_FOUND', `no stored paper ${paperId}; search PubMed first`)

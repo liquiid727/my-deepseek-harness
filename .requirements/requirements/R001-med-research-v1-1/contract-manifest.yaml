@@ -1,22 +1,22 @@
 requirement: R001
 source_prd_version: 2.1.0
-approved_at: 2026-09-12
+approved_at:
 algorithm: sha256
 bundle_algorithm: "SHA-256 of sorted relativePath + NUL + fileSHA256 + LF entries"
-bundle_sha256: a9a491f65eb02d94a111241db410934e7a25aa5388ac4ea2e0df502a317716c6
+bundle_sha256: 24c463dbeec9e5dca9e8c68d43b9c1ab7eeaa0c6b19bd3397f218f612c88f9a8
 files:
   builtin-skills.md: 36bb3e690069d73aaabf37241d812b200481f2a7a4848a5061ccbc86c8dc5060
   coverage.md: 8e51bf30083fc31b729e189df7665876f25cb034a43ba75bad87a35bfe702301
   evaluation.md: 591bc81311f81c7938c61c98a92fe5d4790993f1a42dcc9f92f50f7930551cc8
-  index.yaml: a6f96f5af2ac09145b23c98157632ede3cf9e8ef5e817deeedee027e18374893
+  index.yaml: a24e8794cf82f3346000f8a50634786cbc917fac737aed686ea920085fd24fbb
   interfaces.md: 5103f91b9fa06155463900a3670ac6293c5f8ce844ffb6ce9e890d2308ab7903
   prd.md: 7961c6481dda02e1f7cafb1487b3f7b145713fe6d483cbb2c807e34311366ba1
-  specs/S01-project-workspace/spec.md: 3d1fac01601985ad283ce24d7353e2ae28aec4445485bc230793b7c0ddbd201a
-  specs/S02-literature-discovery/spec.md: 79809d3272192f4fb499282875e200016dc1c7daa01aefa3b729aa749c72d1f6
-  specs/S03-paper-reading/spec.md: d94d55975c100da1c28fa503b93dd61888c582b3dccac635aba5f0e731be5ff4
-  specs/S04-evidence-claims/spec.md: ae8af8dafa116a6df0c5519965bd8e57176202fe22c5e38562fccf8a3388bba8
-  specs/S05-reproducible-statistics/spec.md: 86e828a36ac5a0ac134d23fd0ad35347e52195945da468e5c4b84d1473f7c4e6
-  specs/S06-knowledge-library/spec.md: e601d8bd2a367d7c5e1755b32b3cb690c63f0e65319d00ccf1433e53f43eb5a1
-  specs/S07-skills-center/spec.md: 78241219a2ecbbd97a16157304b6c926e17babc882a93908131fa3bbecc49b0a
-  specs/S08-evidence-writing/spec.md: e4e3eaf3775d5bd8c6a16df56f4be21401280ba5ba2ef8d2ec96e3ab228aa54c
+  specs/S01-project-workspace/spec.md: d345dc9f36a876e36a6f9ba144863acb970094acfc53b913055c90ab81ae68e8
+  specs/S02-literature-discovery/spec.md: 5f7b5e236a5a3b802ed634f9ba9230173b2c6b5c3fca85b8c8f7c588f75c3d3f
+  specs/S03-paper-reading/spec.md: b05a847c9880a96b3f225d295bb46affc7e3bd92d572865e66d6541d3281a3ba
+  specs/S04-evidence-claims/spec.md: 6ac9a90c01aa1365b1c0b4665f77d7a032f7d5f12c4081c4cf801c478b753572
+  specs/S05-reproducible-statistics/spec.md: 47120ab6b9d96514c558b0be37d906cb4de4fe51f6a1f8a8f79dd809b4b2a8e1
+  specs/S06-knowledge-library/spec.md: f5319040b2af6feb95f202ab622c54025d03cef7e44239eda3564a26a6d5f93b
+  specs/S07-skills-center/spec.md: fe49186edf933996900088dee365dd690a46b5d0988ce46042b09f77ee7985c9
+  specs/S08-evidence-writing/spec.md: 8bde3b93eea408c34814e0fe5ece27f605d053fe94e28f6b467cc7a5b38d695b
   ui-acceptance.md: 20c1fb93a72b5b987166c87b2d9fd8497127be7e7a245a1834fc90e2d18baf27

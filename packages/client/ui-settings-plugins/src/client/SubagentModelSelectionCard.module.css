@@ -56,7 +56,7 @@
   border: 0;
   padding: 0;
   background: transparent;
-  color: var(--dsw-alias-brand-primary);
+  color: var(--dsw-alias-accent-strong);
   cursor: pointer;
 }
 

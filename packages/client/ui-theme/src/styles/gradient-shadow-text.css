@@ -55,6 +55,7 @@ body {
   --dsh-content-font-delta: calc(var(--dsh-content-font-size, 14px) - 14px);
   --dsh-content-font-size-secondary: min(calc(var(--dsh-content-font-size, 14px) - 1px), max(13px, calc(var(--dsh-content-font-size, 14px) - 2px)));
   --dsh-content-font-delta-secondary: calc(var(--dsh-content-font-size-secondary) - 13px);
+  --dsw-font-reader-body: 17px/1.65 var(--dsw-font-family-reader);
 
   --dsw-font-markdown-h1: 700 calc(21px + var(--dsh-content-font-delta)) / calc(30px + var(--dsh-content-font-delta)) var(--dsw-font-family);
   --dsw-font-markdown-h1-font-family: var(--dsw-font-family);

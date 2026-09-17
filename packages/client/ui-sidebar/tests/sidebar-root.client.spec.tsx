@@ -32,12 +32,15 @@ type AttentionSnapshot = Parameters<Parameters<SidebarRootComponentProps['useSes
 const noAttention: AttentionSnapshot = new Map()
 const useSessionPendingInteraction: SidebarRootComponentProps['useSessionPendingInteraction'] = selector => selector(noAttention)
 
-function mountShell({ collapsed = false, width = 300 }: { collapsed?: boolean; width?: number } = {}) {
+function mountShell({
+  collapsed = false, width = 300, primaryActions = false,
+}: { collapsed?: boolean; width?: number; primaryActions?: boolean } = {}) {
   const startSession = vi.fn()
   const toggleSidebar = vi.fn()
   let regionOwner: SidebarSectionOwnerProps | undefined
   let settingsOwner: SidebarSettingsOwnerProps | undefined
   let footerActionOwner: SidebarFooterActionOwnerProps | undefined
+  let primaryActionOwner: SidebarSectionOwnerProps | undefined
   const brandMark = <span data-testid="custom-brand-mark">M</span>
   const brandName = <span data-testid="custom-brand-name">Custom Brand</span>
   let current = { collapsed, width }
@@ -47,6 +50,7 @@ function mountShell({ collapsed = false, width = 300 }: { collapsed?: boolean; w
       useSessions={neverHook} useSessionPendingInteraction={useSessionPendingInteraction}
       useResource={useResource} useWorkspaces={neverHook}
       startSession={startSession} toggleSidebar={toggleSidebar} t={t}
+      usePrimaryActions={((select: <T,>(value: T) => T) => select(primaryActions)) as SidebarRootComponentProps['usePrimaryActions']}
       renderSlot={((
         key: string,
         owner: SidebarFooterActionOwnerProps | SidebarSectionOwnerProps | SidebarSettingsOwnerProps,
@@ -60,6 +64,10 @@ function mountShell({ collapsed = false, width = 300 }: { collapsed?: boolean; w
         if (key === 'sidebar.footer.action') {
           footerActionOwner = owner
           return <div data-testid="footer-action-seat" data-wide={owner.wide} />
+        }
+        if (key === 'sidebar.primary.action') {
+          primaryActionOwner = owner as SidebarSectionOwnerProps
+          return <div data-testid="primary-action-strip" data-wide={primaryActionOwner.wide} />
         }
         regionOwner = owner as SidebarSectionOwnerProps
         return <div data-testid="region" data-wide={owner.wide} />
@@ -81,6 +89,10 @@ function mountShell({ collapsed = false, width = 300 }: { collapsed?: boolean; w
     footerActionOwner: () => {
       if (footerActionOwner === undefined) throw new Error('footer action owner not rendered')
       return footerActionOwner
+    },
+    primaryActionOwner: () => {
+      if (primaryActionOwner === undefined) throw new Error('primary action strip not rendered')
+      return primaryActionOwner
     },
     rerender(next: Partial<typeof current>) {
       current = { ...current, ...next }
@@ -111,6 +123,7 @@ describe('SidebarRoot shell', () => {
       collapsed={false} width={300}
       useSessions={neverHook} useSessionPendingInteraction={useSessionPendingInteraction}
       useResource={useResource} useWorkspaces={neverHook}
+      usePrimaryActions={((select: <T,>(value: T) => T) => select(false)) as SidebarRootComponentProps['usePrimaryActions']}
       startSession={vi.fn()} toggleSidebar={vi.fn()} t={t}
       renderSlot={((_key: string, _owner: unknown, options?: { fallback?: ReactNode }) =>
         options?.fallback ?? null) as SidebarRootComponentProps['renderSlot']}
@@ -130,6 +143,7 @@ describe('SidebarRoot shell', () => {
       collapsed={false} width={300}
       useSessions={neverHook} useSessionPendingInteraction={useSessionPendingInteraction}
       useResource={useResource} useWorkspaces={neverHook}
+      usePrimaryActions={((select: <T,>(value: T) => T) => select(false)) as SidebarRootComponentProps['usePrimaryActions']}
       startSession={vi.fn()} toggleSidebar={vi.fn()} t={t}
       renderSlot={((_key: string, _owner: unknown, options?: { fallback?: ReactNode }) =>
         options?.fallback ?? null) as SidebarRootComponentProps['renderSlot']}
@@ -144,12 +158,28 @@ describe('SidebarRoot shell', () => {
       collapsed={false} width={300}
       useSessions={neverHook} useSessionPendingInteraction={useSessionPendingInteraction}
       useResource={useResource} useWorkspaces={neverHook}
+      usePrimaryActions={((select: <T,>(value: T) => T) => select(false)) as SidebarRootComponentProps['usePrimaryActions']}
       startSession={vi.fn()} toggleSidebar={vi.fn()} t={t}
       renderSlot={((_key: string, _owner: unknown, options?: { fallback?: ReactNode }) =>
         options?.fallback ?? null) as SidebarRootComponentProps['renderSlot']}
     />)
 
     expect(screen.getByText('DSH Local Build')).toBeTruthy()
+  })
+
+  it('mounts the icon rail beside the region only while entries are live', () => {
+    const b = mountShell({ primaryActions: true })
+    expect(document.querySelector('[data-testid="primary-action-strip"]')).not.toBeNull()
+    expect(document.querySelector('[class*="primaryRail"]')).not.toBeNull()
+    expect(document.querySelector('[data-testid="region"]')).not.toBeNull()
+    // Icon-shaped presentation inside the rail, whatever the column state.
+    expect(b.primaryActionOwner().wide).toBe(false)
+  })
+
+  it('keeps the full-column region when the strip has no entries', () => {
+    mountShell({ primaryActions: false })
+    expect(document.querySelector('[class*="primaryRail"]')).toBeNull()
+    expect(document.querySelector('[data-testid="region"]')).not.toBeNull()
   })
 
   it('hands the region its wide flag and clamps expandSidebar to the collapsed state', () => {

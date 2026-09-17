@@ -34,9 +34,11 @@ kind: "package-library"
 
 | 导出 | 是什么 |
 |---|---|
-| `Button` | 可点击操作；`variant` 选择 `primary`、`ghost`、`outline` 或 `toolbar`。 |
+| `Button` | 可点击操作；`variant` 选择 `primary`、`ghost`、`outline` 或 `toolbar`，`size` 选择 28、36 或 44px。 |
 | `Switch` | 36×20 的双态开关。`label` 必填，控件不可能在没有名称的情况下发布。 |
-| `Input` | 单行文本输入，用于搜索框与行内表单。 |
+| `Input` | 32 或 40px 高的单行文本输入，用于搜索框与行内表单；`aria-invalid` 会设置外框错误态。 |
+| `Field` | 围绕调用方控件提供标签、说明、错误与操作；render prop 提供 ARIA 关联属性。 |
+| `TabList` | 受控标签控件，支持漫游焦点与方向键/Home/End 激活；面板由调用方持有。 |
 | `Menu` | 由条目、分隔线与分组标题构成的下拉菜单，支持嵌套子菜单。 |
 | `Pill` | 可选中的胶囊按钮，用于视图切换与筛选器；接受 `active` 与 `onClick`。 |
 | `Tag` | 只读胶囊徽章；`tone` 选择八种配色之一。 |

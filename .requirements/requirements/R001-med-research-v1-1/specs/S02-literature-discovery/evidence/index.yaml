@@ -14,3 +14,15 @@ artifacts:
     tests: [typecheck, remote-surface, literature-service]
     result: PASS
     note: Independent QA remains blocked; test design status is review.
+  - id: S02-host-ui-checks-2026-09-12
+    kind: host-ui
+    path: ./implementation.md
+    status: partial
+    commands:
+      - pnpm --dir plugins/med-research typecheck
+      - pnpm --dir plugins/med-research test
+      - pnpm --dir plugins/med-research build:client
+      - pnpm --dir packages/client/ui-layout bundle
+      - pnpm exec vitest run packages/client/ui-layout/tests/app-frame.client.spec.tsx packages/client/ui-layout/tests/columns.client.spec.ts packages/client/ui-layout/tests/apply.client.spec.ts
+    result: PASS
+    note: Host shell and Research surface checks pass; visual parity and browser evidence remain outstanding.

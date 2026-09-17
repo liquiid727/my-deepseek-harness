@@ -41,5 +41,14 @@
     - id: med-artifact
       name: '@medresearch/dsh-plugin-artifact'
 
+    - id: med-knowledge
+      name: '@medresearch/dsh-plugin-knowledge'
+
+    - id: med-skills
+      name: '@medresearch/dsh-plugin-skills'
+
+    - id: med-writing
+      name: '@medresearch/dsh-plugin-writing'
+
     - id: med-ui
       name: '@medresearch/dsh-plugin-medical-ui'

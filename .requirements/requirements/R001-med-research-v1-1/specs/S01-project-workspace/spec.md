@@ -7,7 +7,7 @@ source_entry: ../../prd.md
 source_entry_kind: prd
 source_prd: ../../prd.md
 source_prd_version: 2.1.0
-version: 2.1.0
+version: 2.1.3
 status: approved
 owner: med-research
 qualityProfile: fullstack-flow
@@ -35,6 +35,8 @@ In Scope: Project CRUD、PICO/PECO 元数据、Workspace/Session 绑定、项目
 
 Out of Scope: 替换 `root`/整个 sidebar、独立 Web 应用、URL 路由、静态业务 mock、Team Collaboration。
 
+Session replay: 所有模型可见工具输出都通过标准 `tool/result` Session event 记录；本 Spec 不引入也不依赖 `medical/project-context` 自定义 Session event。
+
 Responsibilities:
 
 - DSH sidebar 保持几何和折叠所有权，并声明可叠加的 `sidebar.primary.action` list slot；owner props 只提供 `wide`，条目以 `id/order/label` 注册并拥有自己的导航行为。
@@ -45,11 +47,13 @@ Responsibilities:
 
 ### SPEC-R001-S01-001 Persist and bind Project
 
-Public Seam: Project service、`project_create/project_get/project_get_context` tools、`medProjects` Remote、Workspace registry 和 Session event。
+Public Seam: Project service、`project_create/project_get/project_get_context` tools、`medProjects` Remote、Workspace registry、Session binding 和 DSH 标准 `tool/result` Session log。
 
-Given / When / Then: Given 合法目录与 Project 输入，When 创建、编辑、选择、归档、恢复或重载，Then `project.json`、版本化存储、Workspace、Session binding 和返回的 Project Context 原子一致；选择变化记录可重建的 `medical/project-context` 事件。
+Given / When / Then: Given 合法目录与 Project 输入，When 创建、编辑、选择、归档、恢复或重载，Then `project.json`、版本化存储、Workspace registration 和 Session binding 均在成功返回前持久化；任一步失败都返回明确错误，不报告为成功。`project_create` 创建 Project 并绑定初始 Session，写入 `project.create` 审计；客户端 `selectProject` 重新绑定当前 Session，写入 `project.select` 审计；显式调用 `project_get_context(projectId)` 也重新绑定当前 Session，并写入同样的 `project.select` 审计。`project_get_context()` 不带 `projectId` 时读取已有 binding。UI 选择本身不向模型请求注入项目事实；`project_get_context` 是组合 Project Context bundle 的唯一入口，结果由标准 `tool/result` Session event 记录并可从 Session log 重建。
 
-Data and Errors: Project/Session/Workspace ID 使用 branded 类型；缺少绑定返回 `PROJECT_NOT_BOUND`；重复创建按规范化 workspace path 拒绝；不兼容导入、越界路径或无效 PICO 字段在写入前失败。
+`project_create` 可以返回创建操作结果，`project_get` 可以返回单 Project 读取结果；二者都不承担组合 Project Context bundle 的职责。
+
+Data and Errors: Project/Session/Workspace ID 使用 branded 类型；没有 `projectId` 且没有 binding 时 `project_get_context` 返回 `PROJECT_NOT_BOUND`，不得静默使用上一个 Project 或返回空 bundle；重复创建按规范化 workspace path 拒绝；不兼容导入、越界路径或无效 PICO 字段在写入前失败。成功只在该操作声明的持久化写入、binding 和审计都完成后返回；这些跨存储步骤不提供事务回滚，失败可能留下已写入的部分状态，调用方必须看到明确失败结果并按实际状态恢复，不能报告为成功。
 
 ### SPEC-R001-S01-002 Project roster, sessions, and overview
 
@@ -73,13 +77,15 @@ Public Seam: Session-header Mode action、`medProjects.getMode/setMode`、`ctx.t
 
 Given / When / Then: Given Research/Paper/Statistics 模式，When 用户切换，Then 服务记录模式与 audit ID 并替换活动 Agent allowlist；失败恢复前一限制。导出包含所有声明域版本，导入在验证全部版本和引用后一次提交。
 
-Security: 密钥、Dataset 行和未授权跨 Project 标识不得出现在日志、备份预览或错误中。
+Security: 密钥、Dataset 行和未授权跨 Project 标识不得出现在日志、备份预览或错误中。`project_get_context` 的组合 bundle 只返回当前 Project 允许暴露的摘要、PICO/PECO、Overview 和授权元数据，不返回 Dataset 行、未授权 Project 数据、秘密或完整原始文献。
 
 ## 5. UI Presentation Contract
 
 `asset/首页.png` 的 DSH 映射：现有 DSH sidebar 承载医学品牌、主导航和 Project/Session 列表；宿主顶部区域保留全局搜索/连接/账户能力；会话视图承载 Hero、研究问题输入、快捷能力、Project Overview、三张核心能力卡和研究灵感。
 
 Desktop 1672×941: 左侧导航和 Project 列表保持独立视觉层级；主区 Hero 居中但不挤压 Overview；输入是首要操作；Overview 为单行高密度计数；核心能力为三列；宿主 composer 不遮挡最后内容。
+
+首页 Hero 通过 `conversation.view` 的 `mountComposer` 放置唯一宿主 composer，不另建 textarea。宿主保留附件、引用、命令、权限、模型选择、发送/停止/排队和审批交互。普通消息准入成功后进入当前 Session 的 Chat；失败留在首页并按宿主规则恢复草稿。Research 由明确的快捷入口进入，灵感只填入草稿。切换 View 不重新创建编辑器；旧 Session、旧 View 或已释放注册的完成回调不得改变当前导航。
 
 1440×900: 卡片与计数允许缩小间距但不改变顺序。390×844: sidebar/Project 列表进入宿主抽屉，快捷能力横向滚动或两列换行，计数两列，核心能力单列；主要输入和创建按钮始终可达。
 
@@ -88,6 +94,7 @@ Style: 使用 DSH font 和主题 token；医学蓝为主操作，绿/紫/橙只�
 ## 6. Verification and Acceptance Mapping
 
 - Service/Remote/持久化测试覆盖创建、切换、计数、并发、Mode、审计和导入失败。
+- Project context 测试覆盖 binding reload、审计记录、`project_get_context` 成功结果、无 binding 的 `PROJECT_NOT_BOUND`、标准 `tool/result` Session log 记录和未授权字段排除；不要求或产生未知的 `medical/project-context` event。
 - Client tests 覆盖 slot 缺失/存在、导航、无 Session、zh/en、键盘和窄屏。
 - 真实 profile 在 1672×941、1440×900、390×844 生成首页状态截图，与原型并排评审布局、间距、字体、颜色、图标、密度、滚动和遮挡。
 - Acceptance: AC-R001-001, AC-R001-013, AC-R001-014, AC-R001-015。
@@ -97,7 +104,7 @@ Style: 使用 DSH font 和主题 token；医学蓝为主操作，绿/紫/橙只�
 - [x] 每个行为有公开入口、数据所有者、失败语义和验收映射。
 - [x] DSH 扩展保持 additive，不替换 single owner。
 - [x] 首页原型的桌面和窄屏映射明确。
-- [x] 逐项覆盖、共享接口、状态与 UI 约束已复核；批准仅适用于设计，执行验收仍独立阻塞。
+- [x] 逐项覆盖、共享接口、状态与 UI 约束已复核；本轮设计修订处于 review，执行验收仍独立阻塞。
 
 ## 8. Executable Interface Details
 
@@ -108,6 +115,8 @@ Project 输入包含 name、question、background、PICO/PECO 和 workspacePath�
 list/sessions 返回稳定分页、当前选择与归档状态；overview 的五项计数分别为未撤销 membership Papers、未撤销 Evidence、Datasets、全部 AnalysisRuns、成功发布 Charts，随业务持久化通知刷新。Analyses 同时列状态统计，不能把失败 run 当成功。概览点击调用对应业务导航贡献，Datasets/Analyses/Charts 的列表由 S05 拥有。
 
 无 Session 的导航请求先展示选择/创建 Project/Session；创建成功后激活目标视图，保留用户输入。每个 Session 保存当前 view、Paper focus、Dataset/run 选择；重载恢复，切换 Project 不复用另一 Project 的 focus。医学导航只使用已声明 view IDs 与 scope，不接管宿主 URL。
+
+Project context reconstruction: Project selection persists the current Session binding and its audit record. The three binding paths are `project_create` with `project.create`, client `selectProject` with `project.select`, and explicit `project_get_context(projectId)` with `project.select`. `project_get_context()` reads the current binding when no `projectId` is supplied and returns `PROJECT_NOT_BOUND` when no binding exists. Model-visible Project facts enter only through its composed Project Context bundle; the standard `tool/result` event is the reconstructable Session-log source. The bundle contains the current Project's allowed summary, PICO/PECO, Overview, and authorized metadata. It excludes Dataset rows, unauthorized Project data, secrets, and complete raw literature. The tool must not fall back to a previous Project or an empty success response, and no `medical/project-context` event is emitted.
 
 Research/Paper/Statistics Mode 的操作集合与权限交集按共享约定逐项执行；设置失败恢复旧 mode 与工具集合并记录拒绝。Profile backup 导出与恢复遵循共享域清单；域 Provider 必须贡献 prepare/validate/commit/rollback 与版本，不允许少备份一个 required 域而显示成功。
 

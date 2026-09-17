@@ -116,6 +116,8 @@ describe('project tools bind the session to its project (SPEC §41)', () => {
     )
     expect(context).toMatchObject({ ok: true, result: { project: { id: 'project-1' } } })
     expect((await app.service.sessionProject('session-1'))?.projectId).toBe('project-1')
+    expect([...app.storage.auditLogs.entries()].map(([, row]) => row.action))
+      .toEqual(['project.create', 'project.create', 'project.select'])
   })
 
   it('treats an empty or whitespace projectId as omitted', async () => {
@@ -146,5 +148,12 @@ describe('project tools bind the session to its project (SPEC §41)', () => {
     const app = await harness()
     expect(await call(app.tools, 'project_get_context', { projectId: 'ghost' }, session('session-1')))
       .toMatchObject({ ok: false, error: { code: 'PROJECT_NOT_FOUND' } })
+  })
+
+  it('returns duplicate creation failures as the shared domain envelope', async () => {
+    const app = await harness()
+    await call(app.tools, 'project_create', { name: 'One' }, session('session-1'))
+    expect(await call(app.tools, 'project_create', { name: ' one ' }, session('session-1')))
+      .toMatchObject({ ok: false, error: { code: 'PROJECT_DUPLICATE', source: 'project' } })
   })
 })

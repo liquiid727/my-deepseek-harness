@@ -34,9 +34,11 @@ Check this table before writing a control in a feature package. A plugin cannot 
 
 | Export | What it is |
 |---|---|
-| `Button` | Clickable action; `variant` selects `primary`, `ghost`, `outline`, or `toolbar`. |
+| `Button` | Clickable action; `variant` selects `primary`, `ghost`, `outline`, or `toolbar`, and `size` selects 28, 36, or 44px. |
 | `Switch` | Two-state toggle, 36×20. `label` is required, so the control cannot ship unnamed. |
-| `Input` | Single-line text entry for search boxes and inline forms. |
+| `Input` | Single-line text entry for search boxes and inline forms at 32 or 40px; `aria-invalid` styles its wrapper. |
+| `Field` | Label, description, error, and action around a caller-rendered control; its render prop supplies the ARIA relationships. |
+| `TabList` | Controlled tab controls with roving focus and Arrow/Home/End activation; the caller owns the panels. |
 | `Menu` | Dropdown of items, separators, and group labels, with nested submenus. |
 | `Pill` | Selectable capsule button for view switchers and filters; takes `active` and `onClick`. |
 | `Tag` | Read-only capsule badge; `tone` selects one of eight palettes. |

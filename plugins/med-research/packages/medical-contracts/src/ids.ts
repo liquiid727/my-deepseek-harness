@@ -72,3 +72,48 @@ export type ArtifactId = z.infer<typeof artifactIdSchema>
 export const auditLogIdSchema = z.string().min(1).brand<'AuditLogId'>()
 /** Identifier of a `med_audit_logs` record. */
 export type AuditLogId = z.infer<typeof auditLogIdSchema>
+
+/** Identifier of a reader note. */
+export const noteIdSchema = z.string().min(1).brand<'NoteId'>()
+/** Identifier of a reader note. */
+export type NoteId = z.infer<typeof noteIdSchema>
+
+/** Identifier of a reader highlight annotation. */
+export const annotationIdSchema = z.string().min(1).brand<'AnnotationId'>()
+/** Identifier of a reader highlight annotation. */
+export type AnnotationId = z.infer<typeof annotationIdSchema>
+
+/** Identifier of a project tag. */
+export const tagIdSchema = z.string().min(1).brand<'TagId'>()
+/** Identifier of a project tag. */
+export type TagId = z.infer<typeof tagIdSchema>
+
+/** Identifier of a writing draft. */
+export const draftIdSchema = z.string().min(1).brand<'DraftId'>()
+/** Identifier of a writing draft. */
+export type DraftId = z.infer<typeof draftIdSchema>
+
+/** Identifier of one immutable draft revision. */
+export const draftRevisionIdSchema = z.string().min(1).brand<'DraftRevisionId'>()
+/** Identifier of one immutable draft revision. */
+export type DraftRevisionId = z.infer<typeof draftRevisionIdSchema>
+
+/** Identifier of a skill definition. */
+export const skillIdSchema = z.string().min(1).brand<'SkillId'>()
+/** Identifier of a skill definition. */
+export type SkillId = z.infer<typeof skillIdSchema>
+
+/** Identifier of an immutable skill version. */
+export const skillVersionIdSchema = z.string().min(1).brand<'SkillVersionId'>()
+/** Identifier of an immutable skill version. */
+export type SkillVersionId = z.infer<typeof skillVersionIdSchema>
+
+/** Identifier of a controlled skill test run. */
+export const skillTestRunIdSchema = z.string().min(1).brand<'SkillTestRunId'>()
+/** Identifier of a controlled skill test run. */
+export type SkillTestRunId = z.infer<typeof skillTestRunIdSchema>
+
+/** Identifier of a workspace skill installation. */
+export const skillInstallationIdSchema = z.string().min(1).brand<'SkillInstallationId'>()
+/** Identifier of a workspace skill installation. */
+export type SkillInstallationId = z.infer<typeof skillInstallationIdSchema>

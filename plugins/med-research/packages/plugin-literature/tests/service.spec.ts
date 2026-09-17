@@ -135,8 +135,13 @@ describe('LiteratureService', () => {
     const boot = await bootStorage()
     booted.push(boot)
 
-    const result = await service(boot.storage, transport).search({
+    const client = service(boot.storage, transport)
+    const approved = await client.planQuery({ projectId: PROJECT, question: 'q', plan: PLAN })
+    await client.approveQuery(approved.id)
+    const result = await client.search({
       projectId: PROJECT,
+      researchQueryId: approved.id,
+      researchQueryRevision: approved.revision ?? 1,
       query: '"PONV"[Title/Abstract]',
       purpose: 'primary',
     })
@@ -158,8 +163,10 @@ describe('LiteratureService', () => {
     booted.push(boot)
     const client = service(boot.storage, transport)
 
-    const first = await client.search({ projectId: PROJECT, query: '"PONV"[Title/Abstract]', purpose: 'primary' })
-    const second = await client.search({ projectId: PROJECT, query: '"PONV"[Title/Abstract]', purpose: 'primary' })
+    const plan = await client.planQuery({ projectId: PROJECT, question: 'q', plan: PLAN })
+    await client.approveQuery(plan.id)
+    const first = await client.search({ projectId: PROJECT, researchQueryId: plan.id, researchQueryRevision: plan.revision ?? 1, query: '"PONV"[Title/Abstract]', purpose: 'primary' })
+    const second = await client.search({ projectId: PROJECT, researchQueryId: plan.id, researchQueryRevision: plan.revision ?? 1, query: '"PONV"[Title/Abstract]', purpose: 'primary' })
 
     expect(second.papers.map(paper => paper.id)).toEqual(first.papers.map(paper => paper.id))
     expect(boot.storage.papers.size).toBe(2)
@@ -170,8 +177,13 @@ describe('LiteratureService', () => {
     const boot = await bootStorage()
     booted.push(boot)
 
-    await expect(service(boot.storage, transport).search({
+    const client = service(boot.storage, transport)
+    const plan = await client.planQuery({ projectId: PROJECT, question: 'q', plan: PLAN })
+    await client.approveQuery(plan.id)
+    await expect(client.search({
       projectId: PROJECT,
+      researchQueryId: plan.id,
+      researchQueryRevision: plan.revision ?? 1,
       query: '"PONV"[Title/Abstract]',
       purpose: 'primary',
     })).rejects.toMatchObject({ code: 'PUBMED_RATE_LIMIT' })

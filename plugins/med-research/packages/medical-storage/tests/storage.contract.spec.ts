@@ -268,7 +268,7 @@ async function seed(storage: MedStorage): Promise<void> {
     text: 'PONV is associated with postoperative pain.',
     evidenceIds: [evidence().id],
     counterEvidenceIds: [],
-    evidenceStatus: 'SUFFICIENT',
+    evidenceStatus: 'CONSISTENT',
     supportStatus: 'VERIFIED',
     rejectionReasons: [],
     createdAt: '2026-01-01T00:00:00.000Z',
@@ -328,7 +328,7 @@ describe('medical-storage contract (SPEC §15–§16)', () => {
       await seed(source.storage)
       bundle = medExport(source.storage)
       expect(bundle.format).toBe('medresearch.export')
-      expect(bundle.domains).toHaveLength(8)
+      expect(bundle.domains).toHaveLength(10)
     } finally {
       await source.shutdown()
     }
@@ -336,7 +336,7 @@ describe('medical-storage contract (SPEC §15–§16)', () => {
     const target = await boot(await freshDbPath())
     try {
       const report = await medImport(target.storage, bundle)
-      expect(report.domains).toBe(8)
+      expect(report.domains).toBe(10)
       expect(report.records).toBeGreaterThan(0)
       expect(medExport(target.storage).domains).toEqual(bundle.domains)
     } finally {

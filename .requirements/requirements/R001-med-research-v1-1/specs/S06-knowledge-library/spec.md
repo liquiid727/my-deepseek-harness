@@ -7,7 +7,7 @@ source_entry: ../../prd.md
 source_entry_kind: prd
 source_prd: ../../prd.md
 source_prd_version: 2.1.0
-version: 1.1.0
+version: 1.1.1
 status: approved
 owner: med-research
 qualityProfile: fullstack-flow
@@ -30,6 +30,10 @@ Business Outcome: 用户在 Project 和个人库中组织、检索并复用 Pape
 In Scope: Project Papers、My Papers、Uploaded Papers、Evidence Library/Groups、Project/Paper/Selection Notes、Tags、search、Project RAG、Draft inventory 和引用关系。
 
 Architecture: 新的 Knowledge Service Definition/Provider/Consumer 组合现有 Paper/Evidence records，并拥有 Tag、Draft 和 project-index records；Note 由 S03 唯一拥有；客户端通过 `medKnowledge` Remote 投影，不扫描本地文件拼装状态。
+
+### 2.1 Project/Session Context (S01 owner)
+
+S06 只消费 S01 提供的当前 Project/Session context。Library、RAG、Note、Tag 和 Draft 的查询、写入、索引与模型输入都使用该 binding；S06 不自行绑定 Project，不注入第二份 Project context，也不创建 `medical/project-context` 自定义 Session event。缺少 binding 返回 `PROJECT_NOT_BOUND`，跨 Project 请求返回 `SCOPE_DENIED`。默认查询范围是当前 Project，显式跨 Project 操作必须经过已有 scope 与授权规则，并在请求中明确目标范围。到达模型的 Project context 仅包含当前 Project 允许暴露的摘要、PICO/PECO、Overview 和授权元数据；Dataset 行、未授权 Project 数据、秘密和完整原始文献不进入 bundle。模型可见工具输出通过标准 `tool/result` Session 事件记录，Session replay 从 S01 binding 与这些结果重建相同输入。
 
 ## 3. Contract Behaviors
 
@@ -75,11 +79,11 @@ Note、Tag、Draft、index IDs branded；所有记录含 Project scope 和版本
 
 规范性共用约定：[接口与状态](../../interfaces.md)、[逐项覆盖](../../coverage.md)、[UI 验收](../../ui-acceptance.md)。本包拥有 Tag 关系、索引、Draft/Revision；Note CRUD 调用 S03，Paper membership 调用 S02，Evidence Group 调用 S04。
 
-Library list 接受 scope=currentProject/myLibrary/uploaded、kind、query、filters、cursor；默认 currentProject。My Papers/Uploaded 是用户可访问 Project 的显式聚合视图，每行显示 memberships；从聚合视图执行保存/删除必须明确目标 Project，不能自动改变当前 Project。移除最后 membership 也保留被 Note/Evidence/Draft 引用的 source；source cleanup 有引用则 SOURCE_IN_USE，确认后仅删除无引用孤立文件，历史引用不悬空。
+Library list 接受 scope=currentProject/myLibrary/uploaded、kind、query、filters、cursor；默认 currentProject，并从 S01 当前 binding 解析 Project。My Papers/Uploaded 是用户可访问 Project 的显式聚合视图，每行显示 memberships；从聚合视图执行保存/删除必须明确目标 Project，不能自动改变当前 Project，且目标必须通过已有 scope/授权规则。移除最后 membership 也保留被 Note/Evidence/Draft 引用的 source；source cleanup 有引用则 SOURCE_IN_USE，确认后仅删除无引用孤立文件，历史引用不悬空。
 
 search 支持 title/author/PMID/Note/tag，默认按相关度再更新时间/ID 排序；空 query 返回所选 scope 的分页列表，不做全文扫描。Tag 创建/重命名去首尾空白，Project 内名称大小写折叠唯一；重名返回 TAG_EXISTS，删除仅移除 Tag 和关联。Evidence 按 Claim 分组仍保持原 ID，不复制记录。
 
-RAG 检索 corpus 为当前 Project 的 Paper 段落、Verified Evidence 与 Notes；lexical FTS 是必交检索，按候选分数与稳定 ID 排序，输出 corpusVersion、候选/得分、引用和不足原因。Note 可用于发现问题或来源，不能作为医学事实唯一支持；选中的原文候选交 S04 verify/gate 后才能产生答案。移除 membership 后新 query 不能命中旧索引；重建期间返回 INDEX_REBUILDING，不能跨 Project 或模型常识补齐。
+RAG 检索 corpus 为 S01 当前 Project 的 Paper 段落、Verified Evidence 与 Notes；lexical FTS 是必交检索，按候选分数与稳定 ID 排序，输出 corpusVersion、候选/得分、引用和不足原因。Note 可用于发现问题或来源，不能作为医学事实唯一支持；选中的原文候选交 S04 verify/gate 后才能产生答案。移除 membership 后新 query 不能命中旧索引；重建期间返回 INDEX_REBUILDING，不能跨 Project 或模型常识补齐，也不能改变 Session binding。
 
 drafts.create/get/list/saveRevision 保存 title、outline、body、事实片段映射、Claim/Evidence versions、状态与 timestamps。用户空白 Draft 可保存为 DRAFT；REVIEWABLE 只能由 S08 校验后提交。S06 提供 Draft editor action registry，S08 注册 generate/translate/validate/export，避免反向静态依赖；完整 profile 必须具备这些动作。
 

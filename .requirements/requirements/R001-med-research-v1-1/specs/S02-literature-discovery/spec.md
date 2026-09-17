@@ -7,7 +7,7 @@ source_entry: ../../prd.md
 source_entry_kind: prd
 source_prd: ../../prd.md
 source_prd_version: 2.1.0
-version: 2.1.0
+version: 2.1.1
 status: approved
 owner: med-research
 qualityProfile: agent-workflow
@@ -30,6 +30,10 @@ Business Outcome: 用户确认透明检索计划后，发现、筛选、排序�
 In Scope: Question normalization、PICO/PECO、Keyword/MeSH expansion、editable PubMed Query、approval、ESearch/EFetch/ESummary、dedup、pagination、year/study/full-text filters、Rerank、Counter Search、Related Papers、save 和 Research UI。
 
 Architecture: tools 只调用 `medLiterature`；Connector 负责 NCBI wire parsing/retry；domain 负责 dedup/ranking input；Project paper repository 负责保存。模型不能提供 PMID/DOI。
+
+### 2.1 Project/Session Context (S01 owner)
+
+S02 只消费 S01 提供的当前 Project/Session context。QueryPlan、SearchRun、Paper membership 的查询、写入与模型输入都使用该 binding；搜索工具不得自行选择、切换或重新绑定 Project。S02 不注入第二份 Project context，也不创建 `medical/project-context` 自定义 Session event。缺少 binding 返回 `PROJECT_NOT_BOUND`，跨 Project 请求返回 `SCOPE_DENIED`。到达模型的 Project context 只包含当前 Project 允许暴露的摘要、PICO/PECO、Overview 和授权元数据；Dataset 行、未授权 Project 数据、秘密和完整原始文献不得进入 bundle。模型可见查询与检索工具输出通过标准 `tool/result` Session 事件记录，Session replay 依据 S01 binding 与这些结果重建相同输入。
 
 ## 3. Contract Behaviors
 

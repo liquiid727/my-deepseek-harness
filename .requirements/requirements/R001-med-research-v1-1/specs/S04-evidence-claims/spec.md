@@ -7,7 +7,7 @@ source_entry: ../../prd.md
 source_entry_kind: prd
 source_prd: ../../prd.md
 source_prd_version: 2.1.0
-version: 2.1.0
+version: 2.1.1
 status: approved
 owner: med-research
 qualityProfile: agent-workflow
@@ -30,6 +30,10 @@ Business Outcome: 用户获得可定位、可比较的 Evidence，以及只由�
 In Scope: retrieval、original text、paragraph/page/section locator、SUPPORT/AGAINST/UNCERTAIN、fulltext/abstract/secondary、location/semantic verification、Claim Gate、citation serialization、Evidence Table/Compare、Counter Evidence、Reference Chasing 和 source navigation。
 
 Architecture: Evidence service owns records and verification transitions；domain owns normalization/alignment、state invariant、Claim Gate 和 citation serializer；UI 从 raw records 派生展示状态。
+
+### 2.1 Project/Session Context (S01 owner)
+
+S04 只消费 S01 提供的当前 Project/Session context。Evidence、Claim、Citation 的查询、写入与模型输入都使用该 binding；Evidence 工具不得自行绑定或切换 Project。S04 不注入第二份 Project context，也不创建 `medical/project-context` 自定义 Session event。缺少 binding 返回 `PROJECT_NOT_BOUND`，跨 Project 请求返回 `SCOPE_DENIED`。到达模型的 Project context 只包含当前 Project 允许暴露的摘要、PICO/PECO、Overview 和授权元数据；Dataset 行、未授权 Project 数据、秘密和完整原始文献不得进入 bundle。验证结果继续通过业务工具结果记录；模型可见输入与输出通过标准 `tool/result` Session 事件记录，Session replay 依据 S01 binding 与这些结果重建相同输入。
 
 ## 3. Contract Behaviors
 

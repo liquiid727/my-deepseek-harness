@@ -39,6 +39,9 @@ import * as MedStatistics from '@medresearch/dsh-plugin-statistics'
 import * as MedFulltext from '@medresearch/dsh-plugin-fulltext'
 import * as MedLiterature from '@medresearch/dsh-plugin-literature'
 import * as MedPaper from '@medresearch/dsh-plugin-paper'
+import * as MedKnowledge from '@medresearch/dsh-plugin-knowledge'
+import * as MedSkills from '@medresearch/dsh-plugin-skills'
+import * as MedWriting from '@medresearch/dsh-plugin-writing'
 import { MED_ARTIFACT_EXPORT_PATH } from '@medresearch/dsh-medical-contracts'
 import { MED_TOOL_NAMES } from '@medresearch/dsh-plugin-medical-ui/src/client/tool-names.ts'
 
@@ -46,17 +49,20 @@ import { MED_TOOL_NAMES } from '@medresearch/dsh-plugin-medical-ui/src/client/to
 const EXPECTED_TOOLS = [
   'project_create', 'project_get', 'project_get_context', 'project_save_paper',
   'literature_plan_query', 'literature_search_pubmed', 'literature_get_paper',
-  'paper_get', 'paper_get_document', 'paper_resolve_fulltext', 'paper_search_content',
-  'evidence_retrieve', 'evidence_verify', 'evidence_save', 'evidence_list_for_claim',
-  'dataset_profile', 'dataset_get_schema',
-  'statistics_plan', 'statistics_generate_code', 'statistics_execute',
+  'paper_get', 'paper_get_document', 'paper_resolve_fulltext', 'paper_search_content', 'paper_summary', 'paper_translate', 'paper_note_create', 'paper_note_list',
+  'evidence_retrieve', 'evidence_verify', 'evidence_save', 'evidence_list_for_claim', 'evidence_claim_gate', 'evidence_citation_map', 'evidence_compare', 'evidence_withdraw', 'evidence_chase',
+  'dataset_profile', 'dataset_get_schema', 'dataset_preview', 'dataset_list',
+  'statistics_plan', 'statistics_generate_code', 'statistics_execute', 'statistics_approve_code', 'statistics_list_runs',
+  'knowledge_list_papers', 'knowledge_search', 'knowledge_create_tag', 'knowledge_create_draft', 'knowledge_get_draft', 'knowledge_rag', 'knowledge_draft_invalidate',
+  'skill_catalog', 'skill_get', 'skill_test', 'skill_install',
+  'writing_generate', 'writing_validate', 'writing_translate', 'writing_export',
   'artifact_get', 'artifact_export',
 ]
 
 /** Services the composition must provide. */
 const EXPECTED_SERVICES = [
   'medRunner', 'medProjects', 'medDatasets', 'medArtifacts', 'medEvidence',
-  'medStatistics', 'medFulltext', 'medLiterature', 'medPapers',
+  'medStatistics', 'medFulltext', 'medLiterature', 'medPapers', 'medKnowledge', 'medSkills', 'medWriting',
 ]
 
 let root: string | undefined
@@ -131,6 +137,9 @@ async function compose(): Promise<Context> {
     '    tool: med-research-test',
     '    email: med-research@example.com',
     "- name: '@medresearch/dsh-plugin-paper'",
+    "- name: '@medresearch/dsh-plugin-knowledge'",
+    "- name: '@medresearch/dsh-plugin-skills'",
+    "- name: '@medresearch/dsh-plugin-writing'",
     '',
   ].join('\n'))
 
@@ -160,6 +169,9 @@ async function compose(): Promise<Context> {
     ['@medresearch/dsh-plugin-fulltext', MedFulltext],
     ['@medresearch/dsh-plugin-literature', MedLiterature],
     ['@medresearch/dsh-plugin-paper', MedPaper],
+    ['@medresearch/dsh-plugin-knowledge', MedKnowledge],
+    ['@medresearch/dsh-plugin-skills', MedSkills],
+    ['@medresearch/dsh-plugin-writing', MedWriting],
   ])
   ctx.loader.internal = {
     version: 'v2',
@@ -196,6 +208,21 @@ describe('med plugin real composition (SPEC §4.2, §5)', () => {
     expect(carded).toEqual([...EXPECTED_TOOLS].sort())
   })
 
+  it('carries every required Reader and Draft-editor contribution (interfaces.md)', async () => {
+    const ctx = await compose()
+    // A V1 profile without the required contributions is not V1: the registry
+    // must report nothing missing once every plugin has applied.
+    expect(ctx.medReaderActions.missing()).toEqual([])
+    expect(ctx.medDraftEditorActions.missing()).toEqual([])
+    expect(ctx.medReaderActions.ids()).toEqual([
+      'reader.copy-citation', 'reader.open-source', 'reader.reference-chase',
+      'reader.save-evidence', 'reader.save-note', 'reader.translate-selection',
+    ])
+    expect(ctx.medDraftEditorActions.ids()).toEqual([
+      'draft.export', 'draft.generate', 'draft.translate', 'draft.validate',
+    ])
+  })
+
   it('serves a composed service call over the shared storage', async () => {
     const ctx = await compose()
     const csv = join(root!, 'cohort.csv')
@@ -223,7 +250,7 @@ describe('med plugin real composition (SPEC §4.2, §5)', () => {
     expect(run.status).toBe('planned')
     // The synchronous read is not part of the Remote surface; it proves the
     // composed service reads back what it wrote through the shared handle.
-    expect(ctx.medStatistics.getRun(run.id)?.id).toBe(run.id)
+    expect(ctx.medStatistics.peekRun(run.id)?.id).toBe(run.id)
 
     // Gate 5 in the real composition: the statistics plugin must see the
     // artifact registrar even though both plugins apply concurrently.
@@ -235,11 +262,12 @@ describe('med plugin real composition (SPEC §4.2, §5)', () => {
       'print("done")',
       '',
     ].join('\n'))
-    expect(approved.status).toBe('approved')
+    expect(approved.status).toBe('waiting_approval')
+    await ctx.medStatistics.approveCode(run.id)
     const result = await ctx.medStatistics.execute({ analysisRunId: run.id, datasetPath: csv })
     expect(result.status).toBe('succeeded')
     expect(result.resultJson).toEqual({ n: 4 })
-    const finished = ctx.medStatistics.getRun(run.id)
+    const finished = ctx.medStatistics.peekRun(run.id)
     expect(finished?.artifactIds ?? []).toHaveLength(1)
     expect(await ctx.medArtifacts.get(finished!.artifactIds![0]!)).toMatchObject({ analysisRunId: run.id })
   })
@@ -277,9 +305,22 @@ describe('med plugin real composition (SPEC §4.2, §5)', () => {
     expect(importCommand).toBeDefined()
 
     const exported = await exportCommand!.handler({ rawInput: file } as never)
-    // The project record and the audit row its creation appended.
-    expect(exported).toEqual({ kind: 'success', text: `Exported 8 domains / 2 records to ${file}` })
-    expect(JSON.parse(await readFile(file, 'utf8'))).toMatchObject({ format: 'medresearch.export' })
+    // The reported counts must match the bundle actually written: the project
+    // record, the audit row its creation appended, and the built-in skill
+    // catalog the skills plugin seeds during apply. Deriving the count from the
+    // file keeps this from silently passing when a seeded domain disappears.
+    const bundle = JSON.parse(await readFile(file, 'utf8')) as {
+      format: string
+      domains: Array<{ name: string; tables: Record<string, Record<string, unknown>> }>
+    }
+    const records = bundle.domains.reduce(
+      (total, domain) => total + Object.values(domain.tables).reduce((count, table) => count + Object.keys(table).length, 0),
+      0,
+    )
+    expect(exported).toEqual({ kind: 'success', text: `Exported ${bundle.domains.length} domains / ${records} records to ${file}` })
+    expect(bundle).toMatchObject({ format: 'medresearch.export' })
+    expect(records).toBeGreaterThan(1)
+    expect(JSON.stringify(bundle)).toContain(project.id)
 
     // Deleting the record proves the import writes instead of reporting a
     // no-op success over data that was already present.
@@ -397,7 +438,7 @@ describe('med plugin real composition (SPEC §4.2, §5)', () => {
         extractorVersion: 'v1',
         extractorModel: 'model',
         promptVersion: 'p1',
-      }, 'PARAGRAPH_NOT_FOUND'],
+      }, 'PROJECT_NOT_FOUND'],
       ['evidence_verify', { evidenceId: 'missing', verdict: 'VERIFIED' }, 'EVIDENCE_NOT_FOUND'],
       ['dataset_profile', { projectId: 'missing', fileRef: '/nonexistent.csv' }, 'DATASET_PARSE_FAILED'],
       ['dataset_get_schema', { datasetId: 'missing' }, 'DATASET_NOT_FOUND'],
@@ -409,6 +450,21 @@ describe('med plugin real composition (SPEC §4.2, §5)', () => {
       expect(result.isError, name).toBe(false)
       expect(result.value, name).toMatchObject({ ok: false, error: { code } })
     }
+
+    // Project scope is checked before the referenced object, so an existing
+    // project with an unknown paragraph reports the paragraph, not the project.
+    const scopeProject = await ctx.medProjects.create({ name: 'Envelope scope project' })
+    const dangling = await dispatch('evidence_save', {
+      projectId: scopeProject.id,
+      paragraphId: 'missing',
+      quote: 'q',
+      relation: 'SUPPORT',
+      extractorVersion: 'v1',
+      extractorModel: 'model',
+      promptVersion: 'p1',
+    })
+    expect(dangling.isError).toBe(false)
+    expect(dangling.value).toMatchObject({ ok: false, error: { code: 'PARAGRAPH_NOT_FOUND' } })
 
     // Reads that legitimately have nothing to return still answer `ok: true`.
     const empties: ReadonlyArray<readonly [string, unknown]> = [

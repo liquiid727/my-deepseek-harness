@@ -14,6 +14,8 @@ export interface Config {
   windowSize?: number
   /** Maximum retrieval units returned by one call. */
   maxRetrieval?: number
+  /** Maximum Reference Chasing hops per walk (SPEC-R001-S04-004). */
+  maxHops?: number
 }
 
 /** Schemastery validator for {@link Config}. */
@@ -21,4 +23,5 @@ export const Config: z<Config> = z.object({
   tolerance: z.number().min(0).max(1).default(0.05),
   windowSize: z.number().step(1).min(0).max(64).default(8),
   maxRetrieval: z.number().step(1).min(1).max(200).default(10),
+  maxHops: z.number().step(1).min(1).max(10).default(3),
 })

@@ -15,6 +15,7 @@ import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { WorkspaceId } from '@deepseek-ai/dsh-workspace/types'
 import { createConversationStore } from '../src/client/stores.ts'
 import { RemoteError } from '@deepseek-ai/dsh-client-test-runtime'
+import type { ConversationController } from '../src/client/service.ts'
 
 usePinnedBrowserLanguages('zh-CN')
 
@@ -106,11 +107,50 @@ async function bench() {
 }
 
 describe('Conversation inject API', () => {
+  it.each(['accepted', 'failed', 'released', 'other-view', 'other-session'] as const)(
+    'notifies only the originating mounted View after a message settles: %s', async (outcome) => {
+      const b = await bench()
+      try {
+        await b.runtime.sessions.setCurrent(ROOT)
+        b.slots.register({ name: 'conversation.view', id: 'home' }, () => null)
+        const { injected, instance } = b.conversationApi(ROOT)
+        instance.actions.setView('home')
+        const accepted = vi.fn()
+        const release = injected.mountComposer('home', 'home-editor', { placeholder: 'Question', onMessageAccepted: accepted })
+        let finish!: (value: Awaited<ReturnType<ISession['prompt']>>) => void
+        b.sessionFake.prompt.mockImplementationOnce(() => new Promise((resolve) => { finish = resolve }))
+        const { actions, state } = b.inputApi(ROOT)
+        const send = vi.spyOn(b.runtime.ctx.conversation as ConversationController, 'sendSession')
+        actions.setDraft('question')
+        actions.submit()
+        await vi.waitFor(() => { expect(b.sessionFake.prompt).toHaveBeenCalledOnce() })
+        expect(accepted).not.toHaveBeenCalled()
+        if (outcome === 'released') release()
+        if (outcome === 'other-view') instance.actions.setView('chat')
+        if (outcome === 'other-session') await b.runtime.sessions.add({ id: 'other' })
+        finish(outcome === 'failed'
+          ? { ok: false, error: new RemoteError('gateway/internal', 'failed', {}) }
+          : { ok: true, value: { accepted: true } })
+        await send.mock.results[0]!.value
+        await vi.waitFor(() => {
+          if (outcome === 'accepted') expect(accepted).toHaveBeenCalledOnce()
+          if (outcome === 'failed') expect(state.getSnapshot().draft).toBe('question')
+        })
+        expect(accepted).toHaveBeenCalledTimes(outcome === 'accepted' ? 1 : 0)
+        if (outcome === 'failed') expect(state.getSnapshot().draft).toBe('question')
+        release()
+        expect(b.residentApi(ROOT).hooks.composerOutlet.getSnapshot()).toBeUndefined()
+      } finally {
+        await b.runtime.dispose()
+      }
+    },
+  )
+
   it('assembles the target-neutral read face without Session side effects', async () => {
     const b = await bench()
     const { injected } = b.conversationApi(ROOT)
     expect(b.sessionFake.loadOlder).not.toHaveBeenCalled()
-    expect(Object.keys(injected)).toEqual(['hooks', 'bindDraftMirror', 'openView'])
+    expect(Object.keys(injected)).toEqual(['mountComposer', 'hooks', 'bindDraftMirror', 'openView'])
     expect(b.viewSource(ROOT).getSnapshot()).toEqual([])
     await b.runtime.dispose()
   })
@@ -135,6 +175,7 @@ describe('Conversation inject API', () => {
     expect(activate).toHaveBeenLastCalledWith('trajectory')
     expect(body.instance.store.getSnapshot()).toMatchObject({
       view: 'trajectory',
+      viewFocus: { trajectory: 'call-1' },
       viewRequest: { view: 'trajectory', focus: 'call-1' },
     })
 
@@ -160,7 +201,7 @@ describe('Conversation inject API', () => {
     try {
       await b.runtime.flush()
       localStorage.setItem(`dsh.conversation.${ROOT}`, JSON.stringify({
-        draft: '', view: 'custom', viewRequest: null,
+        draft: '', view: 'custom', viewFocus: {}, viewRequest: null,
       }))
 
       b.runtime.ctx.uiSession.adapter.resolve(ROOT)

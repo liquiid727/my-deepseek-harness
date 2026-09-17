@@ -52,19 +52,24 @@ export function projectTools(service: ProjectsService): ToolDefinition[] {
       },
       output: { schema: TOOL_ENVELOPE_SCHEMA, render: renderToolEnvelope },
       async execute(args, exec) {
-        const project = await service.create({
-          name: args.name,
-          ...args.researchQuestion === undefined ? {} : { researchQuestion: args.researchQuestion },
-          ...args.background === undefined ? {} : { background: args.background },
-          ...args.population === undefined ? {} : { population: args.population },
-          ...args.interventionOrExposure === undefined ? {} : { interventionOrExposure: args.interventionOrExposure },
-          ...args.comparison === undefined ? {} : { comparison: args.comparison },
-          ...args.outcome === undefined ? {} : { outcome: args.outcome },
-          ...args.keywords === undefined ? {} : { keywords: args.keywords },
-        })
-        // Creating a project makes it this session's active project (SPEC §41).
-        if (exec.agent !== undefined) await service.bindSession(exec.agent.id, project.id)
-        return { ok: true, result: asToolJson(project) }
+        try {
+          const project = await service.create({
+            name: args.name,
+            ...args.researchQuestion === undefined ? {} : { researchQuestion: args.researchQuestion },
+            ...args.background === undefined ? {} : { background: args.background },
+            ...args.population === undefined ? {} : { population: args.population },
+            ...args.interventionOrExposure === undefined ? {} : { interventionOrExposure: args.interventionOrExposure },
+            ...args.comparison === undefined ? {} : { comparison: args.comparison },
+            ...args.outcome === undefined ? {} : { outcome: args.outcome },
+            ...args.keywords === undefined ? {} : { keywords: args.keywords },
+          })
+          // Creating a project makes it this session's active project (SPEC §41).
+          if (exec.agent !== undefined) await service.bindSession(exec.agent.id, project.id)
+          return { ok: true, result: asToolJson(project) }
+        } catch (error) {
+          if (error instanceof ProjectError) return { ok: false, error: asToolJson(toDomainError(error)) }
+          throw error
+        }
       },
     }),
     defineTool({
@@ -142,7 +147,7 @@ export function projectTools(service: ProjectsService): ToolDefinition[] {
               } satisfies DomainError),
             }
           }
-          if (explicit !== undefined && sessionId !== undefined) await service.bindSession(sessionId, id)
+          if (explicit !== undefined && sessionId !== undefined) await service.selectProject(sessionId, id)
           const overview = await service.overview(id)
           return { ok: true, result: asToolJson({ project, overview }) }
         } catch (error) {

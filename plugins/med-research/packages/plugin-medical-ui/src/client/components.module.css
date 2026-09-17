@@ -1,0 +1,106 @@
+.inlineActions,
+.mode,
+.toolCard {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.paperTitle {
+  margin: 0 0 4px;
+  font-size: 13px;
+}
+
+.paperAbstract,
+.readerBody,
+.evidenceQuote {
+  margin: 0;
+  font-size: 12px;
+}
+
+.paperAbstract,
+.toolStatus {
+  color: var(--dsw-alias-label-secondary);
+}
+
+.readerQuote {
+  padding-left: 8px;
+  border-left: 2px solid var(--dsw-alias-accent-primary);
+  font: var(--dsw-font-reader-body);
+}
+
+.readerSection {
+  margin: 0 0 4px;
+  font-size: 12px;
+}
+
+.documentList {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.evidenceList {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.evidenceItem {
+  padding: 12px;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 8px;
+  background: var(--dsw-alias-bg-layer-1);
+}
+
+.evidenceState {
+  color: var(--dsw-alias-state-success-label);
+  font-size: 12px;
+}
+
+.evidenceQuote {
+  margin-block: 4px;
+}
+
+.statistics {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 4px 12px;
+  margin: 0;
+}
+
+.settings {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.settingsTitle,
+.settingsIntro {
+  margin: 0;
+}
+
+.settingsTitle {
+  font-size: 14px;
+}
+
+.settingsIntro,
+.toolCard {
+  font-size: 12px;
+}
+
+.chart {
+  margin: 12px 0 0;
+  color: var(--med-accent-statistics);
+}
+
+.chartCaption {
+  margin-bottom: 4px;
+  color: var(--dsw-alias-label-primary);
+  font-size: 12px;
+}
+
+.chartBar {
+  fill: currentcolor;
+}

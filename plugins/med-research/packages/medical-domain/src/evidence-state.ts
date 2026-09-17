@@ -9,7 +9,7 @@
  * @module @medresearch/dsh-medical-domain/src/evidence-state
  */
 
-import type { LocatorStatus, SupportStatus } from '@medresearch/dsh-medical-contracts'
+import type { Evidence, LocatorStatus, SupportStatus } from '@medresearch/dsh-medical-contracts'
 
 /** Stable code carried by {@link EvidenceStatusViolation}. */
 export const EVIDENCE_STATUS_VIOLATION = 'EVIDENCE_STATUS_VIOLATION'
@@ -84,4 +84,57 @@ export function applyLocatorResult(locatorStatus: LocatorStatus, requested: Supp
           return requested
       }
   }
+}
+
+/** Stable reason prefixes explaining why an evidence is not qualified. */
+export const EVIDENCE_QUALIFICATION_REASONS = {
+  /** The record was withdrawn by the user (interfaces.md §Reader, Note and Evidence). */
+  withdrawn: 'EVIDENCE_WITHDRAWN',
+  /** `sourceType = secondary_citation`; a secondary record never supports a claim directly. */
+  secondary: 'EVIDENCE_SECONDARY',
+  /** The locator failed; `NOT_FOUND` can never qualify. */
+  notLocated: 'EVIDENCE_NOT_LOCATED',
+  /** A `PARTIAL` locator carries no exact matched span, so it degrades to `NOT_FOUND`. */
+  partialWithoutAnchor: 'EVIDENCE_PARTIAL_WITHOUT_ANCHOR',
+  /** The semantic verdict is not `VERIFIED`. */
+  notVerified: 'EVIDENCE_NOT_VERIFIED',
+  /** The relation is the `UNCERTAIN` placeholder, which never supports a claim. */
+  uncertain: 'EVIDENCE_RELATION_UNCERTAIN',
+} as const
+
+/** Reason prefix carried by {@link EVIDENCE_QUALIFICATION_REASONS}. */
+export type EvidenceQualificationReason =
+  (typeof EVIDENCE_QUALIFICATION_REASONS)[keyof typeof EVIDENCE_QUALIFICATION_REASONS]
+
+/**
+ * Decide whether one evidence may support a claim (interfaces.md §Reader, Note
+ * and Evidence): it must be un-withdrawn, readable, located (`FOUND` or a
+ * `PARTIAL` with exact matched anchors), semantically `VERIFIED`, carry a
+ * directional `SUPPORT`/`AGAINST` relation, and not be a secondary citation.
+ *
+ * This is the single qualification rule; the claim gate, the writing service,
+ * and the UI projections all read it instead of restating it.
+ * @param evidence - Stored evidence record.
+ * @returns the qualification reasons; empty means qualified.
+ */
+export function evidenceQualificationReasons(evidence: Evidence): EvidenceQualificationReason[] {
+  const reasons: EvidenceQualificationReason[] = []
+  if (evidence.withdrawnAt !== undefined) reasons.push(EVIDENCE_QUALIFICATION_REASONS.withdrawn)
+  if (evidence.sourceType === 'secondary_citation') reasons.push(EVIDENCE_QUALIFICATION_REASONS.secondary)
+  if (evidence.locatorStatus === 'NOT_FOUND') reasons.push(EVIDENCE_QUALIFICATION_REASONS.notLocated)
+  if (evidence.locatorStatus === 'PARTIAL' && (evidence.matchedAnchors ?? []).length === 0) {
+    reasons.push(EVIDENCE_QUALIFICATION_REASONS.partialWithoutAnchor)
+  }
+  if (evidence.supportStatus !== 'VERIFIED') reasons.push(EVIDENCE_QUALIFICATION_REASONS.notVerified)
+  if (evidence.relation === 'UNCERTAIN') reasons.push(EVIDENCE_QUALIFICATION_REASONS.uncertain)
+  return reasons
+}
+
+/**
+ * Report whether one evidence may support a claim.
+ * @param evidence - Stored evidence record.
+ * @returns true when no qualification reason applies.
+ */
+export function isQualifiedEvidence(evidence: Evidence): boolean {
+  return evidenceQualificationReasons(evidence).length === 0
 }

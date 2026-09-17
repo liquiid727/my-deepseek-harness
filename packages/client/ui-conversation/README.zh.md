@@ -50,6 +50,8 @@ Session 首次绑定或缓存的 Session 成为 current 时，shell 会在渲染
 
 普通 composer 运行时，如果草稿为空或输入不可用，主指针操作保持为 Stop。可提交的文字或附件会把同一位置切换为 Queue Send；清空或成功提交草稿后恢复 Stop。繁忙态 Enter 设置会为普通 Session 与可继续 child 选择 Queue 或 Steer 键盘操作。它们的 QueueDock 行共享 Edit、Remove 与 Steer，空草稿也共享 steer-all 组合键。One-shot child 继续只读。Plan Mode 与 active goal 不改变附件入口。可继续 child 保留独立的 Send 与 Stop 操作，但不提供回形针、粘贴或拖放入口；parent 离线时，Send 与 composer 手势锁定，但在线 inbox 的 QueueDock 控制仍可使用（[决策](../../../.agents/notes/archived/bug-fix/2026-08-20-running-draft-primary-send.md)、[inbox 控制](../../../.agents/notes/implemented/feature/2026-08-27-continuable-subagent-human-inbox-control.zh.md)）。
 
+Conversation View 可通过 owner callback `mountComposer` 将常驻 composer 放入自己的布局。它提供已挂载空元素的 id、本地化 placeholder 和 `onMessageAccepted` callback，并在卸载时释放注册。shell 移动同一个 portal 容器，保留编辑器与草稿；待处理交互使它回到底部。普通发送只有在准入成功且原 Session、View 与注册仍为当前状态时才触发回调。失败发送通过常规输入流程恢复草稿；斜杠命令不触发此回调。参见[放置决策](../../../.agents/notes/implemented/architecture/2026-09-13-view-composer-outlet.zh.md)。
+
 <a id="temporary-composer-entries"></a>
 ## 临时 composer entry
 

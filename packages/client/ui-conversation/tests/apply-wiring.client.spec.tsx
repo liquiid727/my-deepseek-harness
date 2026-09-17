@@ -105,6 +105,31 @@ describe('target-neutral Conversation apply wiring', () => {
     await b.runtime.dispose()
   })
 
+  it('activates a registered View on the current Session through the root-level seam', async () => {
+    const b = await bench()
+    await b.runtime.sessions.add({ id: SID })
+    b.runtime.slots.register({ name: 'conversation.view', id: 'probe' }, () => null)
+    const uiConversation = b.runtime.ctx.get('uiConversation') as unknown as {
+      openView(view: string, options?: { sessionId?: SessionId; focus?: string }): boolean
+    }
+    expect(uiConversation.openView('probe', { focus: 'call-9' })).toBe(true)
+    await vi.waitFor(() => {
+      expect(JSON.parse(localStorage.getItem(`dsh.conversation.${SID}`) ?? '{}'))
+        .toMatchObject({ view: 'probe', viewFocus: { probe: 'call-9' }, viewRequest: { view: 'probe', focus: 'call-9' } })
+    })
+    await b.runtime.dispose()
+  })
+
+  it('refuses the root-level View seam without a current Session', async () => {
+    const b = await bench()
+    b.runtime.slots.register({ name: 'conversation.view', id: 'probe' }, () => null)
+    const uiConversation = b.runtime.ctx.get('uiConversation') as unknown as {
+      openView(view: string): boolean
+    }
+    expect(uiConversation.openView('probe')).toBe(false)
+    await b.runtime.dispose()
+  })
+
   it('removes services, entries, and declarations with the plugin fiber', async () => {
     const b = await bench()
     await b.feature.dispose()

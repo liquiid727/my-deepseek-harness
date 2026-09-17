@@ -31,6 +31,14 @@ function compose(): Composition {
   return JSON.parse(output) as Composition
 }
 
+function composeWithSeparator(): Composition {
+  const output = execFileSync('node', [join(REPOSITORY, 'scripts/install-local-profile.mjs'), '--', '--json'], {
+    cwd: REPOSITORY,
+    encoding: 'utf8',
+  })
+  return JSON.parse(output) as Composition
+}
+
 /** Publishable workspace packages, as the script sees them. */
 function publishablePackages(): string[] {
   return readdirSync(join(REPOSITORY, 'packages'))
@@ -47,6 +55,10 @@ function bundleDshPackages(): string[] {
 }
 
 describe('install-local-profile composition (SPEC §4.1)', () => {
+  it('accepts the standard standalone argument separator', () => {
+    expect(composeWithSeparator()).toEqual(compose())
+  })
+
   it('declares every publishable package as a tarball dependency and an override', () => {
     const composition = compose()
     const names = publishablePackages()

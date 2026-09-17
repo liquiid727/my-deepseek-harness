@@ -6,7 +6,7 @@ status: approved
 owner: med-research
 source_prd: ./prd.md
 source_prd_version: 2.1.0
-updated_at: 2026-09-12
+updated_at: 2026-09-15
 specs:
   - { id: S01, path: ./specs/S01-project-workspace/, status: approved, owner: med-research, required: true, depends_on: [], covers: [REQ-R001-001, REQ-R001-009, REQ-R001-010, REQ-R001-011, REQ-R001-018], business_outcome: "Create, switch, and recover Projects through the prototype-aligned workbench shell." }
   - { id: S02, path: ./specs/S02-literature-discovery/, status: approved, owner: med-research, required: true, depends_on: [S01], covers: [REQ-R001-002, REQ-R001-003, REQ-R001-009, REQ-R001-013, REQ-R001-018], business_outcome: "Approve queries and discover, filter, rank, and save authentic literature." }

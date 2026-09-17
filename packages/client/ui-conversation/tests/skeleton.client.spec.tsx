@@ -32,6 +32,7 @@ import type {
   ComposerBarOwnerProps, ConversationHeaderLineageOwnerProps,
 } from '../src/client/contract/slots.ts'
 import type { ViewTab } from '../src/client/contract/views.ts'
+import type { ComposerOutlet } from '../src/client/contract/composer-outlet.ts'
 
 // Every session-scope fixture carries the resource hook the resources plugin merges into GlobalStandardProps.
 const useResource = (() => ({ status: 'none' as const, value: undefined, failure: undefined, reload: () => {} })) as GlobalStandardProps['useResource']
@@ -44,7 +45,7 @@ Range.prototype.getBoundingClientRect = () => ({
 
 
 function fakeWiring() {
-  const sink = vi.fn(() => Promise.resolve({ kind: 'success' as const }))
+  const sink = vi.fn((_text: string) => Promise.resolve({ kind: 'success' as const }))
   const shell = new SessionInputShell({ actx: {} as Context, defaultSink: sink, commandAttachments: { serialize: () => Promise.resolve([]), release: () => {}, unsupportedNotice: (token: string) => `${token.trim()} attachments-unsupported` } })
   return { wiring: shell, sink, shell }
 }
@@ -122,8 +123,11 @@ function mount(
     summaryOrigin?: 'subagent'
     /** Insert a first-level subagent between the root and selected child. */
     nestedSubagent?: boolean
+    /** View-selection store snapshot override for the shell's hero decision. */
+    viewSelection?: { view: string | null } | null
     /** A composer block another plugin raised for this session. */
     composerBlock?: { reason: string }
+    composerOutlet?: ComposerOutlet
     /** Mutable view ledger used by registration-order regressions. */
     viewTabs?: ViewTab[]
   } = {},
@@ -158,10 +162,10 @@ function mount(
   const useSession = bindSnapshotSelector(session)
   const conversation = createSnapshotStore<ConversationSnapshot>(EMPTY_CONVERSATION_SNAPSHOT)
   const useConversation = bindSnapshotSelector(conversation)
-  const useSessionPendingInteraction = bindSnapshotSelector(
-    createSnapshotStore<SessionPendingInteractionSnapshot>(new Map()),
-  )
+  const pendingInteractions = createSnapshotStore<SessionPendingInteractionSnapshot>(new Map())
+  const useSessionPendingInteraction = bindSnapshotSelector(pendingInteractions)
   const store = createConversationStore().create()
+  if (options.viewSelection?.view) store.actions.setView(options.viewSelection.view)
   store.actions.setDraft('ordinary draft')
   const { wiring, sink } = fakeWiring()
   const useInput = bindSnapshotSelector(wiring.state)
@@ -239,6 +243,7 @@ function mount(
           actions={store.actions}
           renderSlot={renderSlot as never}
           bindDraftMirror={write => wiring.bindMirror(write)}
+          mountComposer={() => () => {}}
           openView={(view, focus) => { store.actions.openView(view, focus) }}
         />
       )
@@ -284,7 +289,7 @@ function mount(
         />
       )
     }
-    return <div data-testid={`view-${opts?.only ?? key}`} />
+    return <div data-testid={`view-${opts?.only ?? key}`}>{opts?.only === 'research' && <div id="research-composer" />}</div>
   }) as ConversationRootProps['renderSlot']
   const renderSlotChain = ((_key, _owner, opts) => (
     options.overlayTakeover === true
@@ -309,6 +314,10 @@ function mount(
     useWorkspaces: bindSnapshotSelector(workspaces),
     useProjection: (() => undefined),
     useComposerBlock: select => select(options.composerBlock),
+    useComposerOutlet: select => select(options.composerOutlet),
+    useViewSelection: select => select(options.viewSelection === undefined
+      ? null
+      : { draft: '', viewRequest: null, view: null, viewFocus: {}, ...options.viewSelection }),
     useInput,
     inputActions,
     renderSlot,
@@ -319,11 +328,74 @@ function mount(
   }
   const view = render(<ConversationRoot {...props} />)
   return {
-    view, store, wiring, sink, retargetWorkspace, session, conversation, slotCalls, lineageOwners, seatOwners, open,
+    view, store, wiring, sink, retargetWorkspace, session, conversation, pendingInteractions, slotCalls, lineageOwners, seatOwners, open,
     pickerOwner: () => pickerOwner,
     rerender: () => { view.rerender(<ConversationRoot {...props} />) },
   }
 }
+
+describe('View composer destination', () => {
+  it('docks a pending interaction and restores the same editor when it settles', () => {
+    const b = mount(sessionSnapshotOf(), undefined, undefined, {
+      viewSelection: { view: 'research' },
+      viewTabs: [{ id: 'chat', label: 'Chat' }, { id: 'research', label: 'Research' }],
+      composerOutlet: { view: 'research', targetId: 'research-composer', placeholder: 'Question', onMessageAccepted: vi.fn() },
+    })
+    try {
+      const editor = b.view.getByRole('textbox')
+      act(() => {
+        // The shell only consumes request presence; domain payloads belong to the takeover renderer.
+        b.pendingInteractions.set(new Map([[SID, { key: 'pending', kind: 'fixture', sessionId: SID } as never]]))
+      })
+      expect(editor.closest('[data-composer-seat]')?.getAttribute('data-placement')).toBe('docked')
+      expect(editor.closest('#research-composer')).toBeNull()
+      act(() => { b.pendingInteractions.set(new Map()) })
+      expect(b.view.getByRole('textbox')).toBe(editor)
+      expect(editor.closest('#research-composer')).not.toBeNull()
+    } finally {
+      b.view.unmount()
+      b.wiring.dispose()
+    }
+  })
+
+  it('moves one live editor between the View and dock without losing the draft', async () => {
+    const options = {
+      viewSelection: { view: 'research' },
+      viewTabs: [{ id: 'chat', label: 'Chat' }, { id: 'research', label: 'Research' }],
+      composerOutlet: { view: 'research', targetId: 'research-composer', placeholder: 'Research question', onMessageAccepted: vi.fn() },
+    }
+    const b = mount(sessionSnapshotOf({ blank: true }), undefined, undefined, options)
+    try {
+      const editor = b.view.getByRole('textbox')
+      expect(b.view.getAllByRole('textbox')).toHaveLength(1)
+      expect(editor.closest('#research-composer')).not.toBeNull()
+      act(() => { b.wiring.setDraft('one draft') })
+      editor.focus()
+      act(() => {
+        options.viewSelection.view = 'chat'
+        b.store.actions.setView('chat')
+        b.rerender()
+      })
+      expect(b.view.getByRole('textbox')).toBe(editor)
+      expect(editor.closest('#research-composer')).toBeNull()
+      expect(editor.textContent).toBe('one draft')
+      act(() => {
+        options.viewSelection.view = 'research'
+        b.store.actions.setView('research')
+        b.rerender()
+      })
+      expect(b.view.getByRole('textbox')).toBe(editor)
+      expect(editor.closest('#research-composer')).not.toBeNull()
+      fireEvent.keyDown(editor, { key: 'Enter' })
+      await act(async () => { await Promise.resolve() })
+      expect(b.sink).toHaveBeenCalledOnce()
+      expect(b.sink.mock.calls[0]?.[0]).toBe('one draft')
+    } finally {
+      b.view.unmount()
+      b.wiring.dispose()
+    }
+  })
+})
 
 describe('Hero chrome', () => {
   it('renders the English preview badge through the hero locale seat', () => {

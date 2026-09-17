@@ -17,12 +17,14 @@ import type {
   ConversationSessionInjected, DraftFileUploads,
 } from './contract/slots.ts'
 import type { InputNotice } from './contract/input.ts'
-import { createConversationStore, readConversationViewPreference } from './stores.ts'
+import { createConversationStore, readConversationViewPreference, sharePerScopeStore } from './stores.ts'
+import type { ConversationStoreState } from './contract/views.ts'
 import { ConversationController, UnsupportedImageMediaTypeError } from './service.ts'
 import type { IConversation } from './service.ts'
 import { ComposerBlockRegistry } from './input/blocks.ts'
 import type { ComposerBlock } from './contract/composer-blocks.ts'
 import { InputHub } from './input/hub.ts'
+import { ComposerOutlets } from './composer-outlets.ts'
 import { ComposerSubmissionPolicy } from './input/submission-policy.ts'
 import { queueDockEntry } from './queue/QueueDock.tsx'
 import { EnterBehaviorRow } from './settings/EnterBehaviorRow.tsx'
@@ -66,6 +68,14 @@ const ABSENT_NOTICES = {
 }
 const ABSENT_BLOCK = {
   getSnapshot: (): ComposerBlock | undefined => undefined,
+  subscribe: () => () => {},
+}
+const ABSENT_VIEW_SELECTION = {
+  getSnapshot: (): ConversationStoreState | null => null,
+  subscribe: () => () => {},
+}
+const ABSENT_COMPOSER_OUTLET = {
+  getSnapshot: () => undefined,
   subscribe: () => () => {},
 }
 const EMPTY_LEXICON: ReadonlyMap<'/' | '@', readonly string[]> = new Map()
@@ -118,11 +128,16 @@ export function apply(ctx: Context, config: Config = Config({})): void {
   // Schemastery's field default is materialized before Cordis calls apply.
   const maxConcurrentFileUploads = config.maxConcurrentFileUploads as number
   const workspaceNavigation = ctx.get('uiWorkspace') as unknown as WorkspaceNavigation
-  const uiConversation = new UiConversation(ctx, sessions)
 
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'ui-conversation: dictionaries')
   const t = ctx.locale.bind(NS)
-  const conversationStore = createConversationStore()
+  const conversationStore = sharePerScopeStore(createConversationStore())
+  // The navigation seam closes over activateView, declared below; it runs only
+  // after apply has finished, so the binding is live by first call.
+  const uiConversation = new UiConversation(ctx, sessions, {
+    storeFor: sessionId => conversationStore.create(sessionId),
+    activateView: (sessionId, view) => { activateView(sessionId, view) },
+  })
   const submissionPolicy = new ComposerSubmissionPolicy(
     ctx.settingsScope.bind<ConversationSettings>({ namespace: CONVERSATION_SETTINGS_NAMESPACE }),
   )
@@ -198,7 +213,21 @@ export function apply(ctx: Context, config: Config = Config({})): void {
     }
   }, 'ui-conversation: View selection')
 
-  const inputHub = new InputHub(ctx, t)
+  const composerOutlets = new ComposerOutlets()
+  const inputHub = new InputHub(ctx, t, (sessionId) => {
+    const source = composerOutlets.storeFor(sessionId)
+    const outlet = source.getSnapshot()
+    return () => {
+      if (outlet === undefined || source.getSnapshot() !== outlet
+        || sessions.list.getSnapshot().current !== sessionId
+        || conversationStore.create(sessionId).store.getSnapshot().view !== outlet.view) return
+      try {
+        outlet.onMessageAccepted()
+      } catch (error) {
+        ctx.logger.error(error)
+      }
+    }
+  })
   const composerBlocks = new ComposerBlockRegistry()
 
   // Conversation assembly and input share the Session binding lifecycle. The
@@ -207,6 +236,7 @@ export function apply(ctx: Context, config: Config = Config({})): void {
     hooks: ['conversation', 'input'],
     props: ['inputActions'],
     resolve: (binding) => {
+      binding.ctx.effect(() => () => { composerOutlets.forget(binding.sessionId) }, 'conversation: composer destination')
       const shell = inputHub.shellFor(binding)
       const conversation = uiConversation.binding(binding)
       restoreView(binding.sessionId)
@@ -237,6 +267,12 @@ export function apply(ctx: Context, config: Config = Config({})): void {
     inject: (sessionId: SessionId | undefined): ConversationInjected => ({
       hooks: {
         composerBlock: sessionId === undefined ? ABSENT_BLOCK : composerBlocks.storeFor(sessionId),
+        composerOutlet: sessionId === undefined ? ABSENT_COMPOSER_OUTLET : composerOutlets.storeFor(sessionId),
+        // The shared per-Session store instance is the shell's own selection
+        // source; handing it to the root shell keeps one selection truth.
+        viewSelection: sessionId === undefined
+          ? ABSENT_VIEW_SELECTION
+          : conversationStore.create(sessionId).store,
       },
       selectWorkspace: async (workspaceId) => {
         const nextId = await workspaceNavigation.connectWorkspace(workspaceId)
@@ -268,6 +304,17 @@ export function apply(ctx: Context, config: Config = Config({})): void {
         // session-list subscription observes it; restore the requested view
         // after the binding has been installed.
         queueMicrotask(restoreCurrentView)
+        // Session creation is asynchronous for workspace-backed launches. A
+        // single microtask can run before the new binding is published, which
+        // leaves the requested feature view hidden behind the blank Hero.
+        let attempts = 0
+        const retry = (): void => {
+          if (requestedView === undefined || attempts >= 20) return
+          attempts += 1
+          restoreCurrentView()
+          if (requestedView !== undefined) setTimeout(retry, 50)
+        }
+        setTimeout(retry, 50)
       },
     }),
   }, ConversationRoot)
@@ -280,6 +327,7 @@ export function apply(ctx: Context, config: Config = Config({})): void {
     },
     store: conversationStore,
     inject: (sessionId: SessionId, actions: BoundActions<typeof conversationStore>): ConversationSessionInjected => ({
+      mountComposer: (view, targetId, options) => composerOutlets.mount(sessionId, { view, targetId, ...options }),
       hooks: { conversationViews },
       bindDraftMirror: write => inputHub.shell(sessionId).bindMirror(write),
       openView: (view, focus) => {

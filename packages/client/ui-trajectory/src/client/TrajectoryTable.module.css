@@ -288,7 +288,7 @@
 
 .requestBoundaryControl:hover::before,
 .requestBoundaryControl:focus-visible::before {
-  background: var(--dsw-alias-brand-primary-new-colorprimary-new-color);
+  background: var(--dsw-alias-accent-primary);
 }
 
 .requestBoundaryControlActive::before,
@@ -296,10 +296,10 @@
 .requestBoundaryControlActive:focus-visible::before {
   background: color-mix(
     in srgb,
-    var(--dsw-alias-brand-primary-new-colorprimary-new-color) 18%,
+    var(--dsw-alias-accent-primary) 18%,
     var(--dsw-alias-bg-layer-1)
   );
-  box-shadow: 0 0 0 1.5px var(--dsw-alias-brand-primary-new-colorprimary-new-color);
+  box-shadow: 0 0 0 1.5px var(--dsw-alias-accent-primary);
 }
 
 .requestBoundaryControl[data-request-status='error']::before,
@@ -330,7 +330,7 @@
 .selectionRail {
   position: absolute;
   left: 0;
-  background: var(--dsw-alias-brand-primary-new-colorprimary-new-color);
+  background: var(--dsw-alias-accent-primary);
   pointer-events: none;
 }
 
@@ -687,14 +687,14 @@
 .assistantVioletBright {
   color: color-mix(
     in srgb,
-    var(--dsw-alias-brand-primary-new-colorprimary-new-color) 60%,
+    var(--dsw-alias-accent-primary) 60%,
     var(--dsw-alias-state-error-secondary)
   );
   background: color-mix(
     in srgb,
     color-mix(
       in srgb,
-      var(--dsw-alias-brand-primary-new-colorprimary-new-color) 55%,
+      var(--dsw-alias-accent-primary) 55%,
       var(--dsw-alias-state-error-secondary)
     ) 15%,
     var(--dsw-alias-bg-layer-1)
@@ -981,39 +981,7 @@
   display: none;
 }
 
-.detailTab {
-  position: relative;
-  flex: none;
-  padding: 0 9px;
-  border: 0;
-  color: var(--dsw-alias-label-tertiary);
-  background: transparent;
-  cursor: pointer;
-  font: var(--dsw-font-xs-13);
-}
-
-.detailTab:hover {
-  color: var(--dsw-alias-label-primary);
-  background: var(--dsw-alias-interactive-bg-hover);
-}
-
-.detailTabActive {
-  color: var(--dsw-alias-state-business-primary);
-}
-
-.detailTabActive::after {
-  position: absolute;
-  right: 9px;
-  bottom: 0;
-  left: 9px;
-  height: 2px;
-  border-radius: 1px 1px 0 0;
-  background: var(--dsw-alias-state-business-primary);
-  content: '';
-}
-
-.close:focus-visible,
-.detailTab:focus-visible {
+.close:focus-visible {
   outline: 1px solid var(--dsw-alias-state-business-primary);
   outline-offset: -1px;
 }

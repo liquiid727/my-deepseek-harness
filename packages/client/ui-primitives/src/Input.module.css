@@ -2,15 +2,33 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 32px;
   padding: 0 8px;
   border: 0.5px solid var(--dsw-alias-border-l4);
   border-radius: 8px;
   background: var(--dsw-alias-bg-layer-1);
 }
 
+.sm {
+  height: 32px;
+}
+
+.md {
+  height: 40px;
+  padding-inline: 12px;
+}
+
 .wrap:focus-within {
-  border-color: var(--dsw-alias-brand-primary);
+  border-color: var(--dsw-alias-focus-ring);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--dsw-alias-focus-ring) 18%, transparent);
+}
+
+.invalid {
+  border-color: var(--dsw-alias-state-error-label);
+}
+
+.invalid:focus-within {
+  border-color: var(--dsw-alias-state-error-label);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--dsw-alias-state-error-label) 18%, transparent);
 }
 
 .icon {

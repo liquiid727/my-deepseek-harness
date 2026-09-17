@@ -109,8 +109,8 @@ describe('med Remote round trip (SPEC §30, §32)', () => {
     await expect(remote.projects.get(created.id)).resolves.toEqual(created)
     await expect(remote.projects.overview(created.id)).resolves.toMatchObject({
       projectId: created.id,
-      papers: 0,
-      analyses: 0,
+      papers: { status: 'counted', value: 0 },
+      analyses: { status: 'counted', value: 0 },
     })
     await expect(remote.projects.update(created.id, { name: 'PONV 2026' }))
       .resolves.toMatchObject({ id: created.id, name: 'PONV 2026' })

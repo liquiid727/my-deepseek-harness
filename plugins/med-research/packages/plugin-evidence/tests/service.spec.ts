@@ -73,6 +73,7 @@ async function boot(paragraphText = 'PONV was associated with higher pain scores
     storage,
     alignment: { tolerance: 0.05, windowSize: 8 },
     maxRetrieval: 10,
+    maxHops: 3,
     now: () => '2026-01-01T00:00:00.000Z',
     newEvidenceId: () => c.evidenceIdSchema.parse(`evidence-${++sequence}`),
   })

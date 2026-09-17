@@ -18,6 +18,7 @@ const ALLOWED_EXTERNALS = new Set([
   'react-dom',
   'react-dom/client',
   '@deepseek-ai/cordis',
+  '@deepseek-ai/dsh-client-ui-primitives',
 ])
 
 const artifact = fileURLToPath(new URL('../packages/plugin-medical-ui/lib/client.js', import.meta.url))
@@ -33,6 +34,10 @@ check(source.includes('return module.exports;'), 'must return the factory export
 check(source.trimEnd().endsWith('});'), 'must close the module-loader handoff')
 check(source.includes('exports.apply = apply;'), 'must export apply')
 check(source.includes('exports.inject = inject;'), 'must export inject')
+check(source.includes('data-plugin-css='), 'must tag compiled styles for loader-owned unload and HMR cleanup')
+check(source.includes('views.css'), 'must inline the shared medical view stylesheet')
+check(source.includes('nav.css'), 'must inline the medical navigation stylesheet')
+check(!source.includes('asset/'), 'must not bundle design-reference asset paths')
 
 for (const specifier of new Set([...source.matchAll(/require\("([^"]+)"\)/g)].map(match => match[1]))) {
   check(ALLOWED_EXTERNALS.has(specifier), `unexpected external require("${specifier}")`)
@@ -47,4 +52,4 @@ if (failures.length > 0) {
   for (const failure of failures) console.error(`  - ${failure}`)
   process.exit(1)
 }
-console.log(`client bundle ok: ${artifact} (${String(source.length)} bytes, externals: react, react/jsx-runtime)`)
+console.log(`client bundle ok: ${artifact} (${String(source.length)} bytes, externals: ${[...ALLOWED_EXTERNALS].join(', ')})`)

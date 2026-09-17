@@ -6,7 +6,8 @@
  * @module @medresearch/dsh-plugin-medical-ui/src/client/views
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Button, Field, Input, StateDot } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { ConvViewProps } from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type { InjectFace, PropsLocale } from '@deepseek-ai/dsh-client-ui-slots'
 import type {
@@ -14,25 +15,27 @@ import type {
   DatasetId,
   Evidence,
   Paper,
-  Project,
-  ProjectId,
-  ProjectOverview,
+  QueryPlan,
+  LiteratureSearchResult,
+  ResearchQuery,
 } from '@medresearch/dsh-medical-contracts'
 import { evidenceUiState } from '../state/evidence.ts'
 import { nextResearchState, type ResearchUiEvent, type ResearchUiState } from '../state/research.ts'
 import { nextStatisticsState, type StatisticsUiEvent, type StatisticsUiState } from '../state/statistics.ts'
 import { MissingValuesChart } from './profile-chart.tsx'
-import { RESEARCH_HOME_STYLES } from './views.styles.ts'
+import { MedResearchIcon } from './icons.tsx'
+import { MedAsyncState, MedSectionHeader, MedViewFrame as MedPanel } from './components.tsx'
 import { decodePaperFocus, encodePaperFocus } from './focus.ts'
 import {
   EVIDENCE_STATE_KEY, NS, RESEARCH_STATE_KEY, STATISTICS_STATE_KEY, type MedViewInjected,
 } from './locales.ts'
+import css from './components.module.css'
 
 /** Full props of a Med Research Conversation view. */
 export type MedViewProps = ConvViewProps & InjectFace<MedViewInjected> & PropsLocale<typeof NS>
 
 /** One asynchronous read: the last value, the failure message, and a reload trigger. */
-interface MedLoad<T> {
+export interface MedLoad<T> {
   value: T | undefined
   error: string | undefined
   loading: boolean
@@ -70,7 +73,7 @@ function useUiMachine<S, E>(
  * @param deps - dependency list; a change cancels the previous read and starts one.
  * @returns the read state and a reload trigger.
  */
-function useMedLoad<T>(load: (signal: AbortSignal) => Promise<T>, deps: readonly unknown[]): MedLoad<T> {
+export function useMedLoad<T>(load: (signal: AbortSignal) => Promise<T>, deps: readonly unknown[] = []): MedLoad<T> {
   const [value, setValue] = useState<T>()
   const [error, setError] = useState<string>()
   const [loading, setLoading] = useState(true)
@@ -98,153 +101,135 @@ function useMedLoad<T>(load: (signal: AbortSignal) => Promise<T>, deps: readonly
       controller.abort()
     }
     // The reader is recreated with the dependency list the caller owns.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [...deps, revision])
 
   return { value, error, loading, reload: useCallback(() => { setRevision(current => current + 1) }, []) }
 }
 
-/** Shared view chrome: localized title, current state label, and the body. */
-function MedPanel({ title, state, children }: {
-  readonly title: string
-  readonly state: string
-  readonly children: ReactNode
-}) {
-  return (
-    <section className="researchPanel">
-      <style>{RESEARCH_HOME_STYLES}</style>
-      <div className="researchShell">
-      <header className="sectionHeader">
-        <h2 className="sectionTitle">{title}</h2>
-        <span className="state">{state}</span>
-      </header>
-      {children}
-      </div>
-    </section>
-  )
-}
-
 /** Failure line with a reload action. */
-function MedFailure({ message, label, onReload }: {
+export function MedFailure({ message, label, onReload }: {
   readonly message: string
   readonly label: string
   readonly onReload: () => void
 }) {
-  return (
-    <p role="alert" className="alert">
-      {label}: {message} <button type="button" onClick={onReload}>{label}</button>
-    </p>
-  )
+  return <MedAsyncState message={`${label}: ${message}`} retryLabel={label} onRetry={onReload} />
 }
 
-/** Research view: the project roster, the entry point of the Evidence Chain. */
-export function ResearchView({ remote, t, openView, useSession }: MedViewProps) {
+/**
+ * Research view (S02): query plan, PubMed search, and paper saving for the
+ * project bound to the current session (SPEC-R001-S01-003 keeps project
+ * selection on the home view). Without a binding it renders a localized
+ * pointer to the home instead of any synthetic content.
+ */
+export function ResearchView({
+  remote, t, openView, useSession, sessionId, viewRequest, viewFocus, completeViewRequest,
+}: MedViewProps) {
   const session = useSession(snapshot => snapshot)
   const [state, advance] = useUiMachine<ResearchUiState, ResearchUiEvent>('IDLE', nextResearchState)
-  const [selected, setSelected] = useState<ProjectId | undefined>()
-  const [name, setName] = useState('')
-  const [researchQuestion, setResearchQuestion] = useState('')
-  const [creating, setCreating] = useState(false)
-  const [createError, setCreateError] = useState<string>()
-  const load = useCallback(async (signal: AbortSignal): Promise<Project[]> => {
-    advance(['reset', 'plan'])
-    try {
-      const projects = await remote.projects.list(signal)
-      if (!signal.aborted) advance('plan_ready')
-      return projects
-    } catch (cause) {
-      if (!signal.aborted) advance('partial_failure')
-      throw cause
+  const [query, setQuery] = useState('')
+  const [primaryQuery, setPrimaryQuery] = useState('')
+  const [broadQuery, setBroadQuery] = useState('')
+  const [approvedQueryId, setApprovedQueryId] = useState<ResearchQuery['id']>()
+  const [searchResult, setSearchResult] = useState<LiteratureSearchResult>()
+  const [searching, setSearching] = useState(false)
+  const [searchError, setSearchError] = useState<string>()
+  const [savedPaperIds, setSavedPaperIds] = useState<Set<Paper['id']>>(new Set())
+
+  // The home view (or a navigation entry) addresses the research question as
+  // this view's focus; consume it once into the query input.
+  const focus = viewRequest?.focus || viewFocus
+  useEffect(() => {
+    if (viewRequest === null) return
+    if (focus !== undefined && focus !== '') {
+      setQuery(focus)
+      setApprovedQueryId(undefined)
+      setSearchResult(undefined)
     }
-  }, [remote, advance])
-  const projects = useMedLoad(load, [load])
-  const overview = useMedLoad(
+    completeViewRequest()
+  }, [viewRequest, focus, completeViewRequest])
+
+  const binding = useMedLoad(
     useCallback(
-      (signal: AbortSignal): Promise<ProjectOverview | undefined> =>
-        selected === undefined ? Promise.resolve(undefined) : remote.projects.overview(selected, signal),
-      [remote, selected],
+      (signal: AbortSignal) => remote.projects.sessionProject(sessionId, signal),
+      [remote, sessionId],
     ),
-    [selected],
+    [remote, sessionId],
   )
-  const createProject = async (): Promise<void> => {
-    setCreating(true)
-    setCreateError(undefined)
+  const projectId = binding.value?.projectId
+
+  const approveAndSearch = async (): Promise<void> => {
+    if (projectId === undefined || query.trim() === '' || primaryQuery.trim() === '' || broadQuery.trim() === '') return
+    setSearching(true)
+    setSearchError(undefined)
     try {
-      const project = await remote.projects.create({
-        name: name.trim(),
-        ...researchQuestion.trim() === '' ? {} : { researchQuestion: researchQuestion.trim() },
-      })
-      setName('')
-      setResearchQuestion('')
-      setSelected(project.id)
-      projects.reload()
+      const plan: QueryPlan = {
+        normalizedQuestion: query.trim(),
+        concepts: [],
+        queries: [
+          { source: 'pubmed', query: primaryQuery.trim(), purpose: 'primary' },
+          { source: 'pubmed', query: broadQuery.trim(), purpose: 'broad' },
+        ],
+      }
+      const stored = await remote.literature.planQuery({ projectId, question: query.trim(), plan })
+      const approved = await remote.literature.approveQuery(stored.id)
+      setApprovedQueryId(approved.id)
+      const result = await remote.literature.search({ projectId, researchQueryId: approved.id, query: primaryQuery.trim(), purpose: 'primary', maxResults: 100 })
+      setSearchResult(result)
+      advance('papers_ready')
     } catch (cause) {
-      setCreateError(cause instanceof Error ? cause.message : String(cause))
+      setSearchError(cause instanceof Error ? cause.message : String(cause))
+      advance('partial_failure')
     } finally {
-      setCreating(false)
+      setSearching(false)
     }
   }
 
-  return (
-    session === undefined ? null : (
-    <MedPanel title={t('view.research')} state={t(RESEARCH_STATE_KEY[state])}>
-      <header className="hero">
-        <span className="eyebrow">{t('home.eyebrow')}</span>
-        <h1 className="title">{t('home.title')}</h1>
-        <p className="subtitle">{t('home.prompt')}</p>
-      </header>
-      <form className="promptCard" onSubmit={(event) => { event.preventDefault(); void createProject() }}>
-        <h2 className="promptHeading">{t('home.createTitle')}</h2>
-        <div className="formGrid">
-        <label className="field">{t('home.name')} <input className="input" required value={name} onChange={event => { setName(event.currentTarget.value) }} /></label>
-        <label className="field">{t('home.question')} <input className="input" value={researchQuestion} onChange={event => { setResearchQuestion(event.currentTarget.value) }} /></label>
-        <button className="primaryButton" type="submit" disabled={creating}>{creating ? t('home.creating') : t('home.create')}</button>
-        </div>
-        {createError === undefined ? null : <p role="alert">{createError}</p>}
-      </form>
-      {projects.loading ? <p>{t('research.PLANNING')}</p> : null}
-      {projects.error === undefined ? null : (
-        <MedFailure message={projects.error} label={t('error.load')} onReload={projects.reload} />
-      )}
-      <section className="section">
-      <div className="sectionHeader"><h2 className="sectionTitle">{t('home.overview')}</h2><span className="sectionMeta">{t('home.overviewHint')}</span></div>
-      {!projects.loading && projects.error === undefined && (projects.value ?? []).length === 0
-        ? <p className="empty">{t('empty.projects')}</p>
-        : null}
-      <div className="projectGrid">
-        {(projects.value ?? []).map(project => (
-          <button aria-label={project.name} className="projectCard" data-selected={selected === project.id} key={project.id} type="button" onClick={() => { setSelected(project.id) }}>
-            <span className="projectName">{project.name}</span><span className="projectHint">{t('home.projectHint')}</span>
-          </button>
-        ))}
-      </div>
-      </section>
-      {selected === undefined ? null : (
-        <>
-          {overview.loading ? <p>{t('home.loading')}</p> : null}
-          {overview.error === undefined ? null : (
-            <MedFailure message={overview.error} label={t('error.load')} onReload={overview.reload} />
-          )}
-          {overview.error === undefined && overview.value !== undefined ? (
-            <div className="metrics">
-              {[[t('home.questions'), overview.value.questions], [t('home.papers'), overview.value.papers], [t('home.evidence'), overview.value.evidences], [t('home.datasets'), overview.value.datasets], [t('home.analyses'), overview.value.analyses], [t('home.charts'), overview.value.charts]].map(([label, value]) => <div className="metric" key={label}><span className="metricValue">{value}</span><span className="metricLabel">{label}</span></div>)}
-            </div>
-          ) : null}
-        </>
-      )}
-      <nav className="section" aria-label={t('home.capabilities')}><div className="sectionHeader"><h2 className="sectionTitle">{t('home.capabilities')}</h2></div><div className="capabilityGrid">
-        <button aria-label={t('view.papers')} className="capability" type="button" onClick={() => { openView('med-papers', '') }}><span className="capabilityIcon" aria-hidden="true">⌕</span><span className="capabilityTitle">{t('view.papers')}</span><span className="capabilityText">{t('home.papersDescription')}</span></button>
-        <button aria-label={t('view.evidence')} className="capability" type="button" onClick={() => { openView('med-evidence', '') }}><span className="capabilityIcon" aria-hidden="true">✓</span><span className="capabilityTitle">{t('view.evidence')}</span><span className="capabilityText">{t('home.evidenceDescription')}</span></button>
-        <button aria-label={t('view.statistics')} className="capability" type="button" onClick={() => { openView('med-statistics', '') }}><span className="capabilityIcon" aria-hidden="true">▥</span><span className="capabilityTitle">{t('view.statistics')}</span><span className="capabilityText">{t('home.statisticsDescription')}</span></button>
-      </div></nav>
-    </MedPanel>
+  if (session === undefined) return null
+
+  if (binding.error !== undefined) {
+    return (
+      <MedPanel title={t('view.research')} state={t(RESEARCH_STATE_KEY[state])}>
+        <MedFailure message={binding.error} label={t('error.load')} onReload={binding.reload} />
+      </MedPanel>
     )
+  }
+  if (projectId === undefined) {
+    return (
+      <MedPanel title={t('view.research')} state={t('research.IDLE')}>
+        {binding.loading ? <p className="state">{t('home.loading')}</p> : (
+          <div className="medNoProject">
+            <p>{t('research.noProject')}</p>
+            <button className="medPrimaryButton" type="button" onClick={() => { openView('med-home', '') }}>
+              {t('research.openHome')}
+            </button>
+          </div>
+        )}
+      </MedPanel>
+    )
+  }
+
+  return (
+    <MedPanel title={t('view.research')} state={t(RESEARCH_STATE_KEY[state])}>
+      <section className="researchWorkspace" aria-label={t('research.workspace')}>
+          <div className="researchQuestionBar"><Input aria-label={t('research.question')} icon={<MedResearchIcon size={16} />} size="md" value={query} onChange={event => { setQuery(event.currentTarget.value); setApprovedQueryId(undefined); setSearchResult(undefined) }} placeholder={t('research.questionPlaceholder')} /></div>
+        <div className="planCard">
+          <MedSectionHeader title={t('research.plan')} meta={approvedQueryId === undefined ? t('research.unconfirmed') : t('research.confirmed')} />
+          <div className="planGrid">
+            <Field label={t('research.primary')}>{control => <Input {...control} size="md" value={primaryQuery} onChange={event => { setPrimaryQuery(event.currentTarget.value); setApprovedQueryId(undefined) }} placeholder={t('research.primaryPlaceholder')} />}</Field>
+            <Field label={t('research.broad')}>{control => <Input {...control} size="md" value={broadQuery} onChange={event => { setBroadQuery(event.currentTarget.value); setApprovedQueryId(undefined) }} placeholder={t('research.broadPlaceholder')} />}</Field>
+            <div className={css.inlineActions}><Button size="lg" variant="primary" disabled={searching || approvedQueryId !== undefined} onClick={() => { void approveAndSearch() }}>{searching ? t('research.searching') : t('research.confirmSearch')}</Button>{approvedQueryId === undefined ? null : <Button size="sm" variant="outline" onClick={() => { setApprovedQueryId(undefined); setSearchResult(undefined) }}>{t('action.editQuery')}</Button>}</div>
+          </div>
+        </div>
+        {searchError === undefined ? null : <MedFailure message={searchError} label={t('action.retry')} onReload={() => { void approveAndSearch() }} />}
+        {searchResult !== undefined ? <section className="resultSection"><MedSectionHeader title={t('research.results')} meta={`${searchResult.papers.length} / ${searchResult.totalCount}`} /><div className="resultFilters"><span>{t('research.filterAll')}</span><span>{t('research.filterCounter')}</span><span>{t('research.filterRelated')}</span></div><div className="resultList">{searchResult.papers.map((paper, index) => <article className="resultRow" key={paper.id}><div className="resultBadge" aria-hidden="true">{index + 1}</div><div className="resultBody"><strong>{paper.title}</strong><span>{paper.authors.slice(0, 3).map(author => author.name).join(', ')} · {paper.journal ?? ''} · {paper.publicationDate ?? ''}</span><small>PMID {paper.pmid ?? '—'} {paper.doi === undefined ? '' : `· DOI ${paper.doi}`}</small></div><Button size="sm" variant="outline" data-saved={savedPaperIds.has(paper.id) || undefined} onClick={() => { void remote.projects.savePaper(projectId, paper.id).then(() => { setSavedPaperIds(current => new Set(current).add(paper.id)) }) }}>{savedPaperIds.has(paper.id) ? t('research.saved') : t('research.save')}</Button></article>)}</div></section> : null}
+      </section>
+    </MedPanel>
   )
 }
 
 /** Papers view: one paper's metadata plus the cited paragraph, highlighted. */
-export function PapersView({ remote, t, viewRequest, completeViewRequest }: MedViewProps) {
-  const focusString = viewRequest?.focus
+export function PapersView({ remote, t, viewRequest, viewFocus, completeViewRequest }: MedViewProps) {
+  const focusString = viewRequest?.focus || viewFocus
   // The decoded focus is a fresh object; memoize on the string so the load
   // effects below do not restart on every render.
   const focus = useMemo(
@@ -310,14 +295,14 @@ export function PapersView({ remote, t, viewRequest, completeViewRequest }: MedV
       )}
       {paper.value === undefined ? null : (
         <article>
-          <h3 style={{ margin: '0 0 4px', fontSize: 13 }}>{paper.value.title}</h3>
-          <p style={{ margin: 0, fontSize: 12, opacity: 0.8 }}>{paper.value.abstract}</p>
+          <h3 className={css.paperTitle}>{paper.value.title}</h3>
+          <p className={css.paperAbstract}>{paper.value.abstract}</p>
         </article>
       )}
       {paragraph.value === undefined ? null : (
-        <article style={{ borderLeft: '3px solid var(--dsh-color-border, #d0d0d0)', paddingLeft: 8 }}>
-          {sectionTitle === undefined ? null : <h4 style={{ margin: '0 0 4px', fontSize: 12 }}>{sectionTitle}</h4>}
-          <p ref={paragraphRef} style={{ margin: 0, fontSize: 12, lineHeight: 1.6 }}>
+        <article className={css.readerQuote}>
+          {sectionTitle === undefined ? null : <h4 className={css.readerSection}>{sectionTitle}</h4>}
+          <p ref={paragraphRef} className={css.readerBody}>
             {highlighted === undefined ? text : (
               <>
                 {highlighted.before}
@@ -328,7 +313,7 @@ export function PapersView({ remote, t, viewRequest, completeViewRequest }: MedV
           </p>
         </article>
       )}
-      <ul style={{ margin: 0, paddingLeft: 18 }}>
+      <ul className={css.documentList}>
         {(documents.value ?? []).map(document => (
           <li key={document.id}>{document.sourceType} — {document.parseStatus}</li>
         ))}
@@ -338,8 +323,9 @@ export function PapersView({ remote, t, viewRequest, completeViewRequest }: MedV
 }
 
 /** Evidence view: every stored evidence of one claim, with its display state. */
-export function EvidenceView({ remote, t, viewRequest, completeViewRequest, openView }: MedViewProps) {
-  const focus = viewRequest?.focus === undefined || viewRequest.focus === '' ? undefined : viewRequest.focus
+export function EvidenceView({ remote, t, viewRequest, viewFocus, completeViewRequest, openView }: MedViewProps) {
+  const focusValue = viewRequest?.focus || viewFocus
+  const focus = focusValue === '' ? undefined : focusValue
   useEffect(() => {
     if (viewRequest !== null && focus !== undefined) completeViewRequest()
   }, [viewRequest, focus, completeViewRequest])
@@ -359,14 +345,14 @@ export function EvidenceView({ remote, t, viewRequest, completeViewRequest, open
       {evidence.error === undefined ? null : (
         <MedFailure message={evidence.error} label={t('error.load')} onReload={evidence.reload} />
       )}
-      <ul style={{ margin: 0, paddingLeft: 0, listStyle: 'none', display: 'grid', gap: 8 }}>
+      <ul className={css.evidenceList}>
         {(evidence.value ?? []).map(item => {
           const state = evidenceUiState(item)
           return (
-            <li key={item.id} style={{ border: '1px solid var(--dsh-color-border, #d0d0d0)', borderRadius: 6, padding: 8 }}>
-              <strong style={{ fontSize: 12 }}>{t(EVIDENCE_STATE_KEY[state])}</strong>
-              <blockquote style={{ margin: '4px 0', fontSize: 12 }}>{item.originalText}</blockquote>
-              <button type="button" onClick={() => { openView('med-papers', encodePaperFocus({
+            <li className={css.evidenceItem} key={item.id}>
+              <strong className={css.evidenceState}><StateDot state={state.endsWith('_FOUND') ? 'done' : state === 'NOT_FOUND' || state === 'REJECTED' ? 'error' : 'warning'} /> {t(EVIDENCE_STATE_KEY[state])}</strong>
+              <blockquote className={css.evidenceQuote}>{item.originalText}</blockquote>
+              <Button size="sm" variant="outline" onClick={() => { openView('med-papers', encodePaperFocus({
                 paperId: item.paperId,
                 documentId: item.documentId,
                 ...item.paragraphId === undefined ? {} : { paragraphId: item.paragraphId },
@@ -374,7 +360,7 @@ export function EvidenceView({ remote, t, viewRequest, completeViewRequest, open
                 ...item.endOffset === undefined ? {} : { endOffset: item.endOffset },
               })) }}>
                 {t('action.openSource')}
-              </button>
+              </Button>
             </li>
           )
         })}
@@ -413,7 +399,7 @@ export function StatisticsView({ remote, t, viewRequest, completeViewRequest }: 
       )}
       {profile.value === undefined ? null : (
         <>
-          <dl style={{ display: 'grid', gridTemplateColumns: 'auto auto', gap: 4, margin: 0 }}>
+          <dl className={css.statistics}>
             <dt>{t('view.statistics')}</dt><dd>{profile.value.filename}</dd>
             <dt>{t('statistics.READY')}</dt><dd>{profile.value.rowCount}</dd>
           </dl>

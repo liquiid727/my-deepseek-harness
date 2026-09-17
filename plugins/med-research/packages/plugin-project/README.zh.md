@@ -37,7 +37,7 @@ Med Research Workspace 的项目生命周期。提供 `ctx.medProjects`，注册
 
 - `project_create` 返回已存储的 `Project`（JSON），并把它绑定为当前会话的项目（SPEC §41）。
 - `project_get` 返回项目，或 `{ ok: false, error: { code: "PROJECT_NOT_FOUND" } }`。
-- `project_get_context` 返回项目与概览计数：显式传 `projectId` 会选中并绑定它；省略、传空串或纯空白则复用会话已绑定的项目；两者都没有时返回 `{ ok: false, error: { code: "PROJECT_NOT_BOUND" } }`。
+- `project_get_context` 返回项目与概览计数：显式传 `projectId` 会选中并绑定它，并追加一条 `project.select` 审计记录；省略、传空串或纯空白则复用会话已绑定的项目；两者都没有时返回 `{ ok: false, error: { code: "PROJECT_NOT_BOUND" } }`。
 - `project_save_paper` 只接受服务端产生的 `paperId`，从不接受模型给的 PMID/DOI 元数据。
 - `medProjects.getMode` 与 `medProjects.setMode` 读取和修改会话的 `research`、`paper` 或 `statistics` 模式。模式变化追加到 `med_audit_logs`；组合了活动 Agent 注册表时，还会安装该模式的 `ctx.tools.restrict()` allowlist。
 - 除这些工具结果外，没有任何项目上下文被注入请求。

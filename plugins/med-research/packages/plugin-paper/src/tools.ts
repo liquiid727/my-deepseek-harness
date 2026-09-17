@@ -8,7 +8,10 @@
 import { defineTool, type ToolDefinition } from '@deepseek-ai/dsh-tools'
 import {
   asToolJson,
+  documentIdSchema,
   paperIdSchema,
+  paragraphIdSchema,
+  projectIdSchema,
   renderToolEnvelope,
   TOOL_ENVELOPE_SCHEMA,
   type DomainError,
@@ -92,6 +95,60 @@ export function paperTools(service: PapersService): ToolDefinition[] {
         if (await service.get(id) === undefined) return notFound(args.paperId)
         return { ok: true, result: asToolJson(await service.search(id, args.query)) }
       },
+    }),
+    defineTool({
+      name: 'paper_summary',
+      description: 'Summarize stored source paragraphs into the structured fields the spec requires; a field the source does not report is emitted as an explicit unreported marker with an anchor when it is reported.',
+      parameters: {
+        projectId: { type: 'string', required: true, description: 'Project that owns the paper; anchors are project-scoped.' },
+        paperId: { type: 'string', required: true, description: 'Paper to summarize.' },
+        documentId: { type: 'string', description: 'Optional parsed document.' },
+        scope: { type: 'string', enum: ['whole', 'section'], description: 'Summary scope.' },
+        mode: { type: 'string', required: true, enum: ['oneSentence', 'threeMinute', 'structured'], description: 'Summary format.' },
+      },
+      output: { schema: TOOL_ENVELOPE_SCHEMA, render: renderToolEnvelope },
+      async execute(args) {
+        const paperId = paperIdSchema.parse(args.paperId)
+        if (await service.get(paperId) === undefined) return notFound(args.paperId)
+        return { ok: true, result: asToolJson(await service.summary({ projectId: projectIdSchema.parse(args.projectId), paperId, ...args.documentId === undefined ? {} : { documentId: documentIdSchema.parse(args.documentId) }, ...args.scope === undefined ? {} : { scope: args.scope as 'whole' | 'section' }, mode: args.mode as 'oneSentence' | 'threeMinute' | 'structured' })) }
+      },
+    }),
+    defineTool({
+      name: 'paper_translate',
+      description: 'Validate a supplied translation against persisted paragraph numeric and citation tokens.',
+      parameters: {
+        documentId: { type: 'string', required: true, description: 'Parsed document.' },
+        paragraphIds: { type: 'array', items: { type: 'string' }, description: 'Optional paragraph subset.' },
+        translatedText: { type: 'string', required: true, description: 'Translation supplied for validation.' },
+        targetLanguage: { type: 'string', required: true, enum: ['zh', 'en'], description: 'Target language.' },
+      },
+      output: { schema: TOOL_ENVELOPE_SCHEMA, render: renderToolEnvelope },
+      async execute(args) {
+        return { ok: true, result: asToolJson(await service.translate({ documentId: documentIdSchema.parse(args.documentId), ...args.paragraphIds === undefined ? {} : { paragraphIds: args.paragraphIds.map(id => paragraphIdSchema.parse(id)) }, translatedText: args.translatedText, targetLanguage: args.targetLanguage as 'zh' | 'en' })) }
+      },
+    }),
+    defineTool({
+      name: 'paper_note_create',
+      description: 'Create a project, paper, or selection note with an independent source anchor.',
+      parameters: {
+        projectId: { type: 'string', required: true, description: 'Project scope.' },
+        paperId: { type: 'string', description: 'Optional paper.' },
+        scope: { type: 'string', required: true, enum: ['project', 'paper', 'selection'], description: 'Note scope.' },
+        title: { type: 'string', required: true, description: 'Note title.' },
+        content: { type: 'string', required: true, description: 'Editable note body.' },
+        anchor: { type: 'json', description: 'Optional SourceAnchor.' },
+      },
+      output: { schema: TOOL_ENVELOPE_SCHEMA, render: renderToolEnvelope },
+      async execute(args) {
+        return { ok: true, result: asToolJson(await service.createNote({ projectId: projectIdSchema.parse(args.projectId), ...args.paperId === undefined ? {} : { paperId: paperIdSchema.parse(args.paperId) }, scope: args.scope as 'project' | 'paper' | 'selection', title: args.title, content: args.content, ...args.anchor === undefined ? {} : { anchor: args.anchor as never } })) }
+      },
+    }),
+    defineTool({
+      name: 'paper_note_list',
+      description: 'List live notes in a project, optionally limited to one paper.',
+      parameters: { projectId: { type: 'string', required: true, description: 'Project scope.' }, paperId: { type: 'string', description: 'Optional paper filter.' } },
+      output: { schema: TOOL_ENVELOPE_SCHEMA, render: renderToolEnvelope },
+      async execute(args) { return { ok: true, result: asToolJson(await service.listNotes({ projectId: projectIdSchema.parse(args.projectId), ...args.paperId === undefined ? {} : { paperId: paperIdSchema.parse(args.paperId) } })) } },
     }),
   ]
 }

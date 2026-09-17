@@ -7,6 +7,7 @@
 
 import type { PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import { NS } from './locales.ts'
+import css from './components.module.css'
 
 /** Full props of the Med Research settings section. */
 export type MedSettingsProps = PropsRuntime<'settings.section'> & PropsLocale<typeof NS>
@@ -18,9 +19,9 @@ export type MedSettingsProps = PropsRuntime<'settings.section'> & PropsLocale<ty
  */
 export function MedSettingsSection({ t }: MedSettingsProps) {
   return (
-    <section style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      <h2 style={{ margin: 0, fontSize: 14 }}>{t('settings.title')}</h2>
-      <p style={{ margin: 0, fontSize: 12, opacity: 0.8 }}>{t('settings.intro')}</p>
+    <section className={css.settings}>
+      <h2 className={css.settingsTitle}>{t('settings.title')}</h2>
+      <p className={css.settingsIntro}>{t('settings.intro')}</p>
     </section>
   )
 }

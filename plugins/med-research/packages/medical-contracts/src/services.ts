@@ -8,13 +8,14 @@
  */
 
 import { z } from 'zod'
-import type { ArtifactId, ClaimId, DatasetId, DocumentId, EvidenceId, PaperId, ParagraphId, ProjectId, ResearchQueryId } from './ids.ts'
+import type { AnalysisRunId, AnnotationId, ArtifactId, ClaimId, DatasetId, DocumentId, DraftId, EvidenceId, NoteId, PaperId, ParagraphId, ProjectId, ResearchQueryId, TagId } from './ids.ts'
 import type {
   Evidence,
   EvidenceChunk,
   EvidenceRelation,
   EvidenceSourceType,
   FulltextResolution,
+  LocatorStatus,
   Paper,
   PaperDocument,
   PaperParagraph,
@@ -27,6 +28,7 @@ import type {
   ResearchQuery,
   ResearchQueryFilters,
   ResearchQueryInput,
+  SessionProject,
   SupportStatus,
   AgentMode,
 } from './research.ts'
@@ -39,6 +41,28 @@ import type {
   StatisticsRunInput,
   StatisticsRunResult,
 } from './statistics.ts'
+import type {
+  Annotation,
+  Draft,
+  DraftRevision,
+  KnowledgeSearchResult,
+  Note,
+  SourceAnchor,
+  Tag,
+} from './knowledge.ts'
+import type {
+  Skill,
+  SkillDefinition,
+  SkillInstallation,
+  SkillTestRun,
+  SkillVersion,
+} from './skills.ts'
+import type {
+  CitationExport,
+  WritingGeneration,
+  WritingLanguage,
+  WritingValidation,
+} from './writing.ts'
 
 /** Fields accepted when creating a project (SPEC §32). */
 export interface ProjectCreateInput {
@@ -67,30 +91,72 @@ export const projectCreateInputSchema = z.strictObject({
 /** Mutable project fields; identity, workspace binding, and timestamps are owned by the service. */
 export type ProjectPatch = Partial<Omit<Project, 'id' | 'workspacePath' | 'createdAt' | 'updatedAt'>>
 
-/** Project overview counters (US-001). */
-export interface ProjectOverview {
-  projectId: ProjectId
-  questions: number
-  papers: number
-  evidences: number
-  datasets: number
-  analyses: number
-  charts: number
+/** Availability of one overview counter (SPEC-R001-S01-002). */
+export interface ProjectOverviewCounter {
+  /** `counted` carries the persisted total; `unavailable` reports the domain read failure. */
+  status: 'counted' | 'unavailable'
+  /** Persisted count; present exactly when `status` is `counted`. */
+  value?: number
 }
 
-/** Project lifecycle service (SPEC §32). */
+/**
+ * One counted overview domain, or the record that reading it failed. An
+ * `unavailable` domain is never reported as zero: the client shows unknown.
+ */
+export type ProjectOverviewDomain = 'papers' | 'evidences' | 'datasets' | 'analyses' | 'charts'
+
+/** Project overview counters (US-001, SPEC-R001-S01-002). */
+export interface ProjectOverview {
+  projectId: ProjectId
+  /** ISO time the overview was computed. */
+  updatedAt: string
+  papers: ProjectOverviewCounter
+  evidences: ProjectOverviewCounter
+  datasets: ProjectOverviewCounter
+  analyses: ProjectOverviewCounter
+  charts: ProjectOverviewCounter
+}
+
+/** Project lifecycle service (SPEC §32, SPEC-R001-S01-001..002). */
 export interface MedProjectsService {
   /** Create the project record, its directory, and its `project.json`. */
   create(input: ProjectCreateInput): Promise<Project>
-  /** List projects visible in this deployment. */
+  /** List projects, including archived ones, newest first. */
   list(): Promise<Project[]>
   /** Read one project; `undefined` when it does not exist. */
   get(id: ProjectId): Promise<Project | undefined>
-  /** Apply a patch and return the updated project. */
-  update(id: ProjectId, patch: ProjectPatch): Promise<Project>
+  /**
+   * Apply a patch and return the updated project.
+   * @param expectedVersion - `updatedAt` token of the caller's copy; a stale
+   *   token fails with `PROJECT_VERSION_CONFLICT` and no partial write.
+   */
+  update(id: ProjectId, patch: ProjectPatch, expectedVersion?: string): Promise<Project>
   /** Delete a project and its owned records. */
   delete(id: ProjectId): Promise<void>
-  /** Counts shown on the project overview. */
+  /**
+   * Make a project read-only and move it out of the active roster, keeping its
+   * sessions, sources, and run history. Fails with `PROJECT_BUSY` while a
+   * protected operation is still running.
+   */
+  archive(id: ProjectId): Promise<Project>
+  /** Restore an archived project under the same identity. */
+  restore(id: ProjectId): Promise<Project>
+  /** Session bindings of one project, oldest first. */
+  sessions(id: ProjectId): Promise<SessionProject[]>
+  /**
+   * Read one session's project binding.
+   * @param sessionId - DSH session id.
+   * @returns the binding, or `undefined` when the session has no project.
+   */
+  sessionProject(sessionId: string): Promise<SessionProject | undefined>
+  /**
+   * Bind a session to a project, replacing any previous binding, and audit the
+   * selection. The client calls this when the user switches projects.
+   * @param sessionId - DSH session id.
+   * @param projectId - Project the session works on.
+   */
+  selectProject(sessionId: string, projectId: ProjectId): Promise<SessionProject>
+  /** Counts shown on the project overview; per-domain availability. */
   overview(id: ProjectId): Promise<ProjectOverview>
   /** Save one already-fetched paper into the project library. */
   savePaper(id: ProjectId, paperId: PaperId): Promise<ProjectPaper>
@@ -150,6 +216,8 @@ export interface LiteratureSearchInput {
   languages?: string[]
   /** Provenance link to the plan this query came from. */
   researchQueryId?: ResearchQueryId
+  /** Approved plan revision; required together with researchQueryId for network calls. */
+  researchQueryRevision?: number
 }
 
 /** Literature planning and search service (SPEC §9, §19). */
@@ -171,6 +239,10 @@ export interface MedLiteratureService {
   search(input: LiteratureSearchInput): Promise<LiteratureSearchResult>
   /** Read one paper by PMID from the connector. */
   getPaper(pmid: string): Promise<Paper | undefined>
+  /** Papers already persisted in one project's search history or library. */
+  listForProject(projectId: ProjectId): Promise<Paper[]>
+  /** Remove one membership without deleting the underlying paper or sources. */
+  unsave(projectId: ProjectId, paperId: PaperId): Promise<void>
 }
 
 /** Paper reading and full-text service (SPEC §31). */
@@ -189,6 +261,110 @@ export interface MedPapersService {
   upload(projectId: ProjectId, fileRef: string): Promise<Paper>
   /** Search paragraph text inside one paper. */
   search(id: PaperId, query: string): Promise<PaperParagraph[]>
+  /** Render a source-faithful summary with explicit missing-field markers. */
+  summary(input: { projectId: ProjectId; paperId: PaperId; documentId?: DocumentId; scope?: 'whole' | 'section'; mode: 'oneSentence' | 'threeMinute' | 'structured' }): Promise<PaperSummary>
+  /** Validate a caller-provided translation without replacing the original. */
+  translate(input: { documentId: DocumentId; paragraphIds?: ParagraphId[]; translatedText: string; targetLanguage: 'zh' | 'en' }): Promise<TranslationCheck>
+  /** Create a note owned by the reader. */
+  createNote(input: NoteCreateInput): Promise<Note>
+  /** Update note body/title while retaining its anchor. */
+  updateNote(id: NoteId, patch: { title?: string; content?: string }, expectedVersion?: number): Promise<Note>
+  /** Soft-delete a note. */
+  deleteNote(id: NoteId): Promise<void>
+  /** Read one note. */
+  getNote(id: NoteId): Promise<Note | undefined>
+  /** List notes visible in a project or paper. */
+  listNotes(input: { projectId: ProjectId; paperId?: PaperId }): Promise<Note[]>
+  /** Create a highlight annotation. */
+  createAnnotation(input: AnnotationCreateInput): Promise<Annotation>
+  /** Delete a highlight annotation. */
+  deleteAnnotation(id: AnnotationId): Promise<void>
+  /** List annotations for a paper. */
+  listAnnotations(projectId: ProjectId, paperId: PaperId): Promise<Annotation[]>
+  /** Resolve an anchor for reader focus. */
+  focus(anchor: SourceAnchor): Promise<{ status: 'FOUND' | 'STALE_ANCHOR'; paragraph?: PaperParagraph }>
+}
+
+/** Input for a reader note. */
+export interface NoteCreateInput {
+  projectId: ProjectId
+  paperId?: PaperId
+  scope: 'project' | 'paper' | 'selection'
+  title: string
+  content: string
+  anchor?: SourceAnchor
+}
+
+/** Input for a reader highlight. */
+export interface AnnotationCreateInput {
+  projectId: ProjectId
+  paperId: PaperId
+  documentId: DocumentId
+  paragraphId: ParagraphId
+  startOffset: number
+  endOffset: number
+  color: 'yellow' | 'blue' | 'green' | 'pink'
+}
+
+/** Source-faithful summary result. */
+/**
+ * The structured summary fields a V1 paper summary must cover, in the order the
+ * spec lists them. A field the source does not report is emitted as `未报告`
+ * with `reported: false` instead of being omitted or inferred.
+ */
+export const PAPER_SUMMARY_FIELD_KEYS = [
+  'researchQuestion',
+  'studyDesign',
+  'population',
+  'sampleSize',
+  'interventionExposure',
+  'comparator',
+  'outcome',
+  'methods',
+  'statistics',
+  'keyResults',
+  'effectSize',
+  'conclusion',
+  'limitations',
+  'bias',
+  'projectRelevance',
+  'references',
+] as const
+
+/** One structured summary field with its source location. */
+export type PaperSummaryFieldKey = (typeof PAPER_SUMMARY_FIELD_KEYS)[number]
+
+/** One structured summary field. */
+export interface PaperSummaryField {
+  key: PaperSummaryFieldKey
+  /** Dictionary key the client resolves for the field title. */
+  titleKey: string
+  value: string
+  /** False when the source does not report this field; `value` is then the placeholder. */
+  reported: boolean
+  /** Exact stored location the value came from; required for an effect size. */
+  anchor?: SourceAnchor
+}
+
+/** Paper summary projected from a parsed document. */
+export interface PaperSummary {
+  paperId: PaperId
+  documentId?: DocumentId
+  mode: 'oneSentence' | 'threeMinute' | 'structured'
+  sections: Array<{ title: string; text: string; paragraphIds: ParagraphId[] }>
+  /** The fields the requested mode covers; every field is present. */
+  fields: PaperSummaryField[]
+  /** Field keys reported as unavailable; a subset of `fields` with `reported: false`. */
+  missingFields: string[]
+}
+
+/** Translation integrity result. */
+export interface TranslationCheck {
+  originalText: string
+  translatedText: string
+  targetLanguage: 'zh' | 'en'
+  status: 'VALID' | 'TRANSLATION_MISMATCH'
+  mismatches: string[]
 }
 
 /** Full-text resolution seam (SPEC §21). */
@@ -244,10 +420,123 @@ export interface MedEvidenceService {
   /**
    * Apply a semantic verdict. The hard rule wins: a `NOT_FOUND` locator always
    * resolves to `REJECTED` regardless of the requested status.
+   *
+   * `relation` re-binds the evidence to the claim proposition, so a claim whose
+   * text changes must be re-verified. An `UNCERTAIN` relation keeps the support
+   * status at `PENDING`, never `VERIFIED`.
    */
-  verify(id: EvidenceId, verdict: SupportStatus): Promise<Evidence>
+  verify(id: EvidenceId, verdict: SupportStatus, options?: {
+    relation?: EvidenceRelation
+    reason?: string
+    verificationVersion?: string
+  }): Promise<Evidence>
+  /**
+   * Withdraw one evidence. Withdrawal is immediate: the record stops
+   * qualifying and every dependent claim and draft must be invalidated.
+   */
+  withdraw(id: EvidenceId, reason?: string): Promise<Evidence>
   /** All evidence bound to one claim. */
   listForClaim(id: ClaimId): Promise<Evidence[]>
+  /** Create and gate a claim from currently stored evidence. */
+  gateClaim(input: { projectId: ProjectId; researchQueryId: ResearchQueryId; text: string; evidenceIds: EvidenceId[]; counterEvidenceIds?: EvidenceId[] }): Promise<ClaimGateResult>
+  /** Serialize the current claim evidence into deterministic citation entries. */
+  serializeCitations(claimId: ClaimId): Promise<CitationMap>
+  /** Compare selected evidence without aggregating unsupported effects. */
+  compare(projectId: ProjectId, evidenceIds: EvidenceId[]): Promise<EvidenceComparison>
+  /**
+   * Chase a secondary citation to its original paper through a declared
+   * connector. Every hop records parent/child source, status, and reason; a
+   * visited set prevents cycles and `maxHops` bounds the walk. A successful
+   * chase creates a NEW direct evidence and re-verifies it; the original
+   * secondary record keeps its own locator status.
+   */
+  chase(input: ChaseInput): Promise<ChaseResult>
+}
+
+/** One reference hop of a Reference Chasing walk (SPEC §8 of S04). */
+export interface ChaseInput {
+  /** Secondary evidence whose reference is being chased. */
+  evidenceId: EvidenceId
+  /** Reference identifier as printed in the source (never invented). */
+  reference: { doi?: string; pmid?: string; title?: string }
+  /** Maximum hops for this walk; resolved from plugin Config when absent. */
+  maxHops?: number
+}
+
+/** Outcome of one Reference Chasing walk. */
+export interface ChaseResult {
+  status: 'RESOLVED' | 'UNRESOLVED' | 'CHASE_LIMIT'
+  /** The direct evidence created when the original paper was found. */
+  evidence?: Evidence
+  hops: ChaseHop[]
+  reason?: string
+}
+
+/** One recorded hop of a Reference Chasing walk. */
+export interface ChaseHop {
+  source: string
+  identifier: string
+  status: 'RESOLVED' | 'UNRESOLVED' | 'SKIPPED_VISITED'
+  reason: string
+}
+
+/** One claim gate outcome including the counts the UI must show (SPEC §12). */
+export interface ClaimGateCounts {
+  /** Distinct qualified SUPPORT evidence ids. */
+  support: number
+  /** Distinct qualified AGAINST evidence ids. */
+  against: number
+  /** Bound evidence still awaiting verification. */
+  pending: number
+  /** Bound evidence that is only a secondary citation. */
+  secondary: number
+}
+
+/** Claim gate result. */
+export interface ClaimGateResult {
+  status: 'CONSISTENT' | 'INSUFFICIENT' | 'CONFLICTING'
+  claim?: import('./research.ts').Claim
+  reasons: string[]
+  counts: ClaimGateCounts
+}
+
+/** Deterministic citation map entry. */
+export interface CitationMap {
+  revision: string
+  entries: Array<{
+    index: number
+    evidenceId: EvidenceId
+    paperId: PaperId
+    pmid?: string
+    doi?: string
+    anchor?: SourceAnchor
+  }>
+}
+
+/** One row of an Evidence comparison (SPEC §26). */
+export interface EvidenceComparisonRow {
+  evidence: Evidence
+  paper: Paper | undefined
+  quote: string
+  /** Study design as reported by the source; empty when the source does not report it. */
+  studyDesign?: string
+  /** Outcome as reported by the source; empty when the source does not report it. */
+  outcome?: string
+  /** Effect as reported by the source; empty when the source does not report it. */
+  effect?: string
+  relation: EvidenceRelation
+  sourceType: EvidenceSourceType
+  locatorStatus: LocatorStatus
+  supportStatus: SupportStatus
+  status: string
+  /** True when a withdrawal or unreadable source makes this record non-qualifying. */
+  withdrawn: boolean
+}
+
+/** Evidence comparison projection. */
+export interface EvidenceComparison {
+  projectId: ProjectId
+  rows: EvidenceComparisonRow[]
 }
 
 /** Dataset upload and profiling service (SPEC §33). */
@@ -258,16 +547,34 @@ export interface MedDatasetsService {
   profile(id: DatasetId): Promise<Dataset | undefined>
   /** Column schema of one dataset. */
   schema(id: DatasetId): Promise<DatasetColumn[]>
+  /** Return a bounded preview for the authenticated UI only. */
+  preview(id: DatasetId, rows?: number): Promise<{ headers: string[]; rows: string[][] }>
+  /** List project-scoped dataset profiles. */
+  list(projectId: ProjectId): Promise<Dataset[]>
 }
 
 /** Statistics planning and execution service (SPEC §34–§35). */
 export interface MedStatisticsService {
   /** Persist the agent-proposed plan as a `planned` run; never executes. */
   plan(input: { projectId: ProjectId; datasetId: DatasetId; question: string; plan: AnalysisPlan }): Promise<AnalysisRun>
-  /** Persist generated code for a planned run; marks it `approved`. */
+  /** Persist generated code for a planned run; moves it to `waiting_approval`. */
   generateCode(id: AnalysisRun['id'], code: string): Promise<AnalysisRun>
+  /** Approve the exact generated code and dataset/profile identity. */
+  approveCode(id: AnalysisRun['id']): Promise<AnalysisRun>
   /** Execute approved code through the isolated runner. */
   execute(input: StatisticsRunInput & { analysisRunId: AnalysisRun['id'] }): Promise<StatisticsRunResult>
+  /** Project-scoped immutable run history. */
+  listRuns(projectId: ProjectId): Promise<AnalysisRun[]>
+  /** Read one run for the authenticated client, with its input versions. */
+  run(id: AnalysisRunId): Promise<AnalysisRun | undefined>
+  /**
+   * Chart artifacts published by one project's successful runs. A failed or
+   * cancelled run contributes nothing, so the UI can never show a figure that
+   * came from a run that did not succeed.
+   */
+  listCharts(projectId: ProjectId): Promise<Artifact[]>
+  /** In-process read of one run; not part of the Remote surface. */
+  peekRun(id: AnalysisRunId): AnalysisRun | undefined
 }
 
 /** Artifact lookup and export service (SPEC §38). */
@@ -276,4 +583,122 @@ export interface MedArtifactsService {
   get(id: ArtifactId): Promise<Artifact | undefined>
   /** Export an artifact's bytes in the requested format. */
   export(id: ArtifactId, format: 'png' | 'svg' | 'csv' | 'json'): Promise<Uint8Array>
+}
+
+/** Project knowledge aggregation service (SPEC-R001-S06). */
+export interface MedKnowledgeService {
+  listPapers(input: { projectId: ProjectId; scope?: 'currentProject' | 'myLibrary' | 'uploaded'; query?: string }): Promise<Paper[]>
+  /** Project ids that currently save one paper; an aggregate view shows these. */
+  memberships(paperId: PaperId): Promise<string[]>
+  search(input: { projectId: ProjectId; query: string; kinds?: Array<'paper' | 'evidence' | 'note' | 'draft'> }): Promise<KnowledgeSearchResult[]>
+  createTag(projectId: ProjectId, name: string): Promise<Tag>
+  renameTag(id: TagId, name: string): Promise<Tag>
+  deleteTag(id: TagId): Promise<void>
+  tag(entityType: 'paper' | 'evidence' | 'note' | 'draft', entityId: string, tagId: TagId): Promise<void>
+  listTags(projectId: ProjectId): Promise<Tag[]>
+  createDraft(input: { projectId: ProjectId; title: string; outline?: string[]; body?: string }): Promise<Draft>
+  getDraft(id: DraftId): Promise<Draft | undefined>
+  listDrafts(projectId: ProjectId): Promise<Draft[]>
+  saveDraftRevision(input: { draftId: DraftId; outline: string[]; body: string; facts: import('./knowledge.ts').DraftFact[]; claimIds: string[]; evidenceIds: EvidenceId[]; expectedRevision?: number }): Promise<DraftRevision>
+  /**
+   * Return a Draft to `DRAFT`. The qualified states are produced by
+   * evidence-backed writing validation, so a caller may only invalidate.
+   */
+  setDraftStatus(id: DraftId, status: 'DRAFT'): Promise<Draft>
+  /**
+   * Answer from the CURRENT Project corpus only. Results carry the corpus
+   * version, candidate scores, and citations; no qualifying material produces
+   * an explicit insufficiency instead of an invented answer, and a removed
+   * membership can never be answered from a stale index.
+   */
+  rag(input: { projectId: ProjectId; query: string; maxCandidates?: number }): Promise<import('./knowledge.ts').ProjectRagAnswer>
+}
+
+/** Local skill catalog and installation service (SPEC-R001-S07). */
+export interface MedSkillsService {
+  catalog(query?: string): Promise<Skill[]>
+  get(id: import('./ids.ts').SkillId): Promise<Skill | undefined>
+  saveDraft(definition: SkillDefinition, expectedRevision?: number): Promise<Skill>
+  validate(id: import('./ids.ts').SkillId): Promise<SkillVersion>
+  test(id: import('./ids.ts').SkillId, input: unknown): Promise<SkillTestRun>
+  publish(id: import('./ids.ts').SkillId): Promise<SkillVersion>
+  install(input: { projectId: ProjectId; skillId: import('./ids.ts').SkillId; versionId: import('./ids.ts').SkillVersionId; enable?: boolean; permissions: string[] }): Promise<SkillInstallation>
+  setEnabled(id: import('./ids.ts').SkillInstallationId, enabled: boolean): Promise<SkillInstallation>
+  uninstall(id: import('./ids.ts').SkillInstallationId): Promise<void>
+}
+
+/** Evidence-backed writing service (SPEC-R001-S08). */
+export interface MedWritingService {
+  generate(input: { projectId: ProjectId; draftId: DraftId; evidenceIds: EvidenceId[]; outline: string[]; language: WritingLanguage }): Promise<WritingGeneration>
+  validate(draftId: DraftId): Promise<WritingValidation>
+  translate(input: { draftId: DraftId; sourceText: string; translatedText?: string; targetLanguage: WritingLanguage }): Promise<{ text: string; validation: WritingValidation }>
+  export(input: { projectId: ProjectId; draftId?: DraftId; paperIds?: PaperId[]; format: 'ris' | 'bibtex' | 'markdown'; mode: 'complete' | 'preview' }): Promise<CitationExport>
+}
+
+/**
+ * Shared shape of a selection-scoped action contribution (interfaces.md
+ * §Reader, Note and Evidence). The Reader and the Draft editor both accept
+ * additive contributions so a business package can attach behaviour without
+ * the host importing it.
+ */
+export interface SelectionActionRequest {
+  projectId: ProjectId
+  /** Session that asked; opaque and DSH-owned. */
+  sessionId?: string
+  /** Paper the selection came from, absent for a Draft-editor request. */
+  paperId?: PaperId
+  documentId?: DocumentId
+  /** Exact stored location of the selection, when one exists. */
+  anchor?: SourceAnchor
+  /** Verbatim selected text; the only text an action may treat as the input. */
+  selectionText?: string
+  /** Draft the request concerns, absent for a Reader request. */
+  draftId?: DraftId
+}
+
+/** Result of invoking one selection-scoped action. */
+export interface SelectionActionResult {
+  status: 'SUCCEEDED' | 'FAILED' | 'CANCELLED'
+  /** Opaque reference the UI resolves (EvidenceId, NoteId, exportId, ...). */
+  reference?: string
+  /** Localized-key reason, present for FAILED and CANCELLED. */
+  message?: string
+}
+
+/**
+ * One additive selection-scoped action. `id` is stable across versions because
+ * a profile's required set is checked by id; `labelKey` is a dictionary key so
+ * the contribution never hardcodes product copy.
+ */
+export interface SelectionAction {
+  id: string
+  order: number
+  labelKey: string
+  /** True when the action is meaningless without a non-empty selection. */
+  requiresSelection: boolean
+  invoke(request: SelectionActionRequest, signal?: AbortSignal): Promise<SelectionActionResult>
+}
+
+/**
+ * Registry of selection-scoped actions (SPEC-R001-S03-004, SPEC-R001-S06-004).
+ *
+ * `register` returns the disposer, so a contribution disappears with its
+ * plugin. `missing` reports the required ids a profile has not been given:
+ * callers surface that as a dependency diagnostic instead of a disabled button,
+ * because a V1 profile without the required contributions is not V1.
+ */
+export interface MedSelectionActionsService {
+  /**
+   * Add one contribution.
+   * @returns the disposer that removes it.
+   */
+  register(action: SelectionAction): () => void
+  /** Contributions applicable to one request, lowest `order` first. */
+  list(request: SelectionActionRequest): SelectionAction[]
+  /** Invoke one contribution by id. */
+  invoke(id: string, request: SelectionActionRequest, signal?: AbortSignal): Promise<SelectionActionResult>
+  /** Required action ids this registry is missing. */
+  missing(): string[]
+  /** Declare the ids a complete profile must provide. */
+  require(ids: readonly string[]): () => void
 }

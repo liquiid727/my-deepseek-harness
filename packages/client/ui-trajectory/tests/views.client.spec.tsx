@@ -234,6 +234,7 @@ function standaloneProps(
     inputActions,
     useProjection,
     viewRequest: null,
+    mountComposer: () => () => {},
     openView: () => {},
     completeViewRequest: () => {},
     // Image seats the outlet would bake: standalone renders omit the gallery.
@@ -381,7 +382,7 @@ function mount(fixture: Awaited<ReturnType<typeof bench>>) {
         }
       })()
       : injected
-    const viewProps: ConvViewProps = { ...owner, ...standardProps }
+    const viewProps: ConvViewProps = { ...owner, ...standardProps, mountComposer: () => () => {} }
     return (
       <View
         {...viewProps}
@@ -409,6 +410,7 @@ function mount(fixture: Awaited<ReturnType<typeof bench>>) {
         actions={conversation.actions}
         renderSlot={renderSlot}
         bindDraftMirror={() => () => {}}
+        mountComposer={() => () => {}}
         openView={conversation.actions.openView}
       />
     </>,

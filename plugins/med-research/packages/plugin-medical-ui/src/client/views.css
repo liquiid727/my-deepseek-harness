@@ -1,0 +1,147 @@
+/* Med Research view geometry. Product colors resolve through the host design system. */
+.medHome,.researchPanel{--med-blue:var(--dsw-alias-accent-primary);--med-blue-deep:var(--dsw-alias-accent-strong);--med-blue-soft:var(--dsw-alias-accent-soft);--med-green:var(--dsw-alias-state-success-label);--med-green-soft:var(--dsw-alias-state-success-tertiary);--med-purple:var(--med-accent-statistics);--med-purple-soft:var(--med-accent-statistics-soft);--med-orange:var(--dsw-alias-state-warn-label);--med-orange-soft:var(--dsw-alias-state-warn-tertiary);--med-ink:var(--dsw-alias-label-primary);--med-muted:var(--dsw-alias-label-secondary);--med-line:var(--dsw-alias-border-l1);--med-surface:var(--dsw-alias-bg-layer-1);--med-canvas:var(--dsw-alias-bg-base);--med-danger:var(--dsw-alias-state-error-label);box-sizing:border-box;color:var(--med-ink);font-size:14px;line-height:1.5}
+.medHome{min-height:100%;background:var(--med-canvas)}
+.visuallyHidden{position:absolute;width:1px;height:1px;margin:-1px;padding:0;border:0;clip:rect(0 0 0 0);overflow:hidden;white-space:nowrap}
+.medHome button,.researchPanel button{font:inherit}
+.medHome :is(button,input,textarea,summary,[role="button"]):focus-visible,.researchPanel :is(button,input,textarea,summary,[role="button"]):focus-visible{outline:2px solid var(--dsw-alias-focus-ring);outline-offset:2px}
+/* Current project strip */
+.medProjectStrip{display:flex;align-items:center;gap:12px;min-height:44px;padding:8px 16px;border:1px solid var(--med-line);border-radius:12px;background:var(--med-surface)}
+.medStripLabel{flex:none;color:var(--med-muted);font-size:12px;font-weight:700;letter-spacing:.04em}
+.medStripName{overflow:hidden;font-size:15px;font-weight:700;text-overflow:ellipsis;white-space:nowrap}
+.medStripHint{color:var(--med-muted);font-size:12px}
+.medStripActions{display:flex;gap:8px;margin-left:auto}
+.medStatusBadge{padding:2px 10px;border-radius:999px;font-size:12px;font-weight:700}
+.medStatusBadge[data-status="active"]{color:var(--med-green);background:var(--med-green-soft)}
+.medStatusBadge[data-status="archived"]{color:var(--med-orange);background:var(--med-orange-soft)}
+.medGhostButton{display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:4px 12px;border:1px solid var(--med-line);border-radius:8px;color:var(--med-ink);background:var(--med-surface);font-size:12px;cursor:pointer}
+.medGhostButton:hover{border-color:var(--med-blue);color:var(--med-blue)}
+/* Hero + primary input */
+.medHero{display:grid;justify-items:center;padding:16px 0 4px;text-align:center}
+.medHeroTitle{display:flex;align-items:center;justify-content:center;gap:16px;margin:8px 0 4px;font-size:clamp(36px,3.2vw,44px);line-height:1.1;font-weight:800}
+.medHeroMark{display:grid;flex:none}
+.medHeroSubtitle{margin:0 0 12px;color:var(--med-muted);font-size:15px}
+.medComposerOutlet{width:100%;max-width:784px;min-width:0;text-align:left}
+/* Quick entries */
+.medQuickRow{display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin-top:12px}
+.medQuick{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:8px 16px;border:1px solid var(--med-line);border-radius:12px;color:var(--med-ink);background:var(--med-surface);font-size:14px;font-weight:600;cursor:pointer}
+.medQuick:hover{border-color:var(--med-blue);color:var(--med-blue)}
+.medQuick[data-disabled]{color:var(--med-muted);background:var(--med-canvas);cursor:not-allowed}
+/* Overview tiles */
+.medSection{margin-top:16px}
+.medSectionHead{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:8px}
+.medSectionTitle{margin:0;font-size:22px;font-weight:750}
+.medSectionMeta{color:var(--med-muted);font-size:12px}
+.medTileRow{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
+.medTile{display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;column-gap:12px;align-items:center;min-width:0;min-height:44px;padding:12px;border:1px solid var(--med-line);border-radius:12px;background:var(--med-surface);text-align:left}
+button.medTile{cursor:pointer}
+button.medTile:hover{border-color:var(--med-blue)}
+.medTile[data-disabled]{cursor:default}
+.medTile[data-disabled]:hover{border-color:var(--med-line)}
+.medTileIcon{grid-row:1 / span 2;display:grid;place-items:center;width:40px;height:40px;border-radius:10px}
+.medTileIcon[data-tone="blue"]{color:var(--med-blue);background:var(--med-blue-soft)}
+.medTileIcon[data-tone="green"]{color:var(--med-green);background:var(--med-green-soft)}
+.medTileIcon[data-tone="purple"]{color:var(--med-purple);background:var(--med-purple-soft)}
+.medTileIcon[data-tone="orange"]{color:var(--med-orange);background:var(--med-orange-soft)}
+.medTileValue{font-size:24px;font-weight:750;line-height:1}
+.medTileLabel{margin-top:4px;color:var(--med-muted);font-size:12px}
+.medTileUnknown{color:var(--med-muted)}
+.medTileRetry{grid-column:2;justify-self:start;min-height:32px;padding:2px 10px;border:1px solid var(--med-line);border-radius:8px;color:var(--med-blue);background:var(--med-blue-soft);font-size:12px;cursor:pointer}
+/* Capability cards */
+.medCardRow{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.medCard{display:grid;gap:10px;padding:16px;border:1px solid var(--med-line);border-radius:16px;background:var(--med-surface);text-align:left;cursor:pointer;transition:transform .15s ease,border-color .15s ease}
+.medCard:hover{border-color:var(--med-blue);transform:translateY(-1px)}
+.medCardHead{display:flex;align-items:center;gap:12px}
+.medCardIcon{display:grid;place-items:center;width:36px;height:36px;border-radius:10px}
+.medCard[data-tone="blue"] .medCardIcon{color:var(--med-blue);background:var(--med-blue-soft)}
+.medCard[data-tone="green"] .medCardIcon{color:var(--med-green);background:var(--med-green-soft)}
+.medCard[data-tone="purple"] .medCardIcon{color:var(--med-purple);background:var(--med-purple-soft)}
+.medCardTitle{font-size:16px;font-weight:750}
+.medCardArrow{margin-left:auto;color:var(--med-muted)}
+.medCardText{color:var(--med-muted);font-size:13px;line-height:1.55}
+.medCardTags{display:flex;flex-wrap:wrap;gap:8px}
+.medTag{padding:3px 10px;border-radius:999px;background:var(--med-canvas);border:1px solid var(--med-line);color:var(--med-muted);font-size:12px}
+/* Inspiration */
+.medInspire{display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin-top:24px;padding:12px 16px;border:1px solid var(--med-line);border-radius:12px;background:var(--med-surface)}
+.medInspireLabel{display:inline-flex;align-items:center;gap:8px;color:var(--med-blue);font-size:13px;font-weight:700}
+.medInspireChips{display:flex;flex:1;flex-wrap:wrap;gap:8px}
+.medChip{padding:8px 14px;border:1px solid var(--med-line);border-radius:999px;color:var(--med-ink);background:var(--med-canvas);font-size:13px;cursor:pointer;min-height:36px}
+.medChip:hover{border-color:var(--med-blue);color:var(--med-blue)}
+/* Project management */
+.medSearch{position:relative;display:inline-flex;align-items:center}
+.medSearchIcon{position:absolute;left:10px;color:var(--med-muted);display:inline-flex}
+.medSearch input{box-sizing:border-box;min-height:36px;width:240px;padding:4px 10px 4px 30px;border:1px solid var(--dsw-alias-border-l3);border-radius:9px;color:var(--med-ink);font:inherit;font-size:13px}
+.medCreateCard{padding:16px;border:1px solid var(--med-line);border-radius:12px;background:var(--med-surface)}
+.medCreateTitle{margin:0 0 12px;font-size:15px}
+.medCreateGrid{display:grid;grid-template-columns:1fr 1.4fr auto;gap:12px;align-items:end}
+.medField{display:grid;gap:6px;color:var(--med-muted);font-size:12px;font-weight:600;text-align:left}
+.medInput{box-sizing:border-box;width:100%;min-height:40px;padding:9px 11px;border:1px solid var(--dsw-alias-border-l3);border-radius:9px;color:var(--med-ink);background:var(--med-surface);font:inherit}
+.medPrimaryButton{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-width:44px;min-height:44px;padding:0 16px;border:0;border-radius:9px;color:var(--dsw-alias-label-on-accent);background:var(--med-blue-deep);font:inherit;font-weight:700;cursor:pointer}
+.medPrimaryButton:hover{background:var(--med-blue-deep)}
+.medPrimaryButton:disabled{opacity:.55;cursor:wait}
+.medAlert{margin:10px 0 0;color:var(--med-danger);font-size:12px}
+.medEmpty{padding:16px;border:1px dashed var(--dsw-alias-border-l3);border-radius:10px;color:var(--med-muted);background:var(--dsw-alias-bg-layer-1);font-size:13px}
+.medProjectGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;margin-top:12px}
+.medProjectCard{position:relative;display:grid;gap:6px;padding:16px;border:1px solid var(--med-line);border-radius:12px;background:var(--med-surface);text-align:left;cursor:pointer}
+.medProjectCard:hover{border-color:var(--med-blue)}
+.medProjectCard[data-selected]{border-color:var(--med-blue);box-shadow:0 0 0 2px var(--med-blue)}
+.medProjectName{overflow:hidden;font-size:15px;font-weight:700;text-overflow:ellipsis;white-space:nowrap}
+.medProjectHint{overflow:hidden;color:var(--med-muted);font-size:12px;text-overflow:ellipsis;white-space:nowrap}
+.medArchiveLink{display:inline-flex;align-items:center;gap:6px;margin-top:4px;color:var(--med-muted);font-size:12px;min-height:32px}
+.medArchiveLink:hover{color:var(--med-orange)}
+.medArchived{margin-top:16px}
+.medArchived summary{cursor:pointer;color:var(--med-muted);font-size:13px;min-height:44px;display:flex;align-items:center}
+.medArchivedList{display:grid;gap:8px;margin:8px 0 0;padding:0;list-style:none}
+.medArchivedList li{display:flex;align-items:center;gap:12px;padding:8px 12px;border:1px solid var(--med-line);border-radius:10px;background:var(--med-surface)}
+.medArchivedList li .medProjectName{flex:1}
+/* No-project guidance inside non-home views */
+.medNoProject{display:grid;gap:12px;justify-items:start;padding:16px;border:1px dashed var(--dsw-alias-border-l3);border-radius:12px}
+.medNoProject p{margin:0;color:var(--med-muted)}
+/* Legacy research view scaffolding */
+.researchPanel{box-sizing:border-box;min-height:100%;padding:20px clamp(14px,2.8vw,34px) 180px;background:var(--med-canvas)}
+.researchShell{max-width:1120px;margin:0 auto}
+.researchPanel .sectionHeader{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:12px}
+.researchPanel .sectionTitle{margin:0;font-size:18px}
+.researchPanel .sectionMeta{color:var(--med-muted);font-size:12px}
+.researchPanel .state{color:var(--med-muted);font-size:12px}
+.medHome .alert,.researchPanel .alert{display:flex;align-items:center;gap:8px;margin:10px 0 0;color:var(--med-danger);font-size:12px}
+.researchWorkspace{display:grid;gap:10px;margin-top:16px}
+.researchQuestionBar{display:flex;align-items:center;gap:10px;padding:12px 14px;border:1px solid var(--dsw-alias-border-l2);border-radius:10px;background:var(--med-blue-soft)}
+.researchQuestionBar input{flex:1;border:0;outline:0;background:transparent;color:var(--med-ink);font-size:16px}
+.questionIcon{color:var(--med-blue);display:inline-flex}
+.planCard{padding:12px;border:1px solid var(--med-line);border-radius:10px;background:var(--med-surface)}
+.planGrid{display:grid;grid-template-columns:1fr 1fr auto;gap:9px;align-items:end}
+.researchPanel .field{display:grid;gap:6px;color:var(--med-muted);font-size:12px;font-weight:600;text-align:left}
+.researchPanel .input{box-sizing:border-box;width:100%;min-height:40px;padding:9px 11px;border:1px solid var(--dsw-alias-border-l3);border-radius:9px;color:var(--med-ink);background:var(--med-surface);font:inherit}
+.researchPanel .input:focus{outline:2px solid var(--dsw-alias-focus-ring);outline-offset:2px;border-color:var(--med-blue)}
+.researchPanel .primaryButton{min-height:44px;padding:0 16px;border:0;border-radius:9px;color:var(--dsw-alias-label-on-accent);background:var(--med-blue-deep);font:inherit;font-weight:700;cursor:pointer}
+.researchPanel .primaryButton:hover{background:var(--med-blue-deep)}
+.researchPanel .primaryButton:disabled{opacity:.55;cursor:wait}
+.resultSection{padding-top:4px}
+.resultFilters{display:flex;gap:8px;margin-bottom:8px;color:var(--med-blue);font-size:12px}
+.resultFilters span{padding:5px 10px;border:1px solid var(--dsw-alias-border-l2);border-radius:999px;background:var(--med-surface)}
+.resultList{display:grid;gap:7px}
+.resultRow{display:flex;align-items:flex-start;gap:10px;padding:11px;border:1px solid var(--med-line);border-radius:10px;background:var(--med-surface)}
+.resultRow:hover{border-color:var(--med-blue)}
+.resultBadge{display:grid;place-items:center;width:26px;height:26px;border-radius:8px;background:var(--med-blue-soft);color:var(--med-blue);font-size:12px;font-weight:700}
+.resultBody{display:grid;gap:4px;min-width:0;flex:1}
+.resultBody strong{font-size:13px;line-height:1.35}
+.resultBody span,.resultBody small{color:var(--med-muted);font-size:11px;line-height:1.35}
+.researchPanel .saveButton{border:1px solid var(--dsw-alias-border-l2);border-radius:7px;padding:6px 9px;background:var(--med-blue-soft);color:var(--med-blue-deep);font-size:11px;cursor:pointer;min-height:32px}
+/* Narrow: single column, two-column counters, always-reachable input */
+@media (max-width:699px){
+.medHeroTitle{font-size:36px}
+.medTileRow{grid-template-columns:repeat(2,minmax(0,1fr))}
+.medCardRow{grid-template-columns:1fr}
+.medCreateGrid{grid-template-columns:1fr}
+.medProjectStrip{flex-wrap:wrap}
+.researchPanel{padding:16px 14px 240px}
+.medHome{padding:12px 14px 240px}
+.planGrid{grid-template-columns:1fr}
+}
+@media (min-width:700px){
+.medHome{padding:16px clamp(16px,3vw,32px) 160px}
+}
+@media (prefers-reduced-motion:reduce){
+.medCard{transition:none}
+.medCard:hover{transform:none}
+}

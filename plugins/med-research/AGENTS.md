@@ -63,15 +63,16 @@
 24. **UI 使用 R001 S01 声明的 DSH 扩展**：additive 主导航 + `conversation.view` + `sidebar.right.pane.tab` + `tool.call.toolview` + `settings.section` + `shell.overlay`。
 25. **不做 URL 路由，不建独立前端，不替换 shell**；DSH 主仓只增加可复用的 additive Slot 和公开 client face，医学插件消费它们。
 26. **视图是会话作用域**：无活跃会话时不渲染且不报错（FR-25）。
-27. **客户端文案全部走 zh/en 类型化字典**，禁止硬编码产品文案；不运行时 import 其它 `@deepseek-ai/dsh-client-*` feature 包的值。
-28. **客户端打包配置自带**（DSH 未对外发布 client bundle preset）。
+27. **客户端文案全部走 zh/en 类型化字典**，禁止硬编码产品文案；除共享的 `dsh-client-ui-primitives` 模块表条目外，不运行时 import 其它 `@deepseek-ai/dsh-client-*` feature 包的值。
+28. **UI 遵循 DSH 产品设计系统。** 颜色、焦点、状态与排版读取 `--dsw-*` 语义 token；插件只注册领域 token，复用 `ui-primitives`，`asset/` 图片只作参考且不进入 bundle。
+29. **客户端打包配置自带**（DSH 未对外发布 client bundle preset）；CSS 经 Lightning CSS 编译并以 loader 所有权标签注入，不在组件内渲染 `<style>`。
 
 ### 2.8 Agent 行为
 
-29. **Agent Mode 用 `ctx.tools.restrict()` 动态允许列表**，不切换 preset（preset 只在会话未产出前可换，SPEC §39）。
-30. **不得伪造结果、静默降级或吞掉错误**；任何中间步骤失败都必须暴露真实失败状态（Gate 4）。
-31. **Evidence 不足时必须明确说不足**，不得用模型参数知识填充研究结果。
-32. **不把相关性描述为因果关系**，除非证据明确支持。
+30. **Agent Mode 用 `ctx.tools.restrict()` 动态允许列表**，不切换 preset（preset 只在会话未产出前可换，SPEC §39）。
+31. **不得伪造结果、静默降级或吞掉错误**；任何中间步骤失败都必须暴露真实失败状态（Gate 4）。
+32. **Evidence 不足时必须明确说不足**，不得用模型参数知识填充研究结果。
+33. **不把相关性描述为因果关系**，除非证据明确支持。
 
 ---
 

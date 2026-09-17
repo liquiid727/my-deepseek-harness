@@ -7,7 +7,7 @@ source_entry: ../../prd.md
 source_entry_kind: prd
 source_prd: ../../prd.md
 source_prd_version: 2.1.0
-version: 2.1.0
+version: 2.1.1
 status: approved
 owner: med-research
 qualityProfile: fullstack-flow
@@ -30,6 +30,10 @@ Business Outcome: 用户审阅并批准统计计划与代码，在隔离 Runner 
 In Scope: CSV/XLSX、preview、type inference/correction、missing analysis、Question、Outcome/Exposure/Covariates、method recommendation、plan、Python code preview、approval、isolated execution、stdout/stderr、structured effects、interpretation、charts、export 和 provenance。
 
 Architecture: Dataset service owns files/profile；Statistics service owns plan/run；`medRunner` owns isolation；Artifact service owns exported bytes。Tool 不直接读取存储或启动进程。
+
+### 2.1 Project/Session Context (S01 owner)
+
+S05 只消费 S01 提供的当前 Project/Session context。Dataset、Plan、Run、Result 和 Artifact 的查询、写入与模型输入都使用该 binding；Statistics 工具不得自行绑定 Project 或改变 Session binding。S05 不注入第二份 Project context，也不创建 `medical/project-context` 自定义 Session event。缺少 binding 返回 `PROJECT_NOT_BOUND`，跨 Project 请求返回 `SCOPE_DENIED`。到达模型的 Project context 只包含当前 Project 允许暴露的摘要、PICO/PECO、Overview 和授权元数据；Dataset 行、未授权 Project 数据、秘密和完整原始文献不得进入 bundle。模型可见统计输入与工具输出通过标准 `tool/result` Session 事件记录，Session replay 依据 S01 binding 与这些结果重建相同输入。
 
 ## 3. Contract Behaviors
 

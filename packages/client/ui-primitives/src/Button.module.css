@@ -21,6 +21,18 @@
   opacity: 0.4;
 }
 
+.button:focus-visible {
+  outline: 2px solid var(--dsw-alias-focus-ring);
+  outline-offset: 2px;
+}
+
+.lg {
+  height: 44px;
+  padding: 0 18px;
+  border-radius: 22px;
+  font-weight: 500;
+}
+
 .md {
   height: 36px;
 }

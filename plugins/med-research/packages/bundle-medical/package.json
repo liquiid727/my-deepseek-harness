@@ -19,10 +19,13 @@
     "@medresearch/dsh-plugin-evidence": "workspace:*",
     "@medresearch/dsh-plugin-fulltext": "workspace:*",
     "@medresearch/dsh-plugin-literature": "workspace:*",
+    "@medresearch/dsh-plugin-knowledge": "workspace:*",
     "@medresearch/dsh-plugin-medical-ui": "workspace:*",
     "@medresearch/dsh-plugin-paper": "workspace:*",
     "@medresearch/dsh-plugin-project": "workspace:*",
-    "@medresearch/dsh-plugin-statistics": "workspace:*"
+    "@medresearch/dsh-plugin-statistics": "workspace:*",
+    "@medresearch/dsh-plugin-skills": "workspace:*",
+    "@medresearch/dsh-plugin-writing": "workspace:*"
   },
   "devDependencies": {
     "yaml": "^2.8.1"

@@ -2,6 +2,7 @@
 import type { Context as ClientContext } from '@deepseek-ai/cordis'
 // Type-only: pulls the locale plugin's Context merge (ctx.locale).
 import type {} from '@deepseek-ai/dsh-client-locale/client'
+import { createSnapshotStore } from '@deepseek-ai/dsh-client-store'
 // Type-only: pulls the SlotRegistry service merge (ctx.slots).
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 // Type-only: pulls the Session root standard-props merge.
@@ -40,11 +41,24 @@ export function apply(ctx: ClientContext): void {
   const workspaceNavigation = ctx.get('uiWorkspace') as unknown as WorkspaceNavigation
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'ui-sidebar: dictionaries')
 
+  // The rail presentation mounts only while the additive strip has live
+  // entries; this flag tracks the strip so the shell can react to entries
+  // appearing and disappearing without mounting an empty rail.
+  const primaryActions = createSnapshotStore<boolean>(false)
+  ctx.effect(() => {
+    const update = (): void => {
+      primaryActions.set(ctx.slots.entries('sidebar.primary.action').length > 0)
+    }
+    update()
+    return ctx.slots.subscribe('sidebar.primary.action', update)
+  }, 'ui-sidebar: primary-action tracking')
+
   const injectProps = (): SidebarRootInjected => ({
     // The shell's New Session button rides the Workspace UI's shared action
     // (current Session Workspace, then recent Workspace).
     startSession: (workspaceId) => { workspaceNavigation.startSession(workspaceId) },
     toggleSidebar: () => { ctx.layout.toggleSidebar() },
+    hooks: { primaryActions },
   })
   ctx.effect(
     () => ctx.slots.register({
@@ -56,6 +70,7 @@ export function apply(ctx: ClientContext): void {
       children: {
         'sidebar.brand.mark': { kind: 'single', scope: 'root' },
         'sidebar.brand.name': { kind: 'single', scope: 'root' },
+        'sidebar.primary.action': { kind: 'list', scope: 'root' },
         'sidebar.workspaces': { kind: 'single', scope: 'root' },
         'sidebar.settings': { kind: 'single', scope: 'root' },
         'sidebar.footer.action': { kind: 'list', scope: 'root' },

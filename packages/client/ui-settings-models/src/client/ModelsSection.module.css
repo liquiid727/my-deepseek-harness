@@ -566,7 +566,7 @@ select.input {
 
 .input:focus {
   outline: none;
-  border-color: var(--dsw-alias-brand-primary);
+  border-color: var(--dsw-alias-focus-ring);
 }
 
 .input::placeholder {

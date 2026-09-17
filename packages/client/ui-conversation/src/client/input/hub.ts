@@ -53,10 +53,12 @@ export class InputHub implements SessionInputResolver {
   /**
    * @param ctx - client root context (services resolved lazily per call — boot order stays free).
    * @param t - conversation-namespace translate thunk (reads the active locale at call time).
+   * @param captureAccepted - Capture the current View's guarded completion callback before an ordinary send.
    */
   constructor(
     private readonly rootCtx: Context,
     private readonly t: TranslateNS<'conversation'>,
+    private readonly captureAccepted: (sessionId: SessionId) => () => void = () => () => {},
   ) {}
 
   /**
@@ -183,7 +185,11 @@ export class InputHub implements SessionInputResolver {
     signal: AbortSignal,
   ): Promise<SubmitOutcome> {
     if (text === '' && attachmentIds.length === 0) return Promise.resolve({ kind: 'success' })
-    return this.conversation().sendSession(session, text, attachmentIds, mode, signal)
+    const accepted = this.captureAccepted(session.sessionId)
+    return this.conversation().sendSession(session, text, attachmentIds, mode, signal).then((outcome) => {
+      if (outcome.kind === 'success') accepted()
+      return outcome
+    })
   }
 
   /**

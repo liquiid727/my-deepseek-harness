@@ -92,13 +92,54 @@ describe('ProjectsService (SPEC §32)', () => {
     const overview = await app.service.overview(created.id)
     expect(overview).toEqual({
       projectId: created.id,
-      questions: 0,
-      papers: 0,
-      evidences: 0,
-      datasets: 0,
-      analyses: 0,
-      charts: 0,
+      updatedAt: '2026-01-01T00:00:00.000Z',
+      papers: { status: 'counted', value: 0 },
+      evidences: { status: 'counted', value: 0 },
+      datasets: { status: 'counted', value: 0 },
+      analyses: { status: 'counted', value: 0 },
+      charts: { status: 'counted', value: 0 },
     })
+  })
+
+  it('reports an unavailable domain instead of zero when a storage read fails', async () => {
+    const app = await harness('/tmp/root')
+    const project = await app.service.create({ name: 'One' })
+    const failing = new Map()
+    const original = app.storage.evidences.entries.bind(app.storage.evidences)
+    ;(app.storage.evidences as unknown as { entries: () => IterableIterator<never> }).entries = () => {
+      void original()
+      throw new Error('domain read failed')
+    }
+    const overview = await app.service.overview(project.id)
+    expect(overview.evidences).toEqual({ status: 'unavailable' })
+    expect(overview.papers).toEqual({ status: 'counted', value: 0 })
+  })
+
+  it('rejects a duplicate project name before any write', async () => {
+    const app = await harness('/tmp/root')
+    await app.service.create({ name: 'One' })
+    const writesBefore = app.writes.length
+    await expect(app.service.create({ name: '  one  ' }))
+      .rejects.toMatchObject({ code: 'PROJECT_DUPLICATE' })
+    expect(app.writes).toHaveLength(writesBefore)
+  })
+
+  it('archives and restores a project under the same identity (SPEC-R001-S01-001)', async () => {
+    const app = await harness('/tmp/root')
+    const project = await app.service.create({ name: 'One' })
+    const archived = await app.service.archive(project.id)
+    expect(archived.status).toBe('archived')
+    expect(parseProjectFile(app.writes.at(-1)!.content).status).toBe('archived')
+    await expect(app.service.update(project.id, { name: 'Renamed' }))
+      .rejects.toMatchObject({ code: 'PROJECT_BUSY' })
+    await expect(app.service.archive(project.id))
+      .rejects.toMatchObject({ code: 'PROJECT_BUSY' })
+    const restored = await app.service.restore(project.id)
+    expect(restored.id).toBe(project.id)
+    expect(restored.status).toBe('active')
+    expect(restored.workspacePath).toBe(project.workspacePath)
+    expect([...app.storage.auditLogs.entries()].map(([, row]) => row.action))
+      .toEqual(['project.create', 'project.archive', 'project.restore'])
   })
 
   it('fails loud when the project does not exist', async () => {
@@ -148,6 +189,26 @@ describe('ProjectsService (SPEC §32)', () => {
     expect(app.storage.sessionProjects.get('session-1')).toEqual(rebound)
   })
 
+  it('selects a project through the client seam and audits the switch', async () => {
+    const app = await harness('/tmp/root')
+    const project = await app.service.create({ name: 'One' })
+    const binding = await app.service.selectProject('session-9', project.id)
+    expect(binding.projectId).toBe(project.id)
+    expect(app.storage.sessionProjects.get('session-9')).toEqual(binding)
+    expect((await app.service.sessions(project.id)).map(row => row.sessionId)).toEqual(['session-9'])
+    expect([...app.storage.auditLogs.entries()].map(([, row]) => row.action))
+      .toEqual(['project.create', 'project.select'])
+  })
+
+  it('rejects a stale expectedVersion with no partial write', async () => {
+    const app = await harness('/tmp/root')
+    const project = await app.service.create({ name: 'One' })
+    await expect(app.service.update(project.id, { name: 'Renamed' }, 'stale-token'))
+      .rejects.toMatchObject({ code: 'PROJECT_VERSION_CONFLICT' })
+    expect(app.storage.projects.get(project.id)?.name).toBe('One')
+    expect(app.writes).toHaveLength(1)
+  })
+
   it('saves an existing paper and rejects an unknown one', async () => {
     const app = await harness('/tmp/root')
     const project = await app.service.create({ name: 'One' })
@@ -168,7 +229,7 @@ describe('ProjectsService (SPEC §32)', () => {
 
     const membership = await app.service.savePaper(project.id, paper.id)
     expect(membership).toEqual({ projectId: project.id, paperId: paper.id, savedAt: '2026-01-01T00:00:00.000Z' })
-    expect((await app.service.overview(project.id)).papers).toBe(1)
+    expect((await app.service.overview(project.id)).papers).toEqual({ status: 'counted', value: 1 })
 
     await expect(app.service.savePaper(project.id, paperIdSchema.parse('ghost')))
       .rejects.toMatchObject({ code: 'PAPER_NOT_FOUND' })

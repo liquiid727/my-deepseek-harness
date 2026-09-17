@@ -17,7 +17,7 @@ describe('MedResearchLaunch', () => {
     } as never))
 
     fireEvent.click(screen.getByRole('button', { name: en['home.openWorkspace'] }))
-    expect(openView).toHaveBeenCalledWith('med-research', '')
+    expect(openView).toHaveBeenCalledWith('med-home', '')
   })
 
   it('starts a session from the root Hero', () => {
@@ -28,6 +28,6 @@ describe('MedResearchLaunch', () => {
     } as never))
 
     fireEvent.click(screen.getByRole('button', { name: en['home.openWorkspace'] }))
-    expect(startSession).toHaveBeenCalledWith('med-research')
+    expect(startSession).toHaveBeenCalledWith('med-home')
   })
 })

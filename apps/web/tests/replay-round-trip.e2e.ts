@@ -76,6 +76,8 @@ describe('web e2e: fresh round trip through the real assembly', () => {
     }
     const input = page.locator('[data-composer-input]').first()
     await input.waitFor({ timeout: 10_000 })
+    expect(await page.locator('[data-composer-input]').count()).toBe(1)
+    const residentEditor = await input.elementHandle()
     // Arm the host-side settled barrier BEFORE the send click.
     const settled = scaffold.whenTurnSettled()
     await input.fill(PROMPT)
@@ -96,6 +98,10 @@ describe('web e2e: fresh round trip through the real assembly', () => {
     await compareOrRefreshGolden(ECHO_EXPECTED, echoSnapshot, MODE)
     const sessionId = await settled
     settledSessionId = sessionId
+    expect(await page.locator('[data-composer-input]').count()).toBe(1)
+    expect(await residentEditor?.evaluate(element =>
+      element.isConnected && element === document.querySelector('[data-composer-input]'))).toBe(true)
+    await residentEditor?.dispose()
     if (MODE === 'record') {
       await recordFixture(scaffold, sessionId, FIXTURE)
     }

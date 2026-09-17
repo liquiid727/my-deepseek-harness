@@ -10,6 +10,7 @@ import {
   IconUserOutline16,
   JsonTree,
   MarkdownText,
+  TabList,
   Tooltip,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { JsonTreeLabels, MarkdownLabels } from '@deepseek-ai/dsh-client-ui-primitives'
@@ -2785,22 +2786,18 @@ export function TrajectoryTable({
               <span aria-hidden="true">×</span>
             </button>
           </div>
-          <div className={css.detailTabs} role="tablist" aria-label={t('details.event')}>
-            {selectedTabs.map(tab => (
-              <button
-                key={tab.id}
-                id={`trajectory-detail-${tab.id}`}
-                type="button"
-                role="tab"
-                aria-controls="trajectory-detail-panel"
-                aria-selected={activeTab === tab.id}
-                className={activeTab === tab.id ? `${css.detailTab} ${css.detailTabActive}` : css.detailTab}
-                onClick={() => { activateTab(tab.id) }}
-              >
-                {t(tab.labelKey)}
-              </button>
-            ))}
-          </div>
+          <TabList
+            className={css.detailTabs}
+            label={t('details.event')}
+            items={selectedTabs.map(tab => ({
+              value: tab.id,
+              label: t(tab.labelKey),
+              tabId: `trajectory-detail-${tab.id}`,
+              panelId: 'trajectory-detail-panel',
+            }))}
+            value={activeTab}
+            onValueChange={activateTab}
+          />
           <div
             id="trajectory-detail-panel"
             className={activeTab === 'overview'

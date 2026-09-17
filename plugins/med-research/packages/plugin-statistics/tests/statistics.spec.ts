@@ -105,7 +105,7 @@ describe('StatisticsService (SPEC §34–§37)', () => {
     await expect(app.generateCode(planned.id, 'print("again")')).rejects.toMatchObject({
       name: 'StatisticsError',
       code: 'STATISTICS_PLAN_INVALID',
-      details: { analysisRunId: planned.id, status: 'approved' },
+      details: { analysisRunId: planned.id, status: 'waiting_approval' },
     } satisfies Partial<StatisticsError>)
   })
 
@@ -113,10 +113,11 @@ describe('StatisticsService (SPEC §34–§37)', () => {
     const app = await service(success)
     const planned = await app.plan({ projectId: PROJECT, datasetId: DATASET, question: 'q', plan: PLAN })
     await app.generateCode(planned.id, 'print("ok")')
+    await app.approveCode(planned.id)
     const result = await app.execute({ analysisRunId: planned.id, datasetPath: '/tmp/ponv.csv' })
 
     expect(result.status).toBe('succeeded')
-    const stored = (await app.getRun(planned.id))!
+    const stored = (await app.peekRun(planned.id))!
     expect(stored.status).toBe('succeeded')
     expect(stored.resultJson).toEqual({ or: 2.1, ci: [1.2, 3.4], p: 0.01 })
     expect(stored.codeHash).toMatch(/^[0-9a-f]{64}$/)
@@ -129,10 +130,11 @@ describe('StatisticsService (SPEC §34–§37)', () => {
     const app = await service(failure)
     const planned = await app.plan({ projectId: PROJECT, datasetId: DATASET, question: 'q', plan: PLAN })
     await app.generateCode(planned.id, '1/0')
+    await app.approveCode(planned.id)
     const result = await app.execute({ analysisRunId: planned.id, datasetPath: '/tmp/ponv.csv' })
 
     expect(result.status).toBe('failed')
-    const stored = (await app.getRun(planned.id))!
+    const stored = (await app.peekRun(planned.id))!
     expect(stored.status).toBe('failed')
     expect(stored.generatedCode).toBe('1/0')
     expect(stored.stderr).toContain('ZeroDivisionError')
@@ -169,10 +171,11 @@ describe('artifact registration (Gate 5)', () => {
 
     const planned = await app.plan({ projectId: PROJECT, datasetId: DATASET, question: 'q', plan: PLAN })
     await app.generateCode(planned.id, 'print(1)')
+    await app.approveCode(planned.id)
     await app.execute({ analysisRunId: planned.id, datasetPath: '/tmp/ponv.csv' })
 
     expect(registered).toEqual([{ analysisRunId: planned.id }])
-    expect(app.getRun(planned.id)!.artifactIds).toEqual(['artifact-1'])
+    expect(app.peekRun(planned.id)!.artifactIds).toEqual(['artifact-1'])
   })
 
   it('does not register artifacts for a failed run', async () => {
@@ -183,9 +186,10 @@ describe('artifact registration (Gate 5)', () => {
     })
     const planned = await app.plan({ projectId: PROJECT, datasetId: DATASET, question: 'q', plan: PLAN })
     await app.generateCode(planned.id, '1/0')
+    await app.approveCode(planned.id)
     await app.execute({ analysisRunId: planned.id, datasetPath: '/tmp/ponv.csv' })
     expect(calls).toBe(0)
-    expect(app.getRun(planned.id)!.artifactIds).toEqual([])
+    expect(app.peekRun(planned.id)!.artifactIds).toEqual([])
   })
 })
 

@@ -8,9 +8,7 @@
  * follows the embedder's content axis (`--dsh-content-font-size` and its
  * secondary step) so a surface reads at the same size as the page around it.
  * Emphasis — a hovered divider, the drop caret, the drop-zone hint — takes the
- * platform's accent (`--dsw-alias-brand-primary-new-colorprimary-new-color`),
- * not `--dsw-alias-brand-primary`, which this platform binds to its
- * near-black (light) or near-white (dark) foreground.
+ * platform's semantic accent (`--dsw-alias-accent-primary`).
  */
 
 .split {
@@ -53,7 +51,7 @@
 }
 
 .divider:hover {
-  background: var(--dsw-alias-brand-primary-new-colorprimary-new-color);
+  background: var(--dsw-alias-accent-primary);
 }
 
 /* Both floors: a flex item's minimum is its content's, and a body's longest
@@ -140,7 +138,7 @@
   align-self: center;
   width: 2px;
   height: 20px;
-  background: var(--dsw-alias-brand-primary-new-colorprimary-new-color);
+  background: var(--dsw-alias-accent-primary);
 }
 
 .tab {
@@ -306,7 +304,7 @@
 .dockHint {
   position: absolute;
   background: var(--dsw-alias-bg-multi-select);
-  border: 1px solid var(--dsw-alias-brand-primary-new-colorprimary-new-color);
+  border: 1px solid var(--dsw-alias-accent-primary);
   pointer-events: none;
 }
 

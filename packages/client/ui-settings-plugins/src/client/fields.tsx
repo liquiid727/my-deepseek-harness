@@ -6,7 +6,7 @@
  * card's save is the single point where a draft becomes a document mutation.
  */
 
-import { Tag } from '@deepseek-ai/dsh-client-ui-primitives'
+import { Button, Field as PrimitiveField, Input, Tag } from '@deepseek-ai/dsh-client-ui-primitives'
 import css from './fields.module.css'
 
 /** What every field control needs regardless of its value type. */
@@ -52,38 +52,41 @@ export function ValueField(props: FieldProps & {
 }) {
   return (
     <div className={css.field}>
-      <div className={css.head}>
-        <label className={css.label} htmlFor={props.id}>{props.label}</label>
-        {props.overridden
+      <PrimitiveField
+        id={props.id}
+        label={props.label}
+        description={props.invalid ? undefined : props.hint}
+        error={props.invalid ? props.invalidLabel : undefined}
+        action={props.overridden
           ? (
             <span className={css.badges}>
               <Tag tone="neutral">{props.overriddenLabel}</Tag>
-              <button
-                type="button"
+              <Button
+                size="sm"
+                variant="ghost"
                 className={css.reset}
                 disabled={props.disabled}
                 onClick={props.onReset}
               >
                 {props.resetLabel}
-              </button>
+              </Button>
             </span>
           )
-          : null}
-      </div>
-      <input
-        id={props.id}
-        className={props.invalid ? css.inputInvalid : css.input}
-        type="text"
-        {...props.numeric === true ? { inputMode: 'numeric' as const } : {}}
-        {...props.invalid ? { 'aria-invalid': true } : {}}
-        value={props.text}
-        placeholder={props.placeholder ?? ''}
-        disabled={props.disabled}
-        onChange={(event) => { props.onEdit(event.target.value) }}
-      />
-      <p className={props.invalid ? css.invalid : css.hint}>
-        {props.invalid ? props.invalidLabel : props.hint}
-      </p>
+          : undefined}
+      >
+        {control => (
+          <Input
+            {...control}
+            className={css.input}
+            type="text"
+            {...props.numeric === true ? { inputMode: 'numeric' as const } : {}}
+            value={props.text}
+            placeholder={props.placeholder ?? ''}
+            disabled={props.disabled}
+            onChange={(event) => { props.onEdit(event.target.value) }}
+          />
+        )}
+      </PrimitiveField>
     </div>
   )
 }
@@ -103,22 +106,26 @@ export function SecretField(props: Pick<FieldProps, 'id' | 'label' | 'hint' | 't
 }) {
   return (
     <div className={css.field}>
-      <div className={css.head}>
-        <label className={css.label} htmlFor={props.id}>{props.label}</label>
-        <span className={css.badges}>
-          <Tag tone={props.configured ? 'neutral' : 'quiet'}>{props.stateLabel}</Tag>
-        </span>
-      </div>
-      <input
+      <PrimitiveField
         id={props.id}
-        className={css.input}
-        type="password"
-        autoComplete="off"
-        value={props.text}
-        disabled={props.disabled}
-        onChange={(event) => { props.onEdit(event.target.value) }}
-      />
-      <p className={css.hint}>{props.hint}</p>
+        label={props.label}
+        description={props.hint}
+        action={<span className={css.badges}>
+          <Tag tone={props.configured ? 'neutral' : 'quiet'}>{props.stateLabel}</Tag>
+        </span>}
+      >
+        {control => (
+          <Input
+            {...control}
+            className={css.input}
+            type="password"
+            autoComplete="off"
+            value={props.text}
+            disabled={props.disabled}
+            onChange={(event) => { props.onEdit(event.target.value) }}
+          />
+        )}
+      </PrimitiveField>
     </div>
   )
 }

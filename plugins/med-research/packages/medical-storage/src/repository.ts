@@ -21,9 +21,11 @@ import {
   datasetDomain,
   documentDomain,
   evidenceDomain,
+  knowledgeDomain,
   literatureDomain,
   paperDomain,
   projectDomain,
+  skillsDomain,
 } from './domains.ts'
 
 /**
@@ -90,6 +92,26 @@ export interface MedStorage {
   readonly artifacts: KvTable<contracts.ArtifactId, contracts.Artifact>
   /** Audit rows. */
   readonly auditLogs: KvTable<contracts.AuditLogId, contracts.AuditLog>
+  /** Reader notes. */
+  readonly notes: KvTable<contracts.NoteId, contracts.Note>
+  /** Reader highlights. */
+  readonly annotations: KvTable<contracts.AnnotationId, contracts.Annotation>
+  /** Project tags. */
+  readonly tags: KvTable<contracts.TagId, contracts.Tag>
+  /** Tag relationships. */
+  readonly tagLinks: KvTable<string, contracts.TagLink>
+  /** Current writing drafts. */
+  readonly drafts: KvTable<contracts.DraftId, contracts.Draft>
+  /** Immutable draft revisions. */
+  readonly draftRevisions: KvTable<contracts.DraftRevisionId, contracts.DraftRevision>
+  /** Skill identities. */
+  readonly skills: KvTable<contracts.SkillId, contracts.Skill>
+  /** Immutable skill versions. */
+  readonly skillVersions: KvTable<contracts.SkillVersionId, contracts.SkillVersion>
+  /** Controlled skill test history. */
+  readonly skillTests: KvTable<contracts.SkillTestRunId, contracts.SkillTestRun>
+  /** Workspace skill installations. */
+  readonly skillInstallations: KvTable<contracts.SkillInstallationId, contracts.SkillInstallation>
   /** Every opened domain, keyed by domain name. */
   readonly opened: ReadonlyMap<string, OpenedDomain>
   /**
@@ -161,7 +183,7 @@ function storageHandle(facility: DomainFacility, entry: SharedStorage, domains: 
 }
 
 /**
- * Open all eight domains through the facility. All-or-nothing: a failure closes
+ * Open all declared domains through the facility. All-or-nothing: a failure closes
  * whatever already opened and rethrows unchanged.
  * @param facility - The mounted `ctx.storageDomain` facility.
  * @returns the shared domain set.
@@ -183,8 +205,10 @@ async function openSharedDomains(facility: DomainFacility): Promise<SharedDomain
     const dataset = await open(datasetDomain)
     const analysis = await open(analysisDomain)
     const audit = await open(auditDomain)
+    const knowledge = await open(knowledgeDomain)
+    const skills = await open(skillsDomain)
 
-    const views = [project, literature, paper, document, evidence, dataset, analysis, audit]
+    const views = [project, literature, paper, document, evidence, dataset, analysis, audit, knowledge, skills]
     return {
       async release() {
         for (const entry of [...opened].reverse()) await entry.domain.close()
@@ -208,6 +232,16 @@ async function openSharedDomains(facility: DomainFacility): Promise<SharedDomain
         analysisRuns: analysis.domain.table('med_analysis_runs'),
         artifacts: analysis.domain.table('med_artifacts'),
         auditLogs: audit.domain.table('med_audit_logs'),
+        notes: knowledge.domain.table('med_notes'),
+        annotations: knowledge.domain.table('med_annotations'),
+        tags: knowledge.domain.table('med_tags'),
+        tagLinks: knowledge.domain.table('med_tag_links'),
+        drafts: knowledge.domain.table('med_drafts'),
+        draftRevisions: knowledge.domain.table('med_draft_revisions'),
+        skills: skills.domain.table('med_skills'),
+        skillVersions: skills.domain.table('med_skill_versions'),
+        skillTests: skills.domain.table('med_skill_tests'),
+        skillInstallations: skills.domain.table('med_skill_installations'),
         opened: new Map(views.map(({ view }): [string, OpenedDomain] => [view.name, view])),
         // Replaced by every handle wrapper; the shared object is never handed out.
         async close() {},

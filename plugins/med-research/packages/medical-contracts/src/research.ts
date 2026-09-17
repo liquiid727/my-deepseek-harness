@@ -223,6 +223,14 @@ export const offsetBaseSchema = z.literal('normalized_paragraph')
 /** Offset base is fixed in V1. */
 export type OffsetBase = z.infer<typeof offsetBaseSchema>
 
+/** Half-open `[start, end)` range over a paragraph's normalized text. */
+export const textSpanSchema = z.strictObject({
+  start: z.number().int().nonnegative(),
+  end: z.number().int().nonnegative(),
+})
+/** Half-open `[start, end)` range over a paragraph's normalized text. */
+export type TextSpan = z.infer<typeof textSpanSchema>
+
 /** One located evidence span (SPEC §11). */
 export const evidenceSchema = z.strictObject({
   id: evidenceIdSchema,
@@ -238,11 +246,30 @@ export const evidenceSchema = z.strictObject({
   offsetBase: offsetBaseSchema,
   startOffset: z.number().int().nonnegative().optional(),
   endOffset: z.number().int().nonnegative().optional(),
+  /**
+   * Exact spans a `PARTIAL` locator matched. A PARTIAL evidence without any
+   * matched span is not qualified and must be downgraded to `NOT_FOUND`
+   * (interfaces.md §Reader, Note and Evidence).
+   */
+  matchedAnchors: z.array(textSpanSchema).optional(),
+  /** Paragraph regions a `PARTIAL` locator could not match; display only. */
+  unmatchedRanges: z.array(textSpanSchema).optional(),
   relation: evidenceRelationSchema,
   retrievalScore: z.number().optional(),
   rerankScore: z.number().optional(),
   locatorStatus: locatorStatusSchema,
   supportStatus: supportStatusSchema,
+  /** Reason recorded by the last semantic verification (SPEC §25). */
+  verificationReason: z.string().optional(),
+  /** Verifier version that produced the current support status (SPEC §25). */
+  verificationVersion: z.string().optional(),
+  /** Time of the last semantic verification. */
+  verifiedAt: z.string().optional(),
+  /**
+   * Withdrawal time. A withdrawn evidence stops qualifying immediately and
+   * invalidates the claims and drafts that depended on it (interfaces.md).
+   */
+  withdrawnAt: z.string().optional(),
   extractorVersion: z.string().min(1),
   extractorModel: z.string().min(1),
   promptVersion: z.string().min(1),
@@ -251,8 +278,14 @@ export const evidenceSchema = z.strictObject({
 /** One located evidence span (SPEC §11). */
 export type Evidence = z.infer<typeof evidenceSchema>
 
-/** Overall evidence sufficiency of a claim (SPEC §12). */
-export const evidenceStatusSchema = z.enum(['SUFFICIENT', 'INSUFFICIENT', 'CONFLICTING'])
+/**
+ * Overall evidence sufficiency of a claim (SPEC §12, interfaces.md).
+ *
+ * `CONFLICTING` means qualified SUPPORT and qualified AGAINST evidence both
+ * exist; `CONSISTENT` means only one side has qualified evidence (the direction
+ * is carried by the counts); `INSUFFICIENT` means neither side does.
+ */
+export const evidenceStatusSchema = z.enum(['CONSISTENT', 'INSUFFICIENT', 'CONFLICTING'])
 /** Overall evidence sufficiency of a claim (SPEC §12). */
 export type EvidenceStatus = z.infer<typeof evidenceStatusSchema>
 
@@ -375,8 +408,11 @@ export const researchQuerySchema = z.strictObject({
   concepts: z.array(queryConceptSchema),
   queries: z.array(querySchema),
   filters: researchQueryFiltersSchema,
+  /** Monotonic plan revision; old records default to their first revision. */
+  revision: z.number().int().positive().optional(),
   createdAt: z.string(),
   approvedAt: z.string().optional(),
+  approvedRevision: z.number().int().positive().optional(),
 })
 /** One persisted research query and the plan generated for it (SPEC §12, §17–§18). */
 export type ResearchQuery = z.infer<typeof researchQuerySchema>

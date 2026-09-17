@@ -10,6 +10,7 @@ import type { ToolCallViewProps } from '@deepseek-ai/dsh-client-ui-tool/client'
 import { artifactExportUrl } from './artifact-download.ts'
 import { NS } from './locales.ts'
 import { MED_TOOL_NAMES } from './tool-names.ts'
+import css from './components.module.css'
 
 export { MED_TOOL_NAMES }
 
@@ -54,9 +55,9 @@ export function MedToolCard({ toolName, block, t }: MedToolCardProps) {
     ? artifactExportUrl(args['artifactId'] as string, args['format'] as string)
     : undefined
   return (
-    <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, fontSize: 12 }}>
+    <div className={css.toolCard}>
       <code>{toolName}</code>
-      <span style={{ opacity: 0.7 }}>{status}</span>
+      <span className={css.toolStatus}>{status}</span>
       {download === undefined ? null : (
         <a href={download} download data-med-artifact-download="true">{t('action.download')}</a>
       )}

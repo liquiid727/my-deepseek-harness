@@ -71,7 +71,7 @@ async function setMeasuredViewport(
  */
 const CONTROL_STYLE_ID = 'composer-tab-geometry-control'
 const CONTROL_CSS = `
-[data-conversation-scroll]:has([data-conversation-composer-overlay]) > [data-composer-seat] { right: 0 !important; }
+[data-conversation-scroll]:has([data-conversation-composer-overlay]) > [data-composer-container] > [data-composer-seat] { right: 0 !important; }
 `
 
 /** The column scroller and the input card as the browser lays them out, in one tab. */

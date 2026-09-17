@@ -6,6 +6,7 @@ import type { AgentMode } from '@medresearch/dsh-medical-contracts'
 import type { MedUiKey } from '../i18n/index.ts'
 import { NS } from './locales.ts'
 import type { MedRemote } from './remote.ts'
+import css from './components.module.css'
 
 /** Business capability injected by the browser plugin. */
 export interface MedModeInjected {
@@ -44,7 +45,7 @@ export function MedModeAction({ sessionId, remote, t }: MedModeActionProps) {
   }, [remote, sessionId])
 
   return (
-    <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+    <label className={css.mode}>
       <span>{t('mode.label')}</span>
       <select
         aria-label={t('mode.label')}

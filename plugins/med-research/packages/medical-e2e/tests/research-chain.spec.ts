@@ -71,11 +71,13 @@ describe('Research chain (PRD §36 Research DoD)', () => {
       newPaperId: () => c.paperIdSchema.parse(`paper-${++paperSequence}`),
       newResearchQueryId: () => c.researchQueryIdSchema.parse(`query-${++querySequence}`),
     })
-    const search = await literature.search({ projectId: project.id, query: '"PONV"[Title/Abstract]', purpose: 'primary' })
+    const plan = await literature.planQuery({ projectId: project.id, question: 'PONV 与术后疼痛是否相关？', plan: { normalizedQuestion: 'PONV and postoperative pain association', concepts: [], queries: [{ source: 'pubmed', query: '"PONV"[Title/Abstract]', purpose: 'primary' }, { source: 'pubmed', query: 'PONV', purpose: 'broad' }] } })
+    await literature.approveQuery(plan.id)
+    const search = await literature.search({ projectId: project.id, researchQueryId: plan.id, researchQueryRevision: plan.revision ?? 1, query: '"PONV"[Title/Abstract]', purpose: 'primary' })
     expect(search.papers).toHaveLength(2)
     expect(search.papers[0]!.pmid).toBe('42705006')
     await projects.savePaper(project.id, search.papers[0]!.id)
-    expect((await projects.overview(project.id)).papers).toBe(1)
+    expect((await projects.overview(project.id)).papers).toMatchObject({ status: 'counted', value: 1 })
 
     // 2. Paper: parse real JATS into paragraphs.
     const papers = new PapersService({
@@ -92,7 +94,7 @@ describe('Research chain (PRD §36 Research DoD)', () => {
 
     // 3. Evidence: retrieve a chunk, locate a quote, verify it.
     const evidenceService = new EvidenceService({
-      storage, alignment: { tolerance: 0.05, windowSize: 8 }, maxRetrieval: 10,
+      storage, alignment: { tolerance: 0.05, windowSize: 8 }, maxRetrieval: 10, maxHops: 3,
       now: () => '2026-01-01T00:00:00.000Z',
       newEvidenceId: () => c.evidenceIdSchema.parse(`evidence-${++evidenceSequence}`),
     })
@@ -116,7 +118,7 @@ describe('Research chain (PRD §36 Research DoD)', () => {
     const claim: c.Claim = {
       id: c.claimIdSchema.parse('claim-1'), projectId: project.id, researchQueryId: c.researchQueryIdSchema.parse('query-1'),
       text: 'PONV is associated with postoperative pain.', evidenceIds: [verified.id], counterEvidenceIds: [],
-      evidenceStatus: 'SUFFICIENT', supportStatus: 'PENDING', rejectionReasons: [], createdAt: '2026-01-01T00:00:00.000Z',
+      evidenceStatus: 'CONSISTENT', supportStatus: 'PENDING', rejectionReasons: [], createdAt: '2026-01-01T00:00:00.000Z',
     }
     const gate = verifyClaim({
       claim,
@@ -136,8 +138,8 @@ describe('Research chain (PRD §36 Research DoD)', () => {
     expect(answer.citations[0]).toEqual({ index: 1, evidenceId: verified.id, paperId: search.papers[0]!.id })
 
     // Every step stayed inside the project.
-    expect((await projects.overview(project.id)).evidences).toBe(1)
-    expect((await projects.overview(project.id)).papers).toBe(1)
+    expect((await projects.overview(project.id)).evidences).toMatchObject({ status: 'counted', value: 1 })
+    expect((await projects.overview(project.id)).papers).toMatchObject({ status: 'counted', value: 1 })
 
     // 6. SPEC §49: the two audited operations left one row each, in order.
     const audits = [...storage.auditLogs.entries()].map(([, row]) => row)

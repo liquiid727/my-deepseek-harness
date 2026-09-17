@@ -4,7 +4,7 @@
 
 ## 概述
 
-Med Research 客户端 UI。交付视图状态机（SPEC §43–§45）、zh/en 字典（AGENTS.md §2.7）、强类型 Remote 数据层（SPEC §30），以及浏览器端注册：blank Session 的 Research 启动动作、四个 `conversation.view` 视图、会话头部 Agent Mode 动作、按工具名 keyed 的 `tool.call.toolview` 卡片、一个 `settings.section` 页。
+Med Research 客户端 UI。交付视图状态机（SPEC §43–§45）、zh/en 字典（AGENTS.md §2.7）、强类型 Remote 数据层（SPEC §30），以及浏览器端注册：医疗品牌席位和五个主导航项、五个 `conversation.view` 视图、blank Session 启动动作、会话头部 Agent Mode 动作、按工具名 keyed 的 `tool.call.toolview` 卡片和一个 `settings.section` 页。
 
 ## 范围
 
@@ -13,26 +13,30 @@ Med Research 客户端 UI。交付视图状态机（SPEC §43–§45）、zh/en 
 - `src/state/evidence.ts` — 由已存证据推导 SPEC §44 的展示状态。
 - `src/i18n/{en,zh}.ts` — 扁平点号字典；`zh` 的键集必须与 `en` 完全一致。
 - `src/client/remote.ts` — `createMedRemote(caller)` 把 `ctx.connection.rpc` 变成按服务分组的强类型调用，并在宿主错误信封上抛 `MedRemoteError`。视图只依赖该接口，不碰 wire。
-- `src/client/views.tsx` — 四个视图；各自通过 `createMedRemote` 读取，并显示状态机对应的字典文案。Papers 视图解析引用 focus 并高亮被引段落。
+- `src/client/views.tsx` — Research、Papers、Evidence 与 Statistics 视图；各自通过 `createMedRemote` 读取，并显示状态机对应的字典文案。Papers 视图解析引用 focus 并高亮被引段落。
+- `src/client/home.tsx` — S01 工作台首页：当前项目、Hero 中唯一的宿主 composer、快捷入口、失败域显示未知并可重试的持久化概览计数、三张能力卡片、仅填入输入框的灵感目录与项目搜索/创建/归档/恢复。普通消息准入成功后打开同一 Session 的 Chat；Research 仍通过明确的导航操作进入。
+- `src/client/nav.tsx` — 侧栏品牌席位与五个主导航项；Skills 在 S07 交付前保持本地化禁用态。
 - `src/client/focus.ts` — Papers 视图的 focus 契约（`paperId|documentId|paragraphId|start|end`）：Evidence 视图编码，Papers 视图解码。
 - `src/client/artifact-download.ts` — 已导出产物的带鉴权下载 URL（SPEC §30）。
 - `src/client/tool-names.ts` — `med` 工具名清单（SPEC §6），由卡片注册与宿主组合测试共用。
 - `src/client/toolview.tsx` — 覆盖全部 `med` 工具名的一张卡片。
 - `src/client/settings.tsx` — 设置页；只说明配置来自部署 profile，不读取值。
-- `src/client/index.tsx` — 插件入口：字典与视图/卡片/设置注册，每一项都由 `ctx.effect` 拥有。
+- `src/client/index.tsx` — 插件入口：字典、领域主题 token 与视图/卡片/设置注册，每一项都由 `ctx.effect` 拥有。
+- `src/client/components.tsx` — 功能本地的纯 props ViewFrame、SectionHeader、AsyncState、MetricTile 与 CapabilityCard；标准控件来自 `dsh-client-ui-primitives`。
+- `src/client/views.css`、`src/client/nav.css` 与 `src/client/components.module.css` — 编译为带标签、由插件持有的样式注入模块的 Lightning CSS 输入。
 - `src/client/hero-action.tsx` — blank Session 的入口，无需模型 turn 即可打开 S01 项目工作区。
 - `src/client/mode-action.tsx` — 本地化的会话头部选择器，通过 `medProjects` Remote 方法读取和修改当前 Agent Mode。
 
 ## 构建
 
-浏览器半边由本包自带的 tsdown 配置打包（DSH 未发布 client preset）：
+浏览器半边由本包自带的 tsdown 配置打包（DSH 未发布 client preset）。React、Cordis 与 `dsh-client-ui-primitives` 通过宿主模块表解析；Lightning CSS 把全局样式与 CSS Modules 编译进同一客户端产物，并附加 loader 所有权标签：
 
 ```sh
 pnpm run build:client    # packages/plugin-medical-ui/lib/client.js
 pnpm run verify:client   # rebuild + check the module-loader artifact contract
 ```
 
-宿主半边保持 source-plane（`main: src/index.ts`），由 harness 通过 tsx 加载。
+宿主半边保持 source-plane（`main: src/index.ts`），由 harness 通过 tsx 加载。开发时链接本 checkout 的 `ui-conversation` 以使用 `mountComposer` 客户端接口；部署此 UI 需要匹配的宿主客户端构建。
 
 ## 模型影响
 

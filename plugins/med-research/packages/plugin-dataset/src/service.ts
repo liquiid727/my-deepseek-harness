@@ -61,6 +61,8 @@ export class DatasetsService implements MedDatasetsService {
 
   /** Audit trail for dataset uploads (SPEC §49). */
   private readonly audit: AuditWriter
+  /** Bounded rows retained only for the authenticated preview surface. */
+  private readonly previews = new Map<DatasetId, { headers: string[]; rows: string[][] }>()
 
   /**
    * @param options - Storage, limits, file reader, and identity.
@@ -79,6 +81,7 @@ export class DatasetsService implements MedDatasetsService {
   async upload(input: { projectId: ProjectId; fileRef: string }): Promise<Dataset> {
     const isXlsx = /\.xlsx$/iu.test(input.fileRef)
     let text = ''
+    let rawBytes: Uint8Array | undefined
     let headers: string[]
     let rows: string[][]
     try {
@@ -87,6 +90,7 @@ export class DatasetsService implements MedDatasetsService {
           throw new Error('XLSX uploads need a binary reader')
         }
         const bytes = await this.options.readBytes(input.fileRef)
+        rawBytes = bytes
         if (bytes.byteLength > this.options.maxBytes) {
           throw new DatasetError('DATASET_TOO_LARGE', `file is ${bytes.byteLength} bytes, limit is ${this.options.maxBytes}`)
         }
@@ -111,13 +115,14 @@ export class DatasetsService implements MedDatasetsService {
       id: this.options.newDatasetId(),
       projectId: input.projectId,
       filename: input.fileRef.split(/[\\/]/u).pop() ?? input.fileRef,
-      contentHash: createHash('sha256').update(text).digest('hex'),
+      contentHash: createHash('sha256').update(rawBytes ?? text).digest('hex'),
       rowCount: rows.length,
       columnCount: headers.length,
       schema,
       createdAt: this.options.now(),
     }
     await this.options.storage.datasets.put(dataset.id, dataset)
+    this.previews.set(dataset.id, { headers: [...headers], rows: rows.slice(0, 5).map(row => [...row]) })
     for (const column of schema) {
       await this.options.storage.datasetColumns.put(`${dataset.id}|${column.name}`, column)
     }
@@ -154,5 +159,20 @@ export class DatasetsService implements MedDatasetsService {
     const dataset = this.options.storage.datasets.get(id)
     if (dataset === undefined) throw new DatasetError('DATASET_NOT_FOUND', `no dataset ${id}`)
     return dataset.schema
+  }
+
+  /** Return at most the first five rows to the authenticated UI, never model calls. */
+  @Remote
+  async preview(id: DatasetId, rows = 5): Promise<{ headers: string[]; rows: string[][] }> {
+    if (this.options.storage.datasets.get(id) === undefined) throw new DatasetError('DATASET_NOT_FOUND', `no dataset ${id}`)
+    const preview = this.previews.get(id)
+    if (preview === undefined) return { headers: [], rows: [] }
+    return { headers: [...preview.headers], rows: preview.rows.slice(0, Math.min(Math.max(rows, 0), 5)).map(row => [...row]) }
+  }
+
+  /** List profiles in one project without exposing row-level data. */
+  @Remote
+  async list(projectId: ProjectId): Promise<Dataset[]> {
+    return [...this.options.storage.datasets.entries()].map(([, dataset]) => dataset).filter(dataset => dataset.projectId === projectId).sort((left, right) => right.createdAt.localeCompare(left.createdAt))
   }
 }

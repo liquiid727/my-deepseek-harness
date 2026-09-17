@@ -58,7 +58,7 @@ function claim(evidenceIds: string[], counterEvidenceIds: string[] = []): c.Clai
     text: 'A claim',
     evidenceIds: evidenceIds.map(id => c.evidenceIdSchema.parse(id)),
     counterEvidenceIds: counterEvidenceIds.map(id => c.evidenceIdSchema.parse(id)),
-    evidenceStatus: 'SUFFICIENT',
+    evidenceStatus: 'CONSISTENT',
     supportStatus: 'PENDING',
     rejectionReasons: [],
     createdAt: '2026-01-01T00:00:00.000Z',

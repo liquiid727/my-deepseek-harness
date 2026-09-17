@@ -1,5 +1,6 @@
 import type { Dataset } from '@medresearch/dsh-medical-contracts'
 import type { MedUiKey } from '../i18n/index.ts'
+import css from './components.module.css'
 
 /** Translator narrowed to the labels used by the profile chart. */
 type ChartTranslate = (key: MedUiKey) => string
@@ -16,8 +17,8 @@ export function MissingValuesChart({ dataset, t }: { dataset: Dataset; t: ChartT
   const plotHeight = height - bottom
   const barWidth = (width - left) / columns.length
   return (
-    <figure style={{ margin: '12px 0 0' }}>
-      <figcaption style={{ fontSize: 12, marginBottom: 4 }}>{t('statistics.MISSING_VALUES')}</figcaption>
+    <figure className={css.chart}>
+      <figcaption className={css.chartCaption}>{t('statistics.MISSING_VALUES')}</figcaption>
       <svg
         xmlns="http://www.w3.org/2000/svg"
         width="100%"
@@ -35,7 +36,7 @@ export function MissingValuesChart({ dataset, t }: { dataset: Dataset; t: ChartT
           const y = plotHeight - barHeight
           return (
             <g key={column.name}>
-              <rect x={x} y={y} width={Math.max(barWidth - 4, 1)} height={barHeight} fill="#4f81bd">
+              <rect className={css.chartBar} x={x} y={y} width={Math.max(barWidth - 4, 1)} height={barHeight}>
                 <title>{`${column.name}: ${column.missingCount}`}</title>
               </rect>
               <text x={x + Math.max(barWidth - 4, 1) / 2} y={height - 8} textAnchor="middle" fontSize="9">

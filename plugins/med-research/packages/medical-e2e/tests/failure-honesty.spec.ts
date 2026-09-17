@@ -47,7 +47,10 @@ function literature(storage: MedStorage, status: number): LiteratureService {
 describe('Gate 4 — failure honesty across the chains', () => {
   it('a rate-limited PubMed search fails loud and stores no papers', async () => {
     const storage = await boot()
-    await expect(literature(storage, 429).search({ projectId: PROJECT, query: '"PONV"', purpose: 'primary' }))
+    const client = literature(storage, 429)
+    const plan = await client.planQuery({ projectId: PROJECT, question: 'q', plan: { normalizedQuestion: 'q', concepts: [], queries: [{ source: 'pubmed', query: 'PONV', purpose: 'primary' }, { source: 'pubmed', query: 'PONV', purpose: 'broad' }] } })
+    await client.approveQuery(plan.id)
+    await expect(client.search({ projectId: PROJECT, researchQueryId: plan.id, researchQueryRevision: plan.revision ?? 1, query: '"PONV"', purpose: 'primary' }))
       .rejects.toMatchObject({ code: 'PUBMED_RATE_LIMIT', retryable: true })
     expect(storage.papers.size).toBe(0)
   })
@@ -69,12 +72,16 @@ describe('Gate 4 — failure honesty across the chains', () => {
       keywords: [], source: 'pubmed', fulltextStatus: 'available',
       createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z',
     })
+    await storage.projects.put(PROJECT, {
+      id: PROJECT, name: 'Failure fixture', keywords: [], workspacePath: '/tmp/failure', status: 'active',
+      createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z',
+    })
     const document = await papers.ingestJats(c.paperIdSchema.parse('paper-1'), '<not-jats')
     expect(document.parseStatus).toBe('FAILED')
     expect(storage.paragraphs.size).toBe(0)
 
     const evidence = new EvidenceService({
-      storage, alignment: { tolerance: 0.05, windowSize: 8 }, maxRetrieval: 10,
+      storage, alignment: { tolerance: 0.05, windowSize: 8 }, maxRetrieval: 10, maxHops: 3,
       now: () => '2026-01-01T00:00:00.000Z',
       newEvidenceId: () => c.evidenceIdSchema.parse('evidence-1'),
     })
@@ -119,10 +126,11 @@ describe('Gate 4 — failure honesty across the chains', () => {
       plan: { objective: 'o', exposures: [], covariates: [], steps: [], assumptions: [], warnings: [] },
     })
     await statistics.generateCode(planned.id, '1/0')
+    await statistics.approveCode(planned.id)
     const result = await statistics.execute({ analysisRunId: planned.id, datasetPath: '/tmp/x.csv' })
 
     expect(result.status).toBe('failed')
-    const run = statistics.getRun(planned.id)!
+    const run = statistics.peekRun(planned.id)!
     expect(run.status).toBe('failed')
     expect(run.resultJson).toBeUndefined()
     expect(run.stderr).toContain('ZeroDivisionError')

@@ -33,6 +33,7 @@ function parseArgs(argv) {
   const options = { profile: 'med-research', home: join(homedir(), '.dsh'), printOnly: false, json: false, force: false }
   for (let index = 0; index < argv.length; index += 1) {
     const flag = argv[index]
+    if (flag === '--') continue
     if (flag === '--print-only') options.printOnly = true
     else if (flag === '--json') { options.json = true; options.printOnly = true }
     else if (flag === '--force') options.force = true

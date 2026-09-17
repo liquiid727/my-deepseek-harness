@@ -14,6 +14,7 @@ import {
   paperIdSchema,
   paragraphIdSchema,
   projectIdSchema,
+  researchQueryIdSchema,
   renderToolEnvelope,
   supportStatusSchema,
   TOOL_ENVELOPE_SCHEMA,
@@ -123,7 +124,9 @@ export function evidenceTools(service: EvidenceService): ToolDefinition[] {
       name: 'evidence_verify',
       description:
         'Apply a semantic verdict to one evidence. The hard rule wins: if the locator status is '
-        + 'NOT_FOUND the stored support status becomes REJECTED regardless of the verdict.',
+        + 'NOT_FOUND the stored support status becomes REJECTED regardless of the verdict. An '
+        + 'UNCERTAIN relation keeps the support status at PENDING. The verdict, reason, and '
+        + 'verifier version are recorded for reproducibility.',
       parameters: {
         evidenceId: { type: 'string', required: true, description: 'Evidence to verify.' },
         verdict: {
@@ -132,15 +135,83 @@ export function evidenceTools(service: EvidenceService): ToolDefinition[] {
           enum: ['PENDING', 'VERIFIED', 'REJECTED'],
           description: 'Semantic verdict for this evidence.',
         },
+        relation: {
+          type: 'string',
+          enum: ['SUPPORT', 'AGAINST', 'UNCERTAIN'],
+          description: 'Re-bind the relation to the claim proposition; UNCERTAIN carries no support.',
+        },
+        reason: { type: 'string', description: 'Why this verdict was reached.' },
+        verificationVersion: { type: 'string', description: 'Verifier version for reproducibility.' },
       },
       output: { schema: TOOL_ENVELOPE_SCHEMA, render: renderToolEnvelope },
       async execute(args) {
         try {
+          const options = {
+            ...args.relation === undefined ? {} : { relation: args.relation as EvidenceRelation },
+            ...args.reason === undefined ? {} : { reason: args.reason },
+            ...args.verificationVersion === undefined ? {} : { verificationVersion: args.verificationVersion },
+          }
           const evidence = await service.verify(
             evidenceIdSchema.parse(args.evidenceId),
             supportStatusSchema.parse(args.verdict),
+            Object.keys(options).length === 0 ? undefined : options,
           )
           return { ok: true, result: asToolJson(evidence) }
+        } catch (error) {
+          if (error instanceof EvidenceError) return { ok: false, error: asToolJson(toDomainError(error)) }
+          throw error
+        }
+      },
+    }),
+    defineTool({
+      name: 'evidence_withdraw',
+      description:
+        'Withdraw one evidence. The record stops qualifying immediately, claims that bound it lose '
+        + 'their support, and drafts that referenced it return to DRAFT.',
+      parameters: {
+        evidenceId: { type: 'string', required: true, description: 'Evidence to withdraw.' },
+        reason: { type: 'string', description: 'Reason recorded on the record and the audit trail.' },
+      },
+      output: { schema: TOOL_ENVELOPE_SCHEMA, render: renderToolEnvelope },
+      async execute(args) {
+        try {
+          const evidence = await service.withdraw(
+            evidenceIdSchema.parse(args.evidenceId),
+            args.reason,
+          )
+          return { ok: true, result: asToolJson(evidence) }
+        } catch (error) {
+          if (error instanceof EvidenceError) return { ok: false, error: asToolJson(toDomainError(error)) }
+          throw error
+        }
+      },
+    }),
+    defineTool({
+      name: 'evidence_chase',
+      description:
+        'Chase a secondary citation to its original paper through the declared reference connector. '
+        + 'Every hop is recorded with its source, status, and reason; a successful chase creates a new '
+        + 'direct evidence and never modifies the original secondary record.',
+      parameters: {
+        evidenceId: { type: 'string', required: true, description: 'Secondary evidence being chased.' },
+        pmid: { type: 'string', description: 'Reference PMID as printed in the source.' },
+        doi: { type: 'string', description: 'Reference DOI as printed in the source.' },
+        title: { type: 'string', description: 'Reference title as printed in the source.' },
+        maxHops: { type: 'integer', description: 'Override the configured hop cap.' },
+      },
+      output: { schema: TOOL_ENVELOPE_SCHEMA, render: renderToolEnvelope },
+      async execute(args) {
+        try {
+          const result = await service.chase({
+            evidenceId: evidenceIdSchema.parse(args.evidenceId),
+            reference: {
+              ...args.pmid === undefined ? {} : { pmid: args.pmid },
+              ...args.doi === undefined ? {} : { doi: args.doi },
+              ...args.title === undefined ? {} : { title: args.title },
+            },
+            ...args.maxHops === undefined ? {} : { maxHops: args.maxHops },
+          })
+          return { ok: true, result: asToolJson(result) }
         } catch (error) {
           if (error instanceof EvidenceError) return { ok: false, error: asToolJson(toDomainError(error)) }
           throw error
@@ -163,6 +234,35 @@ export function evidenceTools(service: EvidenceService): ToolDefinition[] {
           throw error
         }
       },
+    }),
+    defineTool({
+      name: 'evidence_claim_gate',
+      description: 'Create and gate a Claim from project-scoped verified supporting and counter Evidence.',
+      parameters: {
+        projectId: { type: 'string', required: true, description: 'Project scope.' },
+        researchQueryId: { type: 'string', required: true, description: 'Approved research query identity.' },
+        text: { type: 'string', required: true, description: 'Claim text.' },
+        evidenceIds: { type: 'array', required: true, items: { type: 'string' }, description: 'Supporting evidence ids.' },
+        counterEvidenceIds: { type: 'array', items: { type: 'string' }, description: 'Counter evidence ids.' },
+      },
+      output: { schema: TOOL_ENVELOPE_SCHEMA, render: renderToolEnvelope },
+      async execute(args) {
+        return { ok: true, result: asToolJson(await service.gateClaim({ projectId: projectIdSchema.parse(args.projectId), researchQueryId: researchQueryIdSchema.parse(args.researchQueryId), text: args.text, evidenceIds: args.evidenceIds.map(id => evidenceIdSchema.parse(id)), ...args.counterEvidenceIds === undefined ? {} : { counterEvidenceIds: args.counterEvidenceIds.map(id => evidenceIdSchema.parse(id)) } })) }
+      },
+    }),
+    defineTool({
+      name: 'evidence_citation_map',
+      description: 'Assign deterministic citation indices from a stored Claim to Evidence and source anchors.',
+      parameters: { claimId: { type: 'string', required: true, description: 'Claim id.' } },
+      output: { schema: TOOL_ENVELOPE_SCHEMA, render: renderToolEnvelope },
+      async execute(args) { return { ok: true, result: asToolJson(await service.serializeCitations(claimIdSchema.parse(args.claimId))) } },
+    }),
+    defineTool({
+      name: 'evidence_compare',
+      description: 'Compare selected project Evidence with persisted paper metadata and support status.',
+      parameters: { projectId: { type: 'string', required: true, description: 'Project scope.' }, evidenceIds: { type: 'array', required: true, items: { type: 'string' }, description: 'Evidence ids to compare.' } },
+      output: { schema: TOOL_ENVELOPE_SCHEMA, render: renderToolEnvelope },
+      async execute(args) { return { ok: true, result: asToolJson(await service.compare(projectIdSchema.parse(args.projectId), args.evidenceIds.map(id => evidenceIdSchema.parse(id)))) } },
     }),
   ]
 }

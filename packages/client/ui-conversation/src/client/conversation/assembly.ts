@@ -169,6 +169,31 @@ interface BindingRecord {
 }
 
 /** Root service owning Conversation registries and per-Session bindings. */
+/**
+ * Root-level View navigation seam wired by the shell assembly. The per-Session
+ * View-selection store is owned by the slot registration; the assembly exposes
+ * activation through this face so root-scoped surfaces (for example a sidebar
+ * primary-action strip) can select a View without a second selection truth.
+ */
+export interface UiConversationNavigation {
+  /**
+   * Resolve the shared per-Session Conversation store instance.
+   * @param sessionId - Session the instance is scoped to.
+   * @returns the instance carrying the View-selection actions and its
+   *   observable selection snapshot.
+   */
+  storeFor(sessionId: SessionId): {
+    actions: { openView(view: string, focus: string): void }
+    store: ObservableSnapshot<{ view: string | null }>
+  }
+  /**
+   * Activate a registered View roster entry on the Session's assembly.
+   * @param sessionId - Session whose assembly is activated.
+   * @param view - registered View id.
+   */
+  activateView(sessionId: SessionId, view: string): void
+}
+
 export class UiConversation extends Service {
   /** Registry of event matchers and target snapshot builders. */
   readonly events: ConversationEventRegistry
@@ -180,8 +205,10 @@ export class UiConversation extends Service {
   /**
    * @param ctx - owning Client context.
    * @param sessions - Session Controller object layer.
+   * @param navigation - root-level View navigation seam; absent in
+   *   storage-only or registry-only compositions, which disables openView.
    */
-  constructor(ctx: Context, private readonly sessions: ISessions) {
+  constructor(ctx: Context, private readonly sessions: ISessions, private readonly navigation?: UiConversationNavigation) {
     super(ctx, 'uiConversation')
     this.events = new ConversationEventRegistry(ctx)
     this.views = new ConversationViewRegistry(ctx)
@@ -207,6 +234,37 @@ export class UiConversation extends Service {
         for (const record of [...this.bindings.values()]) this.drop(record, true)
       }
     }, 'ui-conversation assembly')
+  }
+
+  /**
+   * Select one registered View for the current (or given) Session from a
+   * root-scoped surface. With no Session the request is refused and the caller
+   * keeps its launch flow; the View roster itself decides unknown ids.
+   * @param view - registered View id to activate.
+   * @param options - explicit Session id and one-shot focus request.
+   * @returns whether the View was activated on a live Session.
+   */
+  openView(view: string, options: { sessionId?: SessionId; focus?: string } = {}): boolean {
+    if (this.navigation === undefined) return false
+    const sessionId = options.sessionId ?? this.sessions.list.getSnapshot().current
+    if (sessionId === undefined || this.sessions.binding(sessionId) === undefined) return false
+    this.navigation.activateView(sessionId, view)
+    this.navigation.storeFor(sessionId).actions.openView(view, options.focus ?? '')
+    return true
+  }
+
+  /**
+   * Observable View-selection source for one Session, for root-scoped
+   * consumers (for example a sidebar navigation strip highlighting the active
+   * View). Returns the same shared store instance the shell renders, or
+   * `undefined` without the navigation seam.
+   * @param sessionId - Session whose selection is observed.
+   * @returns the selection snapshot source, or `undefined`.
+   */
+  viewSelection(sessionId: SessionId): ObservableSnapshot<{ view: string | null }> | undefined {
+    if (this.navigation === undefined) return undefined
+    if (this.sessions.binding(sessionId) === undefined) return undefined
+    return this.navigation.storeFor(sessionId).store
   }
 
   /**

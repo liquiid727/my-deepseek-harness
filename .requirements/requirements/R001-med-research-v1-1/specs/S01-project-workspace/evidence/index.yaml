@@ -1,10 +1,41 @@
 standardVersion: specos-test-standard/v2
 requirement: R001
 spec_package: S01
-updated_at: 2026-09-11
+updated_at: 2026-09-17
 plans: []
 schedules: []
 runs:
+  - run_id: S01-model-chain-smoke-20260917
+    test_ids: [TEST-R001-S01-004, TEST-R001-S01-006]
+    spec_id: SPEC-R001-S01
+    spec_version: 2.1.3
+    spec_hash: d345dc9f36a876e36a6f9ba144863acb970094cd56fb9ad2f764a92a4f7107a6
+    test_version: 2.0.1
+    test_hash: 79af3b71ef5c7f5e18b3c62e63882a3f4dc56b9c6a53e99afdf918d324c5ca4a
+    contract_bundle_hash: 6703ad878703a2a02f7ae73a07d64b087cfc4c34f8c8222a80d813ce8ee4f428
+    revision: worktree-20260917
+    command: ego-browser against http://127.0.0.1:3100/; one Session Chat message through the composer with model deepseek-v4.1-flash (provider ali). Profile reinstalled from current source (build:client + install-local-profile --force; installed client.js byte-identical to source).
+    environment: Node v25.6.0; pnpm 11.7.0; macOS arm64; real med-research profile on port 3100; Chromium viewport 1492x748.
+    result: PASS
+    assertions: Live model round-trip completed (1 turn, 3 steps, LLM 15.6s, 74 tok/s, 2 tool calls). Agent dispatched project_get_context and project_get; session unbound returned PROJECT_NOT_BOUND. Model declined to present output as project Evidence with none bound and offered literature_plan_query instead of fabricating a source. Supersedes the MISSING_CREDENTIAL-blocked model-chain state for this assertion only.
+    artifact: ./model-chain-smoke-20260917.md
+    limitations: Single-turn smoke; does not exercise PubMed retrieval to ANSWER_READY, a bound-project Evidence flow, or the five-prototype browser matrix. Full S01 QA remains open.
+  - run_id: S01-home-composer-20260913
+    test_ids: [TEST-R001-S01-004, TEST-R001-S01-008]
+    spec_id: SPEC-R001-S01-003
+    spec_version: 2.1.1
+    spec_hash: 5facedd3c2b71c46ec8b8aec492c62159f195ddc56fb9ad2f764a92a4f7107a6
+    test_version: 2.0.1
+    test_hash: 250dbb144a5853c2e90296af6ddc57b4a7729c8aa6d4cbc396e27e57d1645cf7
+    contract_bundle_hash: e064c919325627e83051292eb41c9c0505f34a2e3202bbf34780c4cdfb97a9c2
+    revision: a23ee9233b5bc8c6a44cce2c2d29a717f872b2d4
+    dirty_source_fingerprint: 54f5d56566993aeaaed73d8e3858776c11cb61703e1c6337e210c20397ec0f89
+    command: Focused Vitest, TypeScript, client bundles, and ego-browser; exact commands in home-composer.md.
+    environment: Node v25.6.0; pnpm 11.7.0; macOS arm64; actual med-research profile on port 3100.
+    result: BLOCKED
+    assertions: Single resident editor, admission to current Session Chat, draft recovery and stale callbacks covered; complete S01 QA remains blocked.
+    artifact: ./home-composer.md
+    limitations: Real model reply blocked by MISSING_CREDENTIAL; keyless Web lane blocked during host setup; full-repository gates retain unrelated failures.
   - run_id: S01-implementation-typecheck-20260911
     test_id: TEST-R001-S01-001
     spec_id: SPEC-R001-S01
@@ -79,5 +110,149 @@ runs:
     result: PASS
     assertions: Three touched bilingual README pairs are consistent.
     revision: 2c2fa8b998da49a0899cef3e97768d635cdd997f
+  - run_id: S01-implementation-project-context-audit-20260917
+    test_id: TEST-R001-S01-006
+    spec_id: SPEC-R001-S01
+    spec_version: 2.1.3
+    spec_hash: d345dc9f36a876e36a6f9ba144863acb970094cd56fb9ad2f764a92a4f7107a6
+    test_version: 2.0.1
+    test_hash: 79af3b71ef5c7f5e18b3c62e63882a3f4dc56b9c6a53e99afdf918d324c5ca4a
+    contract_bundle_hash: 6703ad878703a2a02f7ae73a07d64b087cfc4c34f8c8222a80d813ce8ee4f428
+    revision: worktree-20260917
+    command: pnpm exec vitest run packages/plugin-project/tests/service.spec.ts packages/plugin-project/tests/tools.spec.ts packages/plugin-project/tests/remote.spec.ts packages/plugin-project/tests/backup.spec.ts packages/plugin-project/tests/mode.spec.ts
+    environment: Node v25.6.0; pnpm 11.7.0; macOS arm64.
+    result: PASS
+    assertions: 5 files and 34 tests passed; explicit project_get_context rebinds the session and appends project.select; unbound and missing-project failures remain explicit.
+  - run_id: S01-implementation-medical-ui-20260917
+    test_id: TEST-R001-S01-004
+    spec_id: SPEC-R001-S01
+    spec_version: 2.1.3
+    spec_hash: d345dc9f36a876e36a6f9ba144863acb970094cd56fb9ad2f764a92a4f7107a6
+    test_version: 2.0.1
+    test_hash: 79af3b71ef5c7f5e18b3c62e63882a3f4dc56b9c6a53e99afdf918d324c5ca4a
+    contract_bundle_hash: 6703ad878703a2a02f7ae73a07d64b087cfc4c34f8c8222a80d813ce8ee4f428
+    revision: worktree-20260917
+    command: pnpm exec vitest run packages/plugin-medical-ui/tests/client-plugin.client.spec.tsx packages/plugin-medical-ui/tests/hero-action.client.spec.tsx packages/plugin-medical-ui/tests/views.client.spec.tsx packages/plugin-medical-ui/tests/style-policy.client.spec.ts
+    environment: Node v25.6.0; pnpm 11.7.0; macOS arm64.
+    result: PASS
+    assertions: 4 files and 31 tests passed; home states, navigation registration, localized launch, project overview states, and style policy passed.
+  - run_id: S01-implementation-plugin-suite-20260917
+    test_id: TEST-R001-S01-001
+    spec_id: SPEC-R001-S01
+    spec_version: 2.1.3
+    spec_hash: d345dc9f36a876e36a6f9ba144863acb970094cd56fb9ad2f764a92a4f7107a6
+    test_version: 2.0.1
+    test_hash: 79af3b71ef5c7f5e18b3c62e63882a3f4dc56b9c6a53e99afdf918d324c5ca4a
+    contract_bundle_hash: 6703ad878703a2a02f7ae73a07d64b087cfc4c34f8c8222a80d813ce8ee4f428
+    revision: worktree-20260917
+    command: pnpm exec vitest run --exclude packages/medical-e2e/tests/composition.spec.ts
+    environment: Node v25.6.0; pnpm 11.7.0; macOS arm64.
+    result: PASS
+    assertions: 58 test files passed; 420 tests passed and 1 skipped. The excluded composition file could not be collected because fs-ext was built for NODE_MODULE_VERSION 127 while Node v25 requires 141.
+    limitations: This is not a replacement for the excluded supported-profile composition test.
+  - run_id: S01-implementation-typecheck-20260917
+    test_id: TEST-R001-S01-005
+    spec_id: SPEC-R001-S01
+    spec_version: 2.1.3
+    spec_hash: d345dc9f36a876e36a6f9ba144863acb970094cd56fb9ad2f764a92a4f7107a6
+    test_version: 2.0.1
+    test_hash: 79af3b71ef5c7f5e18b3c62e63882a3f4dc56b9c6a53e99afdf918d324c5ca4a
+    contract_bundle_hash: 6703ad878703a2a02f7ae73a07d64b087cfc4c34f8c8222a80d813ce8ee4f428
+    revision: worktree-20260917
+    command: pnpm run typecheck
+    environment: Node v25.6.0; pnpm 11.7.0; macOS arm64.
+    result: PASS
+    assertions: Host and client TypeScript programs typechecked successfully.
+  - run_id: S01-implementation-client-bundle-20260917
+    test_id: TEST-R001-S01-005
+    spec_id: SPEC-R001-S01
+    spec_version: 2.1.3
+    spec_hash: d345dc9f36a876e36a6f9ba144863acb970094cd56fb9ad2f764a92a4f7107a6
+    test_version: 2.0.1
+    test_hash: 79af3b71ef5c7f5e18b3c62e63882a3f4dc56b9c6a53e99afdf918d324c5ca4a
+    contract_bundle_hash: 6703ad878703a2a02f7ae73a07d64b087cfc4c34f8c8222a80d813ce8ee4f428
+    revision: worktree-20260917
+    command: pnpm run verify:client
+    environment: Node v25.6.0; pnpm 11.7.0; macOS arm64.
+    result: PASS
+    assertions: Client bundle verification passed; emitted bundle size was 131453 bytes and runtime externals were react, react/jsx-runtime, react-dom, react-dom/client, @deepseek-ai/cordis, and @deepseek-ai/dsh-client-ui-primitives.
+  - run_id: S01-implementation-shared-ui-20260917
+    test_id: TEST-R001-S01-004
+    spec_id: SPEC-R001-S01
+    spec_version: 2.1.3
+    spec_hash: d345dc9f36a876e36a6f9ba144863acb970094cd56fb9ad2f764a92a4f7107a6
+    test_version: 2.0.1
+    test_hash: 79af3b71ef5c7f5e18b3c62e63882a3f4dc56b9c6a53e99afdf918d324c5ca4a
+    contract_bundle_hash: 6703ad878703a2a02f7ae73a07d64b087cfc4c34f8c8222a80d813ce8ee4f428
+    revision: worktree-20260917
+    command: pnpm exec vitest run packages/client/ui-primitives/tests/form-tabs.client.spec.tsx packages/client/ui-theme/tests/elevation-styles.client.spec.ts
+    environment: Node v25.6.0; pnpm 11.7.0; macOS arm64.
+    result: PASS
+    assertions: 2 files and 11 tests passed; TabList accessibility behavior and the neutral-border gate passed.
+  - run_id: S01-implementation-shared-client-typecheck-20260917
+    test_id: TEST-R001-S01-005
+    spec_id: SPEC-R001-S01
+    spec_version: 2.1.3
+    spec_hash: d345dc9f36a876e36a6f9ba144863acb970094cd56fb9ad2f764a92a4f7107a6
+    test_version: 2.0.1
+    test_hash: 79af3b71ef5c7f5e18b3c62e63882a3f4dc56b9c6a53e99afdf918d324c5ca4a
+    contract_bundle_hash: 6703ad878703a2a02f7ae73a07d64b087cfc4c34f8c8222a80d813ce8ee4f428
+    revision: worktree-20260917
+    command: pnpm exec tsc -p packages/client/ui-sidebar/tsconfig.json --noEmit && pnpm exec tsc -p packages/client/ui-conversation/tsconfig.json --noEmit && pnpm exec tsc -p packages/client/ui-primitives/tsconfig.json --noEmit && pnpm exec tsc -p packages/client/ui-theme/tsconfig.json --noEmit
+    environment: Node v25.6.0; pnpm 11.7.0; macOS arm64.
+    result: PASS
+    assertions: Shared client package TypeScript programs typechecked successfully.
+  - run_id: S01-implementation-native-rebuild-20260917
+    test_id: TEST-R001-S01-005
+    spec_id: SPEC-R001-S01
+    spec_version: 2.1.3
+    spec_hash: d345dc9f36a876e36a6f9ba144863acb970094cd56fb9ad2f764a92a4f7107a6
+    test_version: 2.0.1
+    test_hash: 79af3b71ef5c7f5e18b3c62e63882a3f4dc56b9c6a53e99afdf918d324c5ca4a
+    contract_bundle_hash: 6703ad878703a2a02f7ae73a07d64b087cfc4c34f8c8222a80d813ce8ee4f428
+    revision: worktree-20260917
+    command: pnpm rebuild fs-ext
+    environment: Node v25.6.0; pnpm 11.7.0; macOS arm64; node-gyp 12.4.0; Python 3.14.5.
+    result: PASS
+    assertions: fs-ext@2.1.1 rebuilt successfully for NODE_MODULE_VERSION 141 after the stale NODE_MODULE_VERSION 127 binary was detected.
+  - run_id: S01-implementation-composition-20260917
+    test_id: TEST-R001-S01-005
+    spec_id: SPEC-R001-S01
+    spec_version: 2.1.3
+    spec_hash: d345dc9f36a876e36a6f9ba144863acb970094cd56fb9ad2f764a92a4f7107a6
+    test_version: 2.0.1
+    test_hash: 79af3b71ef5c7f5e18b3c62e63882a3f4dc56b9c6a53e99afdf918d324c5ca4a
+    contract_bundle_hash: 6703ad878703a2a02f7ae73a07d64b087cfc4c34f8c8222a80d813ce8ee4f428
+    revision: worktree-20260917
+    command: pnpm exec vitest run packages/medical-e2e/tests/composition.spec.ts
+    environment: Node v25.6.0; pnpm 11.7.0; macOS arm64.
+    result: PASS
+    assertions: Real Loader composition collected and passed all 7 tests.
+  - run_id: S01-implementation-persistence-lease-20260917
+    test_id: TEST-R001-S01-005
+    spec_id: SPEC-R001-S01
+    spec_version: 2.1.3
+    spec_hash: d345dc9f36a876e36a6f9ba144863acb970094cd56fb9ad2f764a92a4f7107a6
+    test_version: 2.0.1
+    test_hash: 79af3b71ef5c7f5e18b3c62e63882a3f4dc56b9c6a53e99afdf918d324c5ca4a
+    contract_bundle_hash: 6703ad878703a2a02f7ae73a07d64b087cfc4c34f8c8222a80d813ce8ee4f428
+    revision: worktree-20260917
+    command: pnpm exec vitest run packages/session/session-persistence-jsonl/tests/lease.spec.ts
+    environment: Node v25.6.0; pnpm 11.7.0; macOS arm64.
+    result: PASS
+    assertions: 1 file and 19 cross-process lease tests passed.
+  - run_id: S01-implementation-full-suite-20260917
+    test_id: TEST-R001-S01-001
+    spec_id: SPEC-R001-S01
+    spec_version: 2.1.3
+    spec_hash: d345dc9f36a876e36a6f9ba144863acb970094cd56fb9ad2f764a92a4f7107a6
+    test_version: 2.0.1
+    test_hash: 79af3b71ef5c7f5e18b3c62e63882a3f4dc56b9c6a53e99afdf918d324c5ca4a
+    contract_bundle_hash: 6703ad878703a2a02f7ae73a07d64b087cfc4c34f8c8222a80d813ce8ee4f428
+    revision: worktree-20260917
+    command: pnpm exec vitest run
+    environment: Node v25.6.0; pnpm 11.7.0; macOS arm64.
+    result: PASS
+    assertions: 59 test files passed; 427 tests passed, 1 skipped, 428 total.
 gates: []
 artifacts: []

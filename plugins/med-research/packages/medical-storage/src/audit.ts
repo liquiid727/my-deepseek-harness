@@ -9,6 +9,7 @@
 import { randomUUID } from 'node:crypto'
 import {
   auditLogIdSchema,
+  auditLogSchema,
   type AuditAction,
   type AuditLog,
   type ProjectId,
@@ -40,6 +41,11 @@ export interface AuditWriter {
 /**
  * Build a writer over one open storage handle. Row identity is owned here
  * rather than by each service, because the audit domain owns the record.
+ *
+ * Every row is validated against the contract before it is written: the domain
+ * medium does not enforce a table's value schema on write, so without this
+ * check an operation invented by a caller would be stored as a plausible-looking
+ * audit row that no consumer can classify (AGENTS.md §2.8, fail loud).
  * @param options - Open storage handle and the clock used for `at`.
  * @returns a writer for that handle.
  */
@@ -47,14 +53,14 @@ export function createAuditWriter(options: { storage: MedStorage; now: () => str
   const { storage, now } = options
   return {
     async append(entry) {
-      const record: AuditLog = {
+      const record: AuditLog = auditLogSchema.parse({
         id: auditLogIdSchema.parse(randomUUID()),
         ...entry.projectId === undefined ? {} : { projectId: entry.projectId },
         ...entry.sessionId === undefined ? {} : { sessionId: entry.sessionId },
         action: entry.action,
         at: now(),
         detail: entry.detail ?? {},
-      }
+      })
       await storage.auditLogs.put(record.id, record)
       return record
     },

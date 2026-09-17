@@ -7,7 +7,7 @@ source_entry: ../../prd.md
 source_entry_kind: prd
 source_prd: ../../prd.md
 source_prd_version: 2.1.0
-version: 2.1.0
+version: 2.1.1
 status: approved
 owner: med-research
 qualityProfile: fullstack-flow
@@ -30,6 +30,10 @@ Business Outcome: 用户阅读真实论文来源，并把翻译、总结、问�
 In Scope: Abstract、上传 PDF、PMC XML、Document/Section/Paragraph、page data、原文/翻译/双语、目录、zoom、AI summary、selection toolbar、Highlight、Note、Evidence、Ask AI、Citation、Reference Explorer 和 Related Papers。
 
 Architecture: resolver 选择真实 source；parser 建立不可变 source document；派生服务保存 translation/summary/annotation provenance，并拥有 Project/Paper/Selection Notes；Reader 通过 `conversation.view` 和公开的 `sidebar.right.pane.tab` client face 渲染同一数据。
+
+### 2.1 Project/Session Context (S01 owner)
+
+S03 只消费 S01 提供的当前 Project/Session context。Reader action 的 Project/Session 输入、Document、Note、Annotation 与派生结果的查询和写入都使用该 binding；Reader 不复制 Project context，也不跨 Project 读取文档或 Note。S03 不自行绑定、选择或切换 Project，也不创建 `medical/project-context` 自定义 Session event。缺少 binding 返回 `PROJECT_NOT_BOUND`，跨 Project 请求返回 `SCOPE_DENIED`。到达模型的 Project context 只包含当前 Project 允许暴露的摘要、PICO/PECO、Overview 和授权元数据；Dataset 行、未授权 Project 数据、秘密和完整原始文献不得进入 bundle。模型可见 Reader 输入与工具输出通过标准 `tool/result` Session 事件记录，Session replay 依据 S01 binding 与这些结果重建相同输入。
 
 ## 3. Contract Behaviors
 

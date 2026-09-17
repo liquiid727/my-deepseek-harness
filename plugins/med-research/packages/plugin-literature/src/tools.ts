@@ -90,7 +90,11 @@ export function literatureTools(service: LiteratureService): ToolDefinition[] {
         dateTo: { type: 'string', description: 'Latest publication date.' },
         publicationTypes: { type: 'array', items: { type: 'string' }, description: 'PubMed publication types.' },
         languages: { type: 'array', items: { type: 'string' }, description: 'Language names, e.g. english.' },
-        researchQueryId: { type: 'string', description: 'Plan this query came from, when available.' },
+        researchQueryId: { type: 'string', description: 'Approved plan this query came from; required for the network call.' },
+        fullText: { type: 'string', enum: ['ANY', 'AVAILABLE'], description: 'Full-text filter: ANY (default) or AVAILABLE (resolver-verified full text only).' },
+        rerankModel: { type: 'string', description: 'Model id for the AI rerank; invalid ids degrade to lexical order.' },
+        cursor: { type: 'string', description: 'Opaque page cursor from a prior search in the same frozen run.' },
+        pageSize: { type: 'integer', description: 'Page size when paging with a cursor.' },
       },
       output: { schema: TOOL_ENVELOPE_SCHEMA, render: renderToolEnvelope },
       async execute(args) {
@@ -105,6 +109,10 @@ export function literatureTools(service: LiteratureService): ToolDefinition[] {
             ...args.publicationTypes === undefined ? {} : { publicationTypes: args.publicationTypes },
             ...args.languages === undefined ? {} : { languages: args.languages },
             ...args.researchQueryId === undefined ? {} : { researchQueryId: researchQueryIdSchema.parse(args.researchQueryId) },
+            ...args.fullText === undefined ? {} : { fullText: args.fullText },
+            ...args.rerankModel === undefined ? {} : { rerankModel: args.rerankModel },
+            ...args.cursor === undefined ? {} : { cursor: args.cursor },
+            ...args.pageSize === undefined ? {} : { pageSize: args.pageSize },
           })
           return { ok: true, result: asToolJson(result) }
         } catch (error) {

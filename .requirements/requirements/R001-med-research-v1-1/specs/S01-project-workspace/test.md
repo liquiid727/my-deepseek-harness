@@ -5,10 +5,10 @@ test_spec_id: TEST-R001-S01
 source_prd: ../../prd.md
 source_spec: ./spec.md
 source_spec_id: SPEC-R001-S01
-source_spec_version: 2.1.0
-source_spec_hash: 3d1fac01601985ad283ce24d7353e2ae28aec4445485bc230793b7c0ddbd201a
-version: 2.0.0
-status: review
+source_spec_version: 2.1.3
+source_spec_hash: d345dc9f36a876e36a6f9ba144863acb970094acfc53b913055c90ab81ae68e8
+version: 2.0.1
+status: approved
 owner: med-research-testing
 qualityProfile: fullstack-flow
 riskTier: P0
@@ -118,6 +118,8 @@ When: 通过 sidebar.primary.action、conversation.view，点击五个主导航�
 
 Then: 目标 view 与 Project/Session 匹配，输入/选择恢复，无双主输入；移除医学贡献后宿主正常，完整 profile 缺 required contribution 明确失败。
 
+首页专项：Hero 内只存在一个宿主编辑器，底部无重复输入；同一编辑器在首页和 Chat 之间移动并保留未提交草稿与附件。点击发送及 Enter 普通提交准入成功后打开当前 Session Chat；拒绝时保留首页并恢复草稿；提交期间切换 Session/View 或释放注册后不得被旧回调导航。灵感只填入，快捷入口明确导航；命令不触发普通消息回调。审批/提问接管回到底部，结束后恢复首页放置。zh/en 和三个规定视口分别核对操作区可见、键盘输入与无横向溢出。
+
 Required evidence: 分项输入/输出断言、服务响应、操作与审计 ID、前后持久状态；UI 行为同时引用 TEST-R001-S01-004，医学判断引用冻结评审结果。每个 coverage feature 单列 PASS/FAIL/BLOCKED/NOT_RUN；无执行结果不得填 PASS。
 
 ### TEST-R001-S01-009 Mode/audit/backup
@@ -168,4 +170,4 @@ AI 生成的本设计与案例需人工评审 coverage、assertions、risk、数
 
 ## Normative Source Binding
 
-本设计除 Spec hash 外同时绑定[规范文件清单](../../contract-manifest.yaml)，bundle SHA-256 为 a9a491f65eb02d94a111241db410934e7a25aa5388ac4ea2e0df502a317716c6。清单任一文件变化使受影响用例 stale；必须重新评审并更新绑定，不能只比 spec.md 判断证据可复用。
+本设计除 Spec hash 外同时绑定[规范文件清单](../../contract-manifest.yaml)，bundle SHA-256 为 24c463dbeec9e5dca9e8c68d43b9c1ab7eeaa0c6b19bd3397f218f612c88f9a8。清单任一文件变化使受影响用例 stale；必须重新评审并更新绑定，不能只比 spec.md 判断证据可复用。其他 Spec 的历史 bundle 绑定未在首页专项中重新批准。

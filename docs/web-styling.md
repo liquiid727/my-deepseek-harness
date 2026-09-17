@@ -2,7 +2,7 @@
 
 English | [中文](web-styling.zh.md)
 
-This reference defines styling ownership and component rules for browser client packages. The current token values live in [`packages/client/ui-theme/src/styles/`](../packages/client/ui-theme/src/styles/); this document does not duplicate that generated-by-source inventory.
+This reference defines styling ownership and component rules for browser client packages. The [product design system](design-system.md) defines the visual language and accessibility baseline; current token values live in [`packages/client/ui-theme/src/styles/`](../packages/client/ui-theme/src/styles/), so this document does not duplicate that source-owned inventory.
 
 ## Ownership
 

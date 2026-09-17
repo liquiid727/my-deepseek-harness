@@ -169,6 +169,8 @@ function localWebUrl(ctx: Context): string {
  * ships its own page and carries no dist) boots without one.
  */
 function resolveDistIndex(): string {
+  const developmentDist = process.env.DSH_WEB_FRONTEND_DIST_INDEX
+  if (developmentDist !== undefined && developmentDist !== '') return developmentDist
   const require = createRequire(import.meta.url)
   try {
     return join(dirname(require.resolve('@deepseek-ai/dsh-web-frontend/package.json')), 'dist', 'index.html')

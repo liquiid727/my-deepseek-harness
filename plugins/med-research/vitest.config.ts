@@ -1,4 +1,5 @@
 import ts from 'typescript'
+import { fileURLToPath } from 'node:url'
 import { defineConfig, type Plugin } from 'vitest/config'
 
 const decoratorSyntax = /^\s*@[A-Za-z_$][\w$]*/m
@@ -41,6 +42,14 @@ function standardDecoratorPlugin(): Plugin {
  */
 export default defineConfig({
   plugins: [standardDecoratorPlugin()],
+  resolve: {
+    dedupe: ['react', 'react-dom'],
+    alias: {
+      '@deepseek-ai/dsh-client-ui-primitives': fileURLToPath(
+        new URL('../../packages/client/ui-primitives/src/index.ts', import.meta.url),
+      ),
+    },
+  },
   test: {
     include: ['packages/*/tests/**/*.spec.ts', 'packages/*/tests/**/*.spec.tsx'],
     environment: 'node',

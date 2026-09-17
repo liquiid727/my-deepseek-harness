@@ -4,7 +4,7 @@
 
 ## 设计结论
 
-PRD 2.1.0、S01–S05 2.1.0、S06–S08 1.1.0 已完成设计订正。八个 Spec 与 [index](index.yaml) 均为 approved；[规范文件清单](contract-manifest.yaml) 固定 PRD、索引、八个 Spec 与五份规范附件的 SHA-256。
+PRD 2.1.0、S01 2.1.3、S02–S05 2.1.1、S06–S08 1.1.1 已完成共享上下文修订。八个 Spec 与 [index](index.yaml) 均为 review；[规范文件清单](contract-manifest.yaml) 固定 PRD、索引、八个 Spec 与五份规范附件的 SHA-256。
 
 [覆盖表](coverage.md)包含 193 条细化功能记录及 27 条矩阵原名对照；全部 18 个 REQ、16 个 AC 有主责与参与责任。13 个内置 Skill 均必交；P0 完成不能代替完整 P1 验收。五张原型已转为三个视口的场景、操作、布局密度与截图判据。
 

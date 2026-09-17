@@ -82,6 +82,11 @@ async function harness(): Promise<Harness> {
     rpc: { call: async () => ({ ok: true, value: [] }) },
     isLoopback: true,
   } as never)
+  ctx.provide('uiConversation', undefined as never)
+  ctx.provide('uiWorkspace', undefined as never)
+  ctx.provide('theme', {
+    overrideTokens: () => () => {},
+  } as never)
   return { ctx, setLocale: (next) => { locale = next } }
 }
 
@@ -90,8 +95,12 @@ function declareParents(ctx: Context): void {
   slots.register({
     name: 'root',
     children: {
+      'sidebar.brand.mark': { kind: 'single', scope: 'root' },
+      'sidebar.brand.name': { kind: 'single', scope: 'root' },
+      'sidebar.primary.action': { kind: 'list', scope: 'root' },
       'conversation.view': { kind: 'list', scope: 'session' },
       'conversation.hero.actions': { kind: 'list', scope: 'session' },
+      'conversation.hero.launch': { kind: 'list', scope: 'root' },
       'conversation.session.header.actions': { kind: 'list', scope: 'session' },
       'tool.call.toolview': { kind: 'keyed', scope: 'session' },
       'settings.section': { kind: 'list', scope: 'root' },
@@ -105,7 +114,7 @@ function entries(ctx: Context, key: string): readonly { options: { id?: string; 
 
 describe('plugin-medical-ui browser half', () => {
   it('declares only the services it uses', () => {
-    expect(inject).toEqual(['slots', 'locale', 'connection'])
+    expect(inject).toEqual(['slots', 'locale', 'connection', 'uiConversation', 'uiWorkspace', 'theme'])
   })
 
   it('waits for the owner declarations, then contributes views, cards, and settings', async () => {
@@ -118,7 +127,11 @@ describe('plugin-medical-ui browser half', () => {
 
     declareParents(app.ctx)
     expect(entries(app.ctx, 'conversation.view').map(entry => entry.options.id))
-      .toEqual(['med-research', 'med-papers', 'med-evidence', 'med-statistics'])
+      .toEqual(['med-home', 'med-research', 'med-papers', 'med-evidence', 'med-statistics', 'med-knowledge', 'med-skills', 'med-writing'])
+    expect(entries(app.ctx, 'sidebar.primary.action').map(entry => entry.options.id))
+      .toEqual(['med-nav-home', 'med-nav-research', 'med-nav-library', 'med-nav-statistics', 'med-nav-skills'])
+    expect(entries(app.ctx, 'sidebar.brand.mark').length).toBe(1)
+    expect(entries(app.ctx, 'sidebar.brand.name').length).toBe(1)
     expect(entries(app.ctx, 'conversation.hero.actions').map(entry => entry.options.id))
       .toEqual(['med-research'])
     expect(entries(app.ctx, 'tool.call.toolview').map(entry => entry.options.key).sort())
@@ -128,6 +141,9 @@ describe('plugin-medical-ui browser half', () => {
 
     await fiber.dispose()
     expect(entries(app.ctx, 'conversation.view')).toEqual([])
+    expect(entries(app.ctx, 'sidebar.primary.action')).toEqual([])
+    expect(entries(app.ctx, 'sidebar.brand.mark').length).toBe(0)
+    expect(entries(app.ctx, 'sidebar.brand.name').length).toBe(0)
     expect(entries(app.ctx, 'conversation.hero.actions')).toEqual([])
     expect(entries(app.ctx, 'tool.call.toolview')).toEqual([])
     expect(entries(app.ctx, 'conversation.session.header.actions')).toEqual([])
@@ -159,7 +175,13 @@ describe('plugin-medical-ui browser half', () => {
     const labels = entries(app.ctx, 'conversation.view')
       .map(entry => typeof entry.options.label === 'function' ? entry.options.label() : entry.options.label)
     expect(labels).toEqual([
-      en['view.research'], en['view.papers'], en['view.evidence'], en['view.statistics'],
+      en['view.home'], en['view.research'], en['view.papers'], en['view.evidence'], en['view.statistics'],
+      en['view.knowledge'], en['view.skills'], en['view.writing'],
+    ])
+    const navLabels = entries(app.ctx, 'sidebar.primary.action')
+      .map(entry => typeof entry.options.label === 'function' ? entry.options.label() : entry.options.label)
+    expect(navLabels).toEqual([
+      en['nav.home'], en['nav.research'], en['nav.library'], en['nav.statistics'], en['nav.skills'],
     ])
     await fiber.dispose()
     await app.ctx.fiber.dispose()

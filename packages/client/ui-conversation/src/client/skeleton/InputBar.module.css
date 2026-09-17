@@ -17,6 +17,23 @@
   padding: 0 var(--dsh-composer-side-clearance);
 }
 
+.inline {
+  padding: 0;
+}
+
+.inline .card {
+  min-height: 124px;
+  padding-top: 16px;
+  border: none;
+  border-radius: 16px;
+  background: var(--dsw-alias-bg-l1);
+  box-shadow: var(--dsw-elevation-prominent);
+}
+
+.inline .scroll {
+  flex: 1;
+}
+
 .notice {
   width: 100%;
   max-width: var(--dsh-composer-card-max-width);

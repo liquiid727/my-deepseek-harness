@@ -74,7 +74,7 @@ export const analysisPlanSchema = z.strictObject({
 export type AnalysisPlan = z.infer<typeof analysisPlanSchema>
 
 /** Lifecycle of one analysis run (SPEC §14). */
-export const analysisRunStatusSchema = z.enum(['planned', 'approved', 'running', 'succeeded', 'failed'])
+export const analysisRunStatusSchema = z.enum(['planned', 'waiting_approval', 'approved', 'running', 'succeeded', 'failed', 'cancelled'])
 /** Lifecycle of one analysis run (SPEC §14). */
 export type AnalysisRunStatus = z.infer<typeof analysisRunStatusSchema>
 
@@ -89,6 +89,14 @@ export const analysisRunSchema = z.strictObject({
   language: z.literal('python'),
   generatedCode: z.string(),
   codeHash: z.string().min(1),
+  /** Approval identity; execution is valid only while these hashes match. */
+  approval: z.strictObject({
+    datasetHash: z.string().min(1),
+    codeHash: z.string().min(1),
+    planHash: z.string().min(1),
+    policyVersion: z.string().min(1),
+    approvedAt: z.string(),
+  }).optional(),
   runtime: z.string().min(1),
   runtimeVersion: z.string().min(1),
   packageVersions: z.record(z.string(), z.string()),

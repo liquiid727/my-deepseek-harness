@@ -106,7 +106,7 @@ describe('backup commands (SPEC §15.2, FR-21)', () => {
     // Two records: the project and the audit row its creation appended.
     expect(imported).toEqual({
       kind: 'success',
-      text: 'Imported 8 domains / 2 records from /backup/med.json',
+      text: 'Imported 10 domains / 2 records from /backup/med.json',
     })
     expect(target.storage.projects.get(projectIdSchema.parse(id))).toEqual(
       source.storage.projects.get(projectIdSchema.parse(id)),

@@ -111,6 +111,25 @@ function datasetTools(service: DatasetsService): ToolDefinition[] {
         }
       },
     }),
+    defineTool({
+      name: 'dataset_preview',
+      description: 'Return at most five rows for the authenticated UI preview; this is not model context.',
+      parameters: { datasetId: { type: 'string', required: true, description: 'Dataset id.' }, rows: { type: 'integer', description: 'Maximum five preview rows.' } },
+      output: { schema: TOOL_ENVELOPE_SCHEMA, render: renderToolEnvelope },
+      async execute(args) {
+        try { return { ok: true, result: asToolJson(await service.preview(datasetIdSchema.parse(args.datasetId), args.rows)) } } catch (error) {
+          if (error instanceof DatasetError) return { ok: false, error: asToolJson({ code: error.code, message: error.message, retryable: false, partialDataAvailable: false, source: 'dataset' }) }
+          throw error
+        }
+      },
+    }),
+    defineTool({
+      name: 'dataset_list',
+      description: 'List project-scoped dataset profiles without returning rows.',
+      parameters: { projectId: { type: 'string', required: true, description: 'Project id.' } },
+      output: { schema: TOOL_ENVELOPE_SCHEMA, render: renderToolEnvelope },
+      async execute(args) { return { ok: true, result: asToolJson(await service.list(projectIdSchema.parse(args.projectId))) } },
+    }),
   ]
 }
 

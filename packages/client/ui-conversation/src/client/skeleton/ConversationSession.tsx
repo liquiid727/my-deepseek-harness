@@ -1,6 +1,6 @@
 /** Strict per-session header/body content inserted into the resident conversation layout. */
 
-import { useEffect } from 'react'
+import { useCallback, useEffect } from 'react'
 import clsx from 'clsx'
 import type { SessionListState, SessionSummary } from '@deepseek-ai/dsh-api-session-controller/client'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
@@ -167,7 +167,7 @@ export function ConversationSessionHeader({
  */
 export function ConversationSession({
   useSession, useConversation, useConversationViews, useInput, inputActions, useStore, actions,
-  renderSlot, bindDraftMirror, openView,
+  renderSlot, bindDraftMirror, openView, mountComposer,
 }: ConversationSessionProps) {
   const tabs = useConversationViews(value => value)
   const selectedId = useStore(s => s.view)
@@ -177,6 +177,13 @@ export function ConversationSession({
   const inputState = useInput(s => s)
   const storedDraft = useStore(s => s.draft)
   const viewRequest = useStore(s => s.viewRequest ?? null)
+  const viewFocus = useStore(s => active === undefined ? '' : s.viewFocus?.[active.id] ?? '')
+  const mountViewComposer = useCallback<import('../contract/composer-outlet.ts').MountComposer>(
+    (targetId, options) => {
+      if (active === undefined) throw new Error('composer destination requires an active View')
+      return mountComposer(active.id, targetId, options)
+    }, [active?.id, mountComposer],
+  )
 
   useEffect(() => {
     if (inputState.draft === '' && storedDraft !== '') inputActions.setDraft(storedDraft)
@@ -197,7 +204,9 @@ export function ConversationSession({
   return (
     <div className={css.viewArea}>
       {active !== undefined && renderSlot('conversation.view', {
+        mountComposer: mountViewComposer,
         viewRequest,
+        viewFocus,
         openView,
         completeViewRequest: actions.completeViewRequest,
       }, { only: active.id })}

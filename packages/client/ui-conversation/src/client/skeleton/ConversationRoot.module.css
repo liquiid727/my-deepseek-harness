@@ -418,7 +418,7 @@
   overflow: hidden;
 }
 
-.scrollBody:has([data-conversation-composer-overlay]) > .composerSeat {
+.scrollBody:has([data-conversation-composer-overlay]) > :global([data-composer-container]) > .composerSeat {
   position: absolute;
   /* Chat's seat rides this box's content box, which its own scrolling shortens
      by the bar's width; the overlay seat is against the padding box, so it
@@ -472,4 +472,16 @@
    mounted but invisible so no wrong layout flashes before the phase lands. */
 .root[data-phase='settling'] .composerSeat {
   visibility: hidden;
+}
+
+.root .composerSeat[data-placement='inline'] {
+  position: relative;
+  bottom: auto;
+  background: none;
+  --dsh-composer-card-max-width: 100%;
+  --dsh-composer-side-clearance: 0px;
+}
+
+.root:has(.composerSeat[data-placement='inline']) .widthHandle {
+  display: none;
 }

@@ -2,12 +2,13 @@
 // chain, AND the composer bar (session-maybe slot) stay mounted across
 // no-session/session transitions — the bar renders inert via owner props.
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import clsx from 'clsx'
 import type { WorkspaceId } from '@deepseek-ai/dsh-workspace/types'
 import type { ConversationSlotProps, InputZone } from '../contract/slots.ts'
 import { conversationPhase } from '../contract/snapshot.ts'
 import { HeroShell, WorkspaceChip, workspaceLabel } from './EmptyHero.tsx'
+import { ResidentComposer } from './ResidentComposer.tsx'
 import css from './ConversationRoot.module.css'
 
 /** Full props composed from the slot contract. */
@@ -130,7 +131,7 @@ function WidthHandle(props: {
 
 export function ConversationRoot({
   sessionId, useSession, useSessions, useSessionPendingInteraction,
-  useWorkspaces, useConversation, useInput, useComposerBlock,
+  useWorkspaces, useConversation, useInput, useComposerBlock, useViewSelection, useComposerOutlet,
   renderSlot, renderSlotChain, selectWorkspace, startSession, t,
 }: ConversationRootProps) {
   const session = useSession(s => s)
@@ -148,6 +149,15 @@ export function ConversationRoot({
   // A plugin this package cannot import (ui-model-selection) says this session cannot
   // send; its reason is already localized by whoever raised it.
   const composerBlock = useComposerBlock(block => block)
+  // A blank session whose active View is a registered feature View presents
+  // that View instead of the centered hero: the View owns the surface and the
+  // composer docks, so the View's content is never covered by hero chrome.
+  const selectedView = useViewSelection(state => state?.view ?? null)
+  const featureViewActive = selectedView !== null && selectedView !== 'chat'
+  const outlet = useComposerOutlet(value => value)
+  const inlineOutlet = outlet?.view === selectedView && pendingInteraction === undefined ? outlet : undefined
+  const scrollBodyRef = useRef<HTMLDivElement>(null)
+  const scrollBodyId = useId()
 
   const [pickerOpen, setPickerOpen] = useState(false)
   const [pendingWorkspaceId, setPendingWorkspaceId] = useState<WorkspaceId | undefined>()
@@ -164,10 +174,10 @@ export function ConversationRoot({
   const seatResizeRef = useCallback((seat: HTMLDivElement | null): void => {
     seatObserver.current?.disconnect()
     seatObserver.current = null
-    const scroller = seat?.parentElement ?? null
+    const scroller = scrollBodyRef.current
     if (seat === null || scroller === null) return
     seatObserver.current = new ResizeObserver(() => {
-      scroller.style.setProperty('--dsh-composer-height', `${seat.offsetHeight}px`)
+      scroller.style.setProperty('--dsh-composer-height', `${seat.dataset.placement === 'inline' ? 0 : seat.offsetHeight}px`)
       scroller.style.setProperty(
         '--dsh-conversation-viewport-height',
         `${scroller.clientHeight}px`,
@@ -175,7 +185,7 @@ export function ConversationRoot({
     })
     seatObserver.current.observe(seat)
     seatObserver.current.observe(scroller)
-  }, [])
+  }, [inlineOutlet?.targetId])
 
   // Publishes the column's live width as --dsh-conversation-column-width so
   // the shared width axis can adapt (see the .root CSS), and re-clamps a
@@ -203,6 +213,11 @@ export function ConversationRoot({
     rootObserver.current.observe(root)
     publishWidths(root)
   }, [publishWidths])
+
+  useLayoutEffect(() => {
+    seatResizeRef(rootEl.current?.querySelector<HTMLDivElement>('[data-composer-seat]') ?? null)
+    return () => { seatResizeRef(null) }
+  }, [seatResizeRef])
 
   // Drag plumbing for the two width handles: onStart snapshots the resolved
   // width (grabbing a clamped column must not jump back to the raw stored
@@ -269,8 +284,9 @@ export function ConversationRoot({
     (shellPhase === 'blank' && openState === 'loading' && summaryBlank !== true)
     || parentAvailabilityPending
   )
-  const hero = sessionId === undefined
-    || (shellPhase === 'blank' && (openState === 'open' || summaryBlank === true))
+  const hero = !featureViewActive
+    && (sessionId === undefined
+      || (shellPhase === 'blank' && (openState === 'open' || summaryBlank === true)))
   const zone: InputZone | undefined =
     session === undefined || inputState === undefined ? undefined : { session, input: inputState }
 
@@ -328,7 +344,7 @@ export function ConversationRoot({
   // when both hold — picking a workspace is the earlier prerequisite.
   const blocked = !inert && composerBlock !== undefined
   const inputBar = renderSlot('conversation.composer.bar', {
-    variant: hero ? 'hero' : 'composer',
+    variant: inlineOutlet !== undefined ? 'inline' : hero ? 'hero' : 'composer',
     ...(inert
       ? {
         disabled: true,
@@ -341,7 +357,8 @@ export function ConversationRoot({
         // block keeps the model seat live because choosing a model is how the
         // user clears it.
         ? { blocked: composerBlock, placeholder: composerBlock.reason }
-        : hero ? { placeholder: t('placeholder.hero') } : {}),
+        : inlineOutlet !== undefined ? { placeholder: inlineOutlet.placeholder }
+          : hero ? { placeholder: t('placeholder.hero') } : {}),
   })
 
   const composerBar = (
@@ -365,7 +382,7 @@ export function ConversationRoot({
   // on the fallback alone would leave a business-owned takeover at the content
   // end off-screen when the user is not pinned to the floor.
   const composerSeat = (
-    <div ref={seatResizeRef} className={css.composerSeat} data-composer-seat="">
+    <div ref={seatResizeRef} className={css.composerSeat} data-composer-seat="" data-placement={inlineOutlet === undefined ? 'docked' : 'inline'}>
       {composer}
     </div>
   )
@@ -374,9 +391,11 @@ export function ConversationRoot({
     <div ref={rootResizeRef} className={css.root} data-phase={phase}>
       {sessionId === undefined ? null : renderSlot('conversation.session.header', {})}
       <div className={css.body}>
-        <div className={css.scrollBody} data-conversation-scroll="">
+        <div ref={scrollBodyRef} id={scrollBodyId} className={css.scrollBody} data-conversation-scroll="">
           {sessionId === undefined ? null : renderSlot('conversation.session', {})}
-          {composerSeat}
+          <ResidentComposer scrollerId={scrollBodyId} targetId={inlineOutlet?.targetId}>
+            {composerSeat}
+          </ResidentComposer>
         </div>
         {/* Width handles only while a transcript is on screen; the hero has no
             content column to size. */}

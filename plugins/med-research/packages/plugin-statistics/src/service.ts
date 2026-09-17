@@ -116,12 +116,49 @@ export class StatisticsService implements MedStatisticsService {
   }
 
   /**
-   * Read one stored analysis run.
+   * Read one stored analysis run without a Remote round trip. In-process
+   * callers (composition checks, tests) use this; the browser reads the same
+   * record through {@link run}.
    * @param id - Run id.
    * @returns the run, or `undefined`.
    */
-  getRun(id: AnalysisRunId): AnalysisRun | undefined {
+  peekRun(id: AnalysisRunId): AnalysisRun | undefined {
     return this.options.storage.analysisRuns.get(id)
+  }
+
+  /**
+   * Read one stored analysis run for the authenticated client.
+   * @param id - Run id.
+   * @returns the run with its input versions, or `undefined`.
+   */
+  @Remote
+  async run(id: AnalysisRunId): Promise<AnalysisRun | undefined> {
+    return this.options.storage.analysisRuns.get(id)
+  }
+
+  /**
+   * List the chart artifacts one project's successful runs published.
+   *
+   * Only artifacts belonging to a `succeeded` run are returned, so a failed or
+   * cancelled run can never contribute a figure the UI would show as a result.
+   * @param projectId - Project scope.
+   * @returns chart artifacts, newest run first.
+   */
+  @Remote
+  async listCharts(projectId: ProjectId): Promise<Artifact[]> {
+    if (this.options.artifacts === undefined) return []
+    const succeeded = new Set(
+      [...this.options.storage.analysisRuns.entries()]
+        .map(([, run]) => run)
+        .filter(run => run.projectId === projectId && run.status === 'succeeded')
+        .map(run => run.id),
+    )
+    const charts: Artifact[] = []
+    for (const [, artifact] of this.options.storage.artifacts.entries()) {
+      if (artifact.projectId !== projectId || artifact.analysisRunId === undefined || !succeeded.has(artifact.analysisRunId)) continue
+      charts.push(artifact)
+    }
+    return charts.sort((left, right) => right.createdAt.localeCompare(left.createdAt) || left.id.localeCompare(right.id))
   }
 
   /**
@@ -149,15 +186,37 @@ export class StatisticsService implements MedStatisticsService {
       ...run,
       generatedCode: code,
       codeHash: createHash('sha256').update(code).digest('hex'),
-      status: 'approved',
+      status: 'waiting_approval',
     }
     await this.options.storage.analysisRuns.put(id, updated)
+    return updated
+  }
+
+  /** Approve the generated code after the user has reviewed its immutable hashes. */
+  @Remote
+  async approveCode(id: AnalysisRunId): Promise<AnalysisRun> {
+    const run = this.options.storage.analysisRuns.get(id)
+    if (run === undefined || run.status !== 'waiting_approval') {
+      throw new StatisticsError('STATISTICS_PLAN_INVALID', `run ${id} is not waiting for approval`, { analysisRunId: id, status: run?.status })
+    }
+    const approved: AnalysisRun = {
+      ...run,
+      status: 'approved',
+      approval: {
+        datasetHash: run.datasetHash,
+        codeHash: run.codeHash,
+        planHash: createHash('sha256').update(JSON.stringify(run.analysisPlan)).digest('hex'),
+        policyVersion: 'med-statistics-runner-v1',
+        approvedAt: this.options.now(),
+      },
+    }
+    await this.options.storage.analysisRuns.put(id, approved)
     await this.audit.append({
       action: 'statistics.approve',
       projectId: run.projectId,
-      detail: { analysisRunId: id, codeHash: updated.codeHash },
+      detail: { analysisRunId: id, codeHash: approved.codeHash, planHash: approved.approval?.planHash },
     })
-    return updated
+    return approved
   }
 
   /**
@@ -179,6 +238,9 @@ export class StatisticsService implements MedStatisticsService {
         analysisRunId: input.analysisRunId,
         status: run.status,
       })
+    }
+    if (run.approval === undefined || run.approval.datasetHash !== run.datasetHash || run.approval.codeHash !== run.codeHash || run.approval.planHash !== createHash('sha256').update(JSON.stringify(run.analysisPlan)).digest('hex')) {
+      throw new StatisticsError('STATISTICS_PLAN_INVALID', `run ${input.analysisRunId} approval is stale`, { analysisRunId: input.analysisRunId })
     }
     const running: AnalysisRun = { ...run, status: 'running' }
     await this.options.storage.analysisRuns.put(run.id, running)
@@ -227,5 +289,11 @@ export class StatisticsService implements MedStatisticsService {
       })
     }
     return result
+  }
+
+  /** List immutable analysis history for one project. */
+  @Remote
+  async listRuns(projectId: ProjectId): Promise<AnalysisRun[]> {
+    return [...this.options.storage.analysisRuns.entries()].map(([, run]) => run).filter(run => run.projectId === projectId).sort((left, right) => right.createdAt.localeCompare(left.createdAt))
   }
 }

@@ -5,10 +5,10 @@ test_spec_id: TEST-R001-S02
 source_prd: ../../prd.md
 source_spec: ./spec.md
 source_spec_id: SPEC-R001-S02
-source_spec_version: 2.1.0
-source_spec_hash: 79809d3272192f4fb499282875e200016dc1c7daa01aefa3b729aa749c72d1f6
+source_spec_version: 2.1.1
+source_spec_hash: 5f7b5e236a5a3b802ed634f9ba9230173b2c6b5c3fca85b8c8f7c588f75c3d3f
 version: 2.0.0
-status: review
+status: approved
 owner: med-research-testing
 qualityProfile: agent-workflow
 riskTier: P0
@@ -168,4 +168,4 @@ AI 生成的本设计与案例需人工评审 coverage、assertions、risk、数
 
 ## Normative Source Binding
 
-本设计除 Spec hash 外同时绑定[规范文件清单](../../contract-manifest.yaml)，bundle SHA-256 为 a9a491f65eb02d94a111241db410934e7a25aa5388ac4ea2e0df502a317716c6。清单任一文件变化使受影响用例 stale；必须重新评审并更新绑定，不能只比 spec.md 判断证据可复用。
+本设计除 Spec hash 外同时绑定[规范文件清单](../../contract-manifest.yaml)，bundle SHA-256 为 24c463dbeec9e5dca9e8c68d43b9c1ab7eeaa0c6b19bd3397f218f612c88f9a8。清单任一文件变化使受影响用例 stale；必须重新评审并更新绑定，不能只比 spec.md 判断证据可复用。
