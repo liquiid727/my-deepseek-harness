@@ -14,6 +14,7 @@
     "test:watch": "vitest",
     "build:client": "pnpm --filter @medresearch/dsh-plugin-medical-ui run bundle",
     "verify:client": "pnpm run build:client && node scripts/verify-client-bundle.mjs",
+    "ui:parity": "node scripts/capture-ui-parity.mjs",
     "install:profile": "node scripts/install-local-profile.mjs"
   },
   "devDependencies": {
