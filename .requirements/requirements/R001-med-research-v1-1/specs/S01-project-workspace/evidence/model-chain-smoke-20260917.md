@@ -3,7 +3,8 @@
 Binds: Spec 2.1.3 / `d345dc9f36a876e36a6f9ba144863acb970094cd56fb9ad2f764a92a4f7107a6`;
 Test Design 2.0.1 / `79af3b71ef5c7f5e18b3c62e63882a3f4dc56b9c6a53e99afdf918d324c5ca4a`;
 contract bundle `6703ad878703a2a02f7ae73a07d64b087cfc4c34f8c8222a80d813ce8ee4f428`;
-revision `worktree-20260917` (HEAD `a23ee9233b5bc8c6a44cce2c2d29a717f872b2d4`).
+revision `62ca9fac796ef751a4b84dc949791e8e83e14494` (the consolidated commit of the
+working tree this run executed against; content-identical to the pre-commit state).
 
 ## What ran
 
@@ -42,7 +43,11 @@ driven with ego-browser.
 > 结局类别：…患者报告的主观症状类结局（patient-reported outcome, PRO）…通常是"恶心＋呕吐
 > （＋干呕）"的复合终点…不属于死亡、心梗、再入院等硬临床终点。
 
-Screenshot: `./screenshots/model-chain-smoke-20260917.png`.
+Screenshot: `./screenshots/model-chain-smoke-20260917.png`. The same chat answer is
+also captured responsively at the three locked viewports:
+`./screenshots/model-chain-chat-1672x941-20260917.png`,
+`./screenshots/model-chain-chat-1440x900-20260917.png`,
+`./screenshots/model-chain-chat-390x844-20260917.png`.
 
 ## Limitations
 

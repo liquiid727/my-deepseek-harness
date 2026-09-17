@@ -5,6 +5,21 @@ updated_at: 2026-09-17
 plans: []
 schedules: []
 runs:
+  - run_id: S01-ui-home-browser-matrix-20260917
+    test_ids: [TEST-R001-S01-004]
+    spec_id: SPEC-R001-S01
+    spec_version: 2.1.3
+    spec_hash: d345dc9f36a876e36a6f9ba144863acb970094cd56fb9ad2f764a92a4f7107a6
+    test_version: 2.0.1
+    test_hash: 79af3b71ef5c7f5e18b3c62e63882a3f4dc56b9c6a53e99afdf918d324c5ca4a
+    contract_bundle_hash: 6703ad878703a2a02f7ae73a07d64b087cfc4c34f8c8222a80d813ce8ee4f428
+    revision: 62ca9fac796ef751a4b84dc949791e8e83e14494
+    command: ego-browser against http://127.0.0.1:3100/; clicked the 首页 tab; CDP Emulation.setDeviceMetricsOverride at 1672x941, 1440x900, 390x844 (deviceScaleFactor 1, zoom 100%); selected project 住院时长队列 to surface service counts. Screenshots and per-assertion detail in ./ui-home-20260917.md.
+    environment: Node v25.6.0; pnpm 11.7.0; macOS arm64; real med-research profile on port 3100 (reinstalled from source, byte-verified client.js); model deepseek-v4.1-flash; browser locale zh.
+    result: PASS
+    assertions: UI-HOME landing and empty-project state. 1672x941 renders current-project chip with blue focus ring, Hero, research-question composer with send, five quick-entries (PubMed 检索 / 论文阅读 / 证据 / 统计分析 / 技能), five service-backed counts (all 0 for the empty project, timestamped 更新于 2026/9/17 15:22:24 under 来自项目服务的持久化计数), three-column Research/Reader/Statistics cards, 研究灵感 rail with 换一批, and the 新建研究项目 form. 390x844 collapses to single column with a two-column quick-entry wrap; 1440x900 keeps the information order. Empty-project counts are 0 as required.
+    artifact: ./ui-home-20260917.md
+    limitations: This run covers the empty-project home. The UI-HOME populated prerequisite (a project holding service-written Paper/Evidence/Dataset/Run/Chart with non-zero counts and the 单域失败为未知 state) requires the S05 Runner chain and is not evidenced here. 200% zoom and the full same-run prototype-vs-actual per-region comparison table (font/spacing/color/density/occlusion) were not run; horizontal-overflow at 390 was not stress-tested. PASS scopes to the assertions listed; full UI-HOME acceptance remains open.
   - run_id: S01-model-chain-smoke-20260917
     test_ids: [TEST-R001-S01-004, TEST-R001-S01-006]
     spec_id: SPEC-R001-S01
@@ -13,7 +28,7 @@ runs:
     test_version: 2.0.1
     test_hash: 79af3b71ef5c7f5e18b3c62e63882a3f4dc56b9c6a53e99afdf918d324c5ca4a
     contract_bundle_hash: 6703ad878703a2a02f7ae73a07d64b087cfc4c34f8c8222a80d813ce8ee4f428
-    revision: worktree-20260917
+    revision: 62ca9fac796ef751a4b84dc949791e8e83e14494
     command: ego-browser against http://127.0.0.1:3100/; one Session Chat message through the composer with model deepseek-v4.1-flash (provider ali). Profile reinstalled from current source (build:client + install-local-profile --force; installed client.js byte-identical to source).
     environment: Node v25.6.0; pnpm 11.7.0; macOS arm64; real med-research profile on port 3100; Chromium viewport 1492x748.
     result: PASS
@@ -118,7 +133,7 @@ runs:
     test_version: 2.0.1
     test_hash: 79af3b71ef5c7f5e18b3c62e63882a3f4dc56b9c6a53e99afdf918d324c5ca4a
     contract_bundle_hash: 6703ad878703a2a02f7ae73a07d64b087cfc4c34f8c8222a80d813ce8ee4f428
-    revision: worktree-20260917
+    revision: 62ca9fac796ef751a4b84dc949791e8e83e14494
     command: pnpm exec vitest run packages/plugin-project/tests/service.spec.ts packages/plugin-project/tests/tools.spec.ts packages/plugin-project/tests/remote.spec.ts packages/plugin-project/tests/backup.spec.ts packages/plugin-project/tests/mode.spec.ts
     environment: Node v25.6.0; pnpm 11.7.0; macOS arm64.
     result: PASS
@@ -131,7 +146,7 @@ runs:
     test_version: 2.0.1
     test_hash: 79af3b71ef5c7f5e18b3c62e63882a3f4dc56b9c6a53e99afdf918d324c5ca4a
     contract_bundle_hash: 6703ad878703a2a02f7ae73a07d64b087cfc4c34f8c8222a80d813ce8ee4f428
-    revision: worktree-20260917
+    revision: 62ca9fac796ef751a4b84dc949791e8e83e14494
     command: pnpm exec vitest run packages/plugin-medical-ui/tests/client-plugin.client.spec.tsx packages/plugin-medical-ui/tests/hero-action.client.spec.tsx packages/plugin-medical-ui/tests/views.client.spec.tsx packages/plugin-medical-ui/tests/style-policy.client.spec.ts
     environment: Node v25.6.0; pnpm 11.7.0; macOS arm64.
     result: PASS
@@ -144,7 +159,7 @@ runs:
     test_version: 2.0.1
     test_hash: 79af3b71ef5c7f5e18b3c62e63882a3f4dc56b9c6a53e99afdf918d324c5ca4a
     contract_bundle_hash: 6703ad878703a2a02f7ae73a07d64b087cfc4c34f8c8222a80d813ce8ee4f428
-    revision: worktree-20260917
+    revision: 62ca9fac796ef751a4b84dc949791e8e83e14494
     command: pnpm exec vitest run --exclude packages/medical-e2e/tests/composition.spec.ts
     environment: Node v25.6.0; pnpm 11.7.0; macOS arm64.
     result: PASS
@@ -158,7 +173,7 @@ runs:
     test_version: 2.0.1
     test_hash: 79af3b71ef5c7f5e18b3c62e63882a3f4dc56b9c6a53e99afdf918d324c5ca4a
     contract_bundle_hash: 6703ad878703a2a02f7ae73a07d64b087cfc4c34f8c8222a80d813ce8ee4f428
-    revision: worktree-20260917
+    revision: 62ca9fac796ef751a4b84dc949791e8e83e14494
     command: pnpm run typecheck
     environment: Node v25.6.0; pnpm 11.7.0; macOS arm64.
     result: PASS
@@ -171,7 +186,7 @@ runs:
     test_version: 2.0.1
     test_hash: 79af3b71ef5c7f5e18b3c62e63882a3f4dc56b9c6a53e99afdf918d324c5ca4a
     contract_bundle_hash: 6703ad878703a2a02f7ae73a07d64b087cfc4c34f8c8222a80d813ce8ee4f428
-    revision: worktree-20260917
+    revision: 62ca9fac796ef751a4b84dc949791e8e83e14494
     command: pnpm run verify:client
     environment: Node v25.6.0; pnpm 11.7.0; macOS arm64.
     result: PASS
@@ -184,7 +199,7 @@ runs:
     test_version: 2.0.1
     test_hash: 79af3b71ef5c7f5e18b3c62e63882a3f4dc56b9c6a53e99afdf918d324c5ca4a
     contract_bundle_hash: 6703ad878703a2a02f7ae73a07d64b087cfc4c34f8c8222a80d813ce8ee4f428
-    revision: worktree-20260917
+    revision: 62ca9fac796ef751a4b84dc949791e8e83e14494
     command: pnpm exec vitest run packages/client/ui-primitives/tests/form-tabs.client.spec.tsx packages/client/ui-theme/tests/elevation-styles.client.spec.ts
     environment: Node v25.6.0; pnpm 11.7.0; macOS arm64.
     result: PASS
@@ -197,7 +212,7 @@ runs:
     test_version: 2.0.1
     test_hash: 79af3b71ef5c7f5e18b3c62e63882a3f4dc56b9c6a53e99afdf918d324c5ca4a
     contract_bundle_hash: 6703ad878703a2a02f7ae73a07d64b087cfc4c34f8c8222a80d813ce8ee4f428
-    revision: worktree-20260917
+    revision: 62ca9fac796ef751a4b84dc949791e8e83e14494
     command: pnpm exec tsc -p packages/client/ui-sidebar/tsconfig.json --noEmit && pnpm exec tsc -p packages/client/ui-conversation/tsconfig.json --noEmit && pnpm exec tsc -p packages/client/ui-primitives/tsconfig.json --noEmit && pnpm exec tsc -p packages/client/ui-theme/tsconfig.json --noEmit
     environment: Node v25.6.0; pnpm 11.7.0; macOS arm64.
     result: PASS
@@ -210,7 +225,7 @@ runs:
     test_version: 2.0.1
     test_hash: 79af3b71ef5c7f5e18b3c62e63882a3f4dc56b9c6a53e99afdf918d324c5ca4a
     contract_bundle_hash: 6703ad878703a2a02f7ae73a07d64b087cfc4c34f8c8222a80d813ce8ee4f428
-    revision: worktree-20260917
+    revision: 62ca9fac796ef751a4b84dc949791e8e83e14494
     command: pnpm rebuild fs-ext
     environment: Node v25.6.0; pnpm 11.7.0; macOS arm64; node-gyp 12.4.0; Python 3.14.5.
     result: PASS
@@ -223,7 +238,7 @@ runs:
     test_version: 2.0.1
     test_hash: 79af3b71ef5c7f5e18b3c62e63882a3f4dc56b9c6a53e99afdf918d324c5ca4a
     contract_bundle_hash: 6703ad878703a2a02f7ae73a07d64b087cfc4c34f8c8222a80d813ce8ee4f428
-    revision: worktree-20260917
+    revision: 62ca9fac796ef751a4b84dc949791e8e83e14494
     command: pnpm exec vitest run packages/medical-e2e/tests/composition.spec.ts
     environment: Node v25.6.0; pnpm 11.7.0; macOS arm64.
     result: PASS
@@ -236,7 +251,7 @@ runs:
     test_version: 2.0.1
     test_hash: 79af3b71ef5c7f5e18b3c62e63882a3f4dc56b9c6a53e99afdf918d324c5ca4a
     contract_bundle_hash: 6703ad878703a2a02f7ae73a07d64b087cfc4c34f8c8222a80d813ce8ee4f428
-    revision: worktree-20260917
+    revision: 62ca9fac796ef751a4b84dc949791e8e83e14494
     command: pnpm exec vitest run packages/session/session-persistence-jsonl/tests/lease.spec.ts
     environment: Node v25.6.0; pnpm 11.7.0; macOS arm64.
     result: PASS
@@ -249,7 +264,7 @@ runs:
     test_version: 2.0.1
     test_hash: 79af3b71ef5c7f5e18b3c62e63882a3f4dc56b9c6a53e99afdf918d324c5ca4a
     contract_bundle_hash: 6703ad878703a2a02f7ae73a07d64b087cfc4c34f8c8222a80d813ce8ee4f428
-    revision: worktree-20260917
+    revision: 62ca9fac796ef751a4b84dc949791e8e83e14494
     command: pnpm exec vitest run
     environment: Node v25.6.0; pnpm 11.7.0; macOS arm64.
     result: PASS

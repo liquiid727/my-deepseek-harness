@@ -26,3 +26,19 @@ artifacts:
       - pnpm exec vitest run packages/client/ui-layout/tests/app-frame.client.spec.tsx packages/client/ui-layout/tests/columns.client.spec.ts packages/client/ui-layout/tests/apply.client.spec.ts
     result: PASS
     note: Host shell and Research surface checks pass; visual parity and browser evidence remain outstanding.
+  - id: S02-browser-matrix-20260917
+    kind: browser
+    path: ./browser-matrix-20260917.md
+    status: partial
+    revision: 62ca9fac796ef751a4b84dc949791e8e83e14494
+    commands:
+      - ego-browser against http://127.0.0.1:3100/; open 首页 PubMed 检索 quick-entry; fill and 确认并检索 a real PONV RCT query; capture the partial/failure state
+    environment: real med-research profile on 3100; model deepseek-v4.1-flash; ego-browser Chromium 1672x941 DPR1 locale zh
+    result: PARTIAL
+    note: >-
+      Retrieval pipeline is live (plan 未确认→已确认, dispatch reached NCBI, failure/retry UI
+      renders) and the UI-RESEARCH partial/failure state is captured; the success path
+      (result cards, three-class counts, Evidence selection, ANSWER_READY) is blocked because
+      eutils.ncbi.nlm.nih.gov resolves to 198.18.0.23 (198.18.0.0/15 proxy range) which the
+      product SSRF guard rejects. Needs public-DNS egress to evidence success. Independent QA
+      and test-design approval remain blocked.
