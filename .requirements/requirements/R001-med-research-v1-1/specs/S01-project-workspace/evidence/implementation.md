@@ -1,7 +1,7 @@
 # Implementation Evidence - S01 Project Workspace
 
 - Entry: PRD R001
-- Spec: SPEC-R001-S01 / current implementation checkpoint 2.1.3 / d345dc9f36a876e36a6f9ba144863acb970094cd56fb9ad2f764a92a4f7107a6
+- Spec: SPEC-R001-S01 / current implementation checkpoint 2.1.3 / d345dc9f36a876e36a6f9ba144863acb970094acfc53b913055c90ab81ae68e8
 - Status: implemented against the current checkpoint; earlier 2.1.0 notes below are historical, and acceptance remains owned by review.md and acceptance.md
 - Tested revision: current dirty worktree on branch `medical-workspace` (see git status below); no new commit was created
 
@@ -100,7 +100,7 @@ node scripts/install-local-profile.mjs --print-only --json
 
 ## 2026-09-17 implementation checkpoint (Spec 2.1.3)
 
-This checkpoint is bound to Spec SHA-256 `d345dc9f36a876e36a6f9ba144863acb970094cd56fb9ad2f764a92a4f7107a6`, Test Design SHA-256 `79af3b71ef5c7f5e18b3c62e63882a3f4dc56b9c6a53e99afdf918d324c5ca4a`, and contract bundle SHA-256 `6703ad878703a2a02f7ae73a07d64b087cfc4c34f8c8222a80d813ce8ee4f428`.
+This checkpoint is bound to Spec SHA-256 `d345dc9f36a876e36a6f9ba144863acb970094acfc53b913055c90ab81ae68e8`, Test Design SHA-256 `79af3b71ef5c7f5e18b3c62e63882a3f4dc56b9c6a53e99afdf918d324c5ca4a`, and contract bundle SHA-256 `24c463dbeec9e5dca9e8c68d43b9c1ab7eeaa0c6b19bd3397f218f612c88f9a8`.
 
 ### Changed files
 

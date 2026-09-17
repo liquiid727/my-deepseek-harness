@@ -1,8 +1,8 @@
 # S01 — Real model-chain smoke (current build)
 
-Binds: Spec 2.1.3 / `d345dc9f36a876e36a6f9ba144863acb970094cd56fb9ad2f764a92a4f7107a6`;
+Binds: Spec 2.1.3 / `d345dc9f36a876e36a6f9ba144863acb970094acfc53b913055c90ab81ae68e8`;
 Test Design 2.0.1 / `79af3b71ef5c7f5e18b3c62e63882a3f4dc56b9c6a53e99afdf918d324c5ca4a`;
-contract bundle `6703ad878703a2a02f7ae73a07d64b087cfc4c34f8c8222a80d813ce8ee4f428`;
+contract bundle `24c463dbeec9e5dca9e8c68d43b9c1ab7eeaa0c6b19bd3397f218f612c88f9a8`;
 revision `62ca9fac796ef751a4b84dc949791e8e83e14494` (the consolidated commit of the
 working tree this run executed against; content-identical to the pre-commit state).
 

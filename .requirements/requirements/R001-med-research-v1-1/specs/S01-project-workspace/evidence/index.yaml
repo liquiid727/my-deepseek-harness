@@ -9,10 +9,10 @@ runs:
     test_ids: [TEST-R001-S01-004]
     spec_id: SPEC-R001-S01
     spec_version: 2.1.3
-    spec_hash: d345dc9f36a876e36a6f9ba144863acb970094cd56fb9ad2f764a92a4f7107a6
+    spec_hash: d345dc9f36a876e36a6f9ba144863acb970094acfc53b913055c90ab81ae68e8
     test_version: 2.0.1
     test_hash: 79af3b71ef5c7f5e18b3c62e63882a3f4dc56b9c6a53e99afdf918d324c5ca4a
-    contract_bundle_hash: 6703ad878703a2a02f7ae73a07d64b087cfc4c34f8c8222a80d813ce8ee4f428
+    contract_bundle_hash: 24c463dbeec9e5dca9e8c68d43b9c1ab7eeaa0c6b19bd3397f218f612c88f9a8
     revision: 62ca9fac796ef751a4b84dc949791e8e83e14494
     command: ego-browser against http://127.0.0.1:3100/; clicked the 首页 tab; CDP Emulation.setDeviceMetricsOverride at 1672x941, 1440x900, 390x844 (deviceScaleFactor 1, zoom 100%); selected project 住院时长队列 to surface service counts. Screenshots and per-assertion detail in ./ui-home-20260917.md.
     environment: Node v25.6.0; pnpm 11.7.0; macOS arm64; real med-research profile on port 3100 (reinstalled from source, byte-verified client.js); model deepseek-v4.1-flash; browser locale zh.
@@ -24,10 +24,10 @@ runs:
     test_ids: [TEST-R001-S01-004, TEST-R001-S01-006]
     spec_id: SPEC-R001-S01
     spec_version: 2.1.3
-    spec_hash: d345dc9f36a876e36a6f9ba144863acb970094cd56fb9ad2f764a92a4f7107a6
+    spec_hash: d345dc9f36a876e36a6f9ba144863acb970094acfc53b913055c90ab81ae68e8
     test_version: 2.0.1
     test_hash: 79af3b71ef5c7f5e18b3c62e63882a3f4dc56b9c6a53e99afdf918d324c5ca4a
-    contract_bundle_hash: 6703ad878703a2a02f7ae73a07d64b087cfc4c34f8c8222a80d813ce8ee4f428
+    contract_bundle_hash: 24c463dbeec9e5dca9e8c68d43b9c1ab7eeaa0c6b19bd3397f218f612c88f9a8
     revision: 62ca9fac796ef751a4b84dc949791e8e83e14494
     command: ego-browser against http://127.0.0.1:3100/; one Session Chat message through the composer with model deepseek-v4.1-flash (provider ali). Profile reinstalled from current source (build:client + install-local-profile --force; installed client.js byte-identical to source).
     environment: Node v25.6.0; pnpm 11.7.0; macOS arm64; real med-research profile on port 3100; Chromium viewport 1492x748.
@@ -50,7 +50,7 @@ runs:
     result: BLOCKED
     assertions: Single resident editor, admission to current Session Chat, draft recovery and stale callbacks covered; complete S01 QA remains blocked.
     artifact: ./home-composer.md
-    limitations: Real model reply blocked by MISSING_CREDENTIAL; keyless Web lane blocked during host setup; full-repository gates retain unrelated failures.
+    limitations: Real model reply blocked by MISSING_CREDENTIAL; keyless Web lane blocked during host setup; full-repository gates retain unrelated failures. Hash-verification caveat — this 2.1.1 run's spec_hash could not be independently reproduced — spec.md has advanced to 2.1.3 (real digest d345dc9f36a876e36a6f9ba144863acb970094acfc53b913055c90ab81ae68e8), and the 2.1.1 file it was computed against is no longer present. This historical record is left unchanged per the no-rewrite policy for superseded evidence; flagged for the human reviewer.
   - run_id: S01-implementation-typecheck-20260911
     test_id: TEST-R001-S01-001
     spec_id: SPEC-R001-S01
@@ -129,10 +129,10 @@ runs:
     test_id: TEST-R001-S01-006
     spec_id: SPEC-R001-S01
     spec_version: 2.1.3
-    spec_hash: d345dc9f36a876e36a6f9ba144863acb970094cd56fb9ad2f764a92a4f7107a6
+    spec_hash: d345dc9f36a876e36a6f9ba144863acb970094acfc53b913055c90ab81ae68e8
     test_version: 2.0.1
     test_hash: 79af3b71ef5c7f5e18b3c62e63882a3f4dc56b9c6a53e99afdf918d324c5ca4a
-    contract_bundle_hash: 6703ad878703a2a02f7ae73a07d64b087cfc4c34f8c8222a80d813ce8ee4f428
+    contract_bundle_hash: 24c463dbeec9e5dca9e8c68d43b9c1ab7eeaa0c6b19bd3397f218f612c88f9a8
     revision: 62ca9fac796ef751a4b84dc949791e8e83e14494
     command: pnpm exec vitest run packages/plugin-project/tests/service.spec.ts packages/plugin-project/tests/tools.spec.ts packages/plugin-project/tests/remote.spec.ts packages/plugin-project/tests/backup.spec.ts packages/plugin-project/tests/mode.spec.ts
     environment: Node v25.6.0; pnpm 11.7.0; macOS arm64.
@@ -142,10 +142,10 @@ runs:
     test_id: TEST-R001-S01-004
     spec_id: SPEC-R001-S01
     spec_version: 2.1.3
-    spec_hash: d345dc9f36a876e36a6f9ba144863acb970094cd56fb9ad2f764a92a4f7107a6
+    spec_hash: d345dc9f36a876e36a6f9ba144863acb970094acfc53b913055c90ab81ae68e8
     test_version: 2.0.1
     test_hash: 79af3b71ef5c7f5e18b3c62e63882a3f4dc56b9c6a53e99afdf918d324c5ca4a
-    contract_bundle_hash: 6703ad878703a2a02f7ae73a07d64b087cfc4c34f8c8222a80d813ce8ee4f428
+    contract_bundle_hash: 24c463dbeec9e5dca9e8c68d43b9c1ab7eeaa0c6b19bd3397f218f612c88f9a8
     revision: 62ca9fac796ef751a4b84dc949791e8e83e14494
     command: pnpm exec vitest run packages/plugin-medical-ui/tests/client-plugin.client.spec.tsx packages/plugin-medical-ui/tests/hero-action.client.spec.tsx packages/plugin-medical-ui/tests/views.client.spec.tsx packages/plugin-medical-ui/tests/style-policy.client.spec.ts
     environment: Node v25.6.0; pnpm 11.7.0; macOS arm64.
@@ -155,10 +155,10 @@ runs:
     test_id: TEST-R001-S01-001
     spec_id: SPEC-R001-S01
     spec_version: 2.1.3
-    spec_hash: d345dc9f36a876e36a6f9ba144863acb970094cd56fb9ad2f764a92a4f7107a6
+    spec_hash: d345dc9f36a876e36a6f9ba144863acb970094acfc53b913055c90ab81ae68e8
     test_version: 2.0.1
     test_hash: 79af3b71ef5c7f5e18b3c62e63882a3f4dc56b9c6a53e99afdf918d324c5ca4a
-    contract_bundle_hash: 6703ad878703a2a02f7ae73a07d64b087cfc4c34f8c8222a80d813ce8ee4f428
+    contract_bundle_hash: 24c463dbeec9e5dca9e8c68d43b9c1ab7eeaa0c6b19bd3397f218f612c88f9a8
     revision: 62ca9fac796ef751a4b84dc949791e8e83e14494
     command: pnpm exec vitest run --exclude packages/medical-e2e/tests/composition.spec.ts
     environment: Node v25.6.0; pnpm 11.7.0; macOS arm64.
@@ -169,10 +169,10 @@ runs:
     test_id: TEST-R001-S01-005
     spec_id: SPEC-R001-S01
     spec_version: 2.1.3
-    spec_hash: d345dc9f36a876e36a6f9ba144863acb970094cd56fb9ad2f764a92a4f7107a6
+    spec_hash: d345dc9f36a876e36a6f9ba144863acb970094acfc53b913055c90ab81ae68e8
     test_version: 2.0.1
     test_hash: 79af3b71ef5c7f5e18b3c62e63882a3f4dc56b9c6a53e99afdf918d324c5ca4a
-    contract_bundle_hash: 6703ad878703a2a02f7ae73a07d64b087cfc4c34f8c8222a80d813ce8ee4f428
+    contract_bundle_hash: 24c463dbeec9e5dca9e8c68d43b9c1ab7eeaa0c6b19bd3397f218f612c88f9a8
     revision: 62ca9fac796ef751a4b84dc949791e8e83e14494
     command: pnpm run typecheck
     environment: Node v25.6.0; pnpm 11.7.0; macOS arm64.
@@ -182,10 +182,10 @@ runs:
     test_id: TEST-R001-S01-005
     spec_id: SPEC-R001-S01
     spec_version: 2.1.3
-    spec_hash: d345dc9f36a876e36a6f9ba144863acb970094cd56fb9ad2f764a92a4f7107a6
+    spec_hash: d345dc9f36a876e36a6f9ba144863acb970094acfc53b913055c90ab81ae68e8
     test_version: 2.0.1
     test_hash: 79af3b71ef5c7f5e18b3c62e63882a3f4dc56b9c6a53e99afdf918d324c5ca4a
-    contract_bundle_hash: 6703ad878703a2a02f7ae73a07d64b087cfc4c34f8c8222a80d813ce8ee4f428
+    contract_bundle_hash: 24c463dbeec9e5dca9e8c68d43b9c1ab7eeaa0c6b19bd3397f218f612c88f9a8
     revision: 62ca9fac796ef751a4b84dc949791e8e83e14494
     command: pnpm run verify:client
     environment: Node v25.6.0; pnpm 11.7.0; macOS arm64.
@@ -195,10 +195,10 @@ runs:
     test_id: TEST-R001-S01-004
     spec_id: SPEC-R001-S01
     spec_version: 2.1.3
-    spec_hash: d345dc9f36a876e36a6f9ba144863acb970094cd56fb9ad2f764a92a4f7107a6
+    spec_hash: d345dc9f36a876e36a6f9ba144863acb970094acfc53b913055c90ab81ae68e8
     test_version: 2.0.1
     test_hash: 79af3b71ef5c7f5e18b3c62e63882a3f4dc56b9c6a53e99afdf918d324c5ca4a
-    contract_bundle_hash: 6703ad878703a2a02f7ae73a07d64b087cfc4c34f8c8222a80d813ce8ee4f428
+    contract_bundle_hash: 24c463dbeec9e5dca9e8c68d43b9c1ab7eeaa0c6b19bd3397f218f612c88f9a8
     revision: 62ca9fac796ef751a4b84dc949791e8e83e14494
     command: pnpm exec vitest run packages/client/ui-primitives/tests/form-tabs.client.spec.tsx packages/client/ui-theme/tests/elevation-styles.client.spec.ts
     environment: Node v25.6.0; pnpm 11.7.0; macOS arm64.
@@ -208,10 +208,10 @@ runs:
     test_id: TEST-R001-S01-005
     spec_id: SPEC-R001-S01
     spec_version: 2.1.3
-    spec_hash: d345dc9f36a876e36a6f9ba144863acb970094cd56fb9ad2f764a92a4f7107a6
+    spec_hash: d345dc9f36a876e36a6f9ba144863acb970094acfc53b913055c90ab81ae68e8
     test_version: 2.0.1
     test_hash: 79af3b71ef5c7f5e18b3c62e63882a3f4dc56b9c6a53e99afdf918d324c5ca4a
-    contract_bundle_hash: 6703ad878703a2a02f7ae73a07d64b087cfc4c34f8c8222a80d813ce8ee4f428
+    contract_bundle_hash: 24c463dbeec9e5dca9e8c68d43b9c1ab7eeaa0c6b19bd3397f218f612c88f9a8
     revision: 62ca9fac796ef751a4b84dc949791e8e83e14494
     command: pnpm exec tsc -p packages/client/ui-sidebar/tsconfig.json --noEmit && pnpm exec tsc -p packages/client/ui-conversation/tsconfig.json --noEmit && pnpm exec tsc -p packages/client/ui-primitives/tsconfig.json --noEmit && pnpm exec tsc -p packages/client/ui-theme/tsconfig.json --noEmit
     environment: Node v25.6.0; pnpm 11.7.0; macOS arm64.
@@ -221,10 +221,10 @@ runs:
     test_id: TEST-R001-S01-005
     spec_id: SPEC-R001-S01
     spec_version: 2.1.3
-    spec_hash: d345dc9f36a876e36a6f9ba144863acb970094cd56fb9ad2f764a92a4f7107a6
+    spec_hash: d345dc9f36a876e36a6f9ba144863acb970094acfc53b913055c90ab81ae68e8
     test_version: 2.0.1
     test_hash: 79af3b71ef5c7f5e18b3c62e63882a3f4dc56b9c6a53e99afdf918d324c5ca4a
-    contract_bundle_hash: 6703ad878703a2a02f7ae73a07d64b087cfc4c34f8c8222a80d813ce8ee4f428
+    contract_bundle_hash: 24c463dbeec9e5dca9e8c68d43b9c1ab7eeaa0c6b19bd3397f218f612c88f9a8
     revision: 62ca9fac796ef751a4b84dc949791e8e83e14494
     command: pnpm rebuild fs-ext
     environment: Node v25.6.0; pnpm 11.7.0; macOS arm64; node-gyp 12.4.0; Python 3.14.5.
@@ -234,10 +234,10 @@ runs:
     test_id: TEST-R001-S01-005
     spec_id: SPEC-R001-S01
     spec_version: 2.1.3
-    spec_hash: d345dc9f36a876e36a6f9ba144863acb970094cd56fb9ad2f764a92a4f7107a6
+    spec_hash: d345dc9f36a876e36a6f9ba144863acb970094acfc53b913055c90ab81ae68e8
     test_version: 2.0.1
     test_hash: 79af3b71ef5c7f5e18b3c62e63882a3f4dc56b9c6a53e99afdf918d324c5ca4a
-    contract_bundle_hash: 6703ad878703a2a02f7ae73a07d64b087cfc4c34f8c8222a80d813ce8ee4f428
+    contract_bundle_hash: 24c463dbeec9e5dca9e8c68d43b9c1ab7eeaa0c6b19bd3397f218f612c88f9a8
     revision: 62ca9fac796ef751a4b84dc949791e8e83e14494
     command: pnpm exec vitest run packages/medical-e2e/tests/composition.spec.ts
     environment: Node v25.6.0; pnpm 11.7.0; macOS arm64.
@@ -247,10 +247,10 @@ runs:
     test_id: TEST-R001-S01-005
     spec_id: SPEC-R001-S01
     spec_version: 2.1.3
-    spec_hash: d345dc9f36a876e36a6f9ba144863acb970094cd56fb9ad2f764a92a4f7107a6
+    spec_hash: d345dc9f36a876e36a6f9ba144863acb970094acfc53b913055c90ab81ae68e8
     test_version: 2.0.1
     test_hash: 79af3b71ef5c7f5e18b3c62e63882a3f4dc56b9c6a53e99afdf918d324c5ca4a
-    contract_bundle_hash: 6703ad878703a2a02f7ae73a07d64b087cfc4c34f8c8222a80d813ce8ee4f428
+    contract_bundle_hash: 24c463dbeec9e5dca9e8c68d43b9c1ab7eeaa0c6b19bd3397f218f612c88f9a8
     revision: 62ca9fac796ef751a4b84dc949791e8e83e14494
     command: pnpm exec vitest run packages/session/session-persistence-jsonl/tests/lease.spec.ts
     environment: Node v25.6.0; pnpm 11.7.0; macOS arm64.
@@ -260,10 +260,10 @@ runs:
     test_id: TEST-R001-S01-001
     spec_id: SPEC-R001-S01
     spec_version: 2.1.3
-    spec_hash: d345dc9f36a876e36a6f9ba144863acb970094cd56fb9ad2f764a92a4f7107a6
+    spec_hash: d345dc9f36a876e36a6f9ba144863acb970094acfc53b913055c90ab81ae68e8
     test_version: 2.0.1
     test_hash: 79af3b71ef5c7f5e18b3c62e63882a3f4dc56b9c6a53e99afdf918d324c5ca4a
-    contract_bundle_hash: 6703ad878703a2a02f7ae73a07d64b087cfc4c34f8c8222a80d813ce8ee4f428
+    contract_bundle_hash: 24c463dbeec9e5dca9e8c68d43b9c1ab7eeaa0c6b19bd3397f218f612c88f9a8
     revision: 62ca9fac796ef751a4b84dc949791e8e83e14494
     command: pnpm exec vitest run
     environment: Node v25.6.0; pnpm 11.7.0; macOS arm64.
