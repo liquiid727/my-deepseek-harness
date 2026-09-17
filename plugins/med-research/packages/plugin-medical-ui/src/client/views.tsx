@@ -6,7 +6,7 @@
  * @module @medresearch/dsh-plugin-medical-ui/src/client/views
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Button, Field, Input, StateDot } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { ConvViewProps } from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type { InjectFace, PropsLocale } from '@deepseek-ai/dsh-client-ui-slots'
@@ -15,6 +15,7 @@ import type {
   DatasetId,
   Evidence,
   Paper,
+  ProjectId,
   QueryPlan,
   LiteratureSearchResult,
   ResearchQuery,
@@ -24,7 +25,7 @@ import { nextResearchState, type ResearchUiEvent, type ResearchUiState } from '.
 import { nextStatisticsState, type StatisticsUiEvent, type StatisticsUiState } from '../state/statistics.ts'
 import { MissingValuesChart } from './profile-chart.tsx'
 import { MedResearchIcon } from './icons.tsx'
-import { MedAsyncState, MedSectionHeader, MedViewFrame as MedPanel } from './components.tsx'
+import { MedAsyncState, MedBreadcrumb, MedSectionHeader, MedViewFrame as MedPanel } from './components.tsx'
 import { decodePaperFocus, encodePaperFocus } from './focus.ts'
 import {
   EVIDENCE_STATE_KEY, NS, RESEARCH_STATE_KEY, STATISTICS_STATE_KEY, type MedViewInjected,
@@ -106,6 +107,39 @@ export function useMedLoad<T>(load: (signal: AbortSignal) => Promise<T>, deps: r
   return { value, error, loading, reload: useCallback(() => { setRevision(current => current + 1) }, []) }
 }
 
+/**
+ * Read the project bound to the current Session.
+ * @param remote - typed Remote client.
+ * @param sessionId - host Session id.
+ * @returns the binding read state.
+ */
+export function useMedSessionProject(remote: MedViewProps['remote'], sessionId: string): MedLoad<{ projectId?: ProjectId } | undefined> {
+  return useMedLoad(
+    useCallback(
+      (signal: AbortSignal) => remote.projects.sessionProject(sessionId, signal),
+      [remote, sessionId],
+    ),
+    [remote, sessionId],
+  )
+}
+
+/**
+ * Read one project's name for a page breadcrumb.
+ * @param remote - typed Remote client.
+ * @param projectId - bound project, absent before the binding resolves.
+ * @returns the project name, or undefined while unknown.
+ */
+export function useMedProjectName(remote: MedViewProps['remote'], projectId: ProjectId | undefined): string | undefined {
+  const project = useMedLoad(
+    useCallback(
+      (signal: AbortSignal) => projectId === undefined ? Promise.resolve(undefined) : remote.projects.get(projectId, signal),
+      [remote, projectId],
+    ),
+    [remote, projectId],
+  )
+  return project.value?.name
+}
+
 /** Failure line with a reload action. */
 export function MedFailure({ message, label, onReload }: {
   readonly message: string
@@ -122,7 +156,7 @@ export function MedFailure({ message, label, onReload }: {
  * pointer to the home instead of any synthetic content.
  */
 export function ResearchView({
-  remote, t, openView, useSession, sessionId, viewRequest, viewFocus, completeViewRequest,
+  remote, t, openView, useSession, sessionId, viewRequest, viewFocus, completeViewRequest, mountComposer,
 }: MedViewProps) {
   const session = useSession(snapshot => snapshot)
   const [state, advance] = useUiMachine<ResearchUiState, ResearchUiEvent>('IDLE', nextResearchState)
@@ -148,14 +182,23 @@ export function ResearchView({
     completeViewRequest()
   }, [viewRequest, focus, completeViewRequest])
 
-  const binding = useMedLoad(
-    useCallback(
-      (signal: AbortSignal) => remote.projects.sessionProject(sessionId, signal),
-      [remote, sessionId],
-    ),
-    [remote, sessionId],
-  )
+  const binding = useMedSessionProject(remote, sessionId)
   const projectId = binding.value?.projectId
+  const projectName = useMedProjectName(remote, projectId)
+
+  // The results column owns the resident Session composer while this View is
+  // active (UI-RESEARCH pins the input to the bottom of the result column).
+  // The host requires the destination element to be mounted inside the
+  // Conversation scrollport before it is claimed, so the mount waits for the
+  // branch that actually renders the outlet.
+  const composerId = useId()
+  const composerPlaceholder = t('research.composerPlaceholder')
+  const onMessageAccepted = useCallback(() => { openView('chat', '') }, [openView])
+  const composerReady = session !== undefined && binding.error === undefined && projectId !== undefined
+  useLayoutEffect(() => {
+    if (!composerReady) return
+    return mountComposer(composerId, { placeholder: composerPlaceholder, onMessageAccepted })
+  }, [composerId, composerPlaceholder, onMessageAccepted, mountComposer, composerReady])
 
   const approveAndSearch = async (): Promise<void> => {
     if (projectId === undefined || query.trim() === '' || primaryQuery.trim() === '' || broadQuery.trim() === '') return
@@ -210,6 +253,7 @@ export function ResearchView({
 
   return (
     <MedPanel title={t('view.research')} state={t(RESEARCH_STATE_KEY[state])}>
+      <MedBreadcrumb page={t('view.research')} project={projectName} t={t} />
       <section className="researchWorkspace" aria-label={t('research.workspace')}>
           <div className="researchQuestionBar"><Input aria-label={t('research.question')} icon={<MedResearchIcon size={16} />} size="md" value={query} onChange={event => { setQuery(event.currentTarget.value); setApprovedQueryId(undefined); setSearchResult(undefined) }} placeholder={t('research.questionPlaceholder')} /></div>
         <div className="planCard">
@@ -222,6 +266,7 @@ export function ResearchView({
         </div>
         {searchError === undefined ? null : <MedFailure message={searchError} label={t('action.retry')} onReload={() => { void approveAndSearch() }} />}
         {searchResult !== undefined ? <section className="resultSection"><MedSectionHeader title={t('research.results')} meta={`${searchResult.papers.length} / ${searchResult.totalCount}`} /><div className="resultFilters"><span>{t('research.filterAll')}</span><span>{t('research.filterCounter')}</span><span>{t('research.filterRelated')}</span></div><div className="resultList">{searchResult.papers.map((paper, index) => <article className="resultRow" key={paper.id}><div className="resultBadge" aria-hidden="true">{index + 1}</div><div className="resultBody"><strong>{paper.title}</strong><span>{paper.authors.slice(0, 3).map(author => author.name).join(', ')} · {paper.journal ?? ''} · {paper.publicationDate ?? ''}</span><small>PMID {paper.pmid ?? '—'} {paper.doi === undefined ? '' : `· DOI ${paper.doi}`}</small></div><Button size="sm" variant="outline" data-saved={savedPaperIds.has(paper.id) || undefined} onClick={() => { void remote.projects.savePaper(projectId, paper.id).then(() => { setSavedPaperIds(current => new Set(current).add(paper.id)) }) }}>{savedPaperIds.has(paper.id) ? t('research.saved') : t('research.save')}</Button></article>)}</div></section> : null}
+        <div className="researchComposer" id={composerId} />
       </section>
     </MedPanel>
   )
@@ -370,7 +415,9 @@ export function EvidenceView({ remote, t, viewRequest, viewFocus, completeViewRe
 }
 
 /** Statistics view: one dataset's stored profile and column schema. */
-export function StatisticsView({ remote, t, viewRequest, completeViewRequest }: MedViewProps) {
+export function StatisticsView({ remote, t, viewRequest, completeViewRequest, sessionId }: MedViewProps) {
+  const binding = useMedSessionProject(remote, sessionId)
+  const projectName = useMedProjectName(remote, binding.value?.projectId)
   const focus = viewRequest?.focus === undefined || viewRequest.focus === '' ? undefined : viewRequest.focus as DatasetId
   useEffect(() => {
     if (viewRequest !== null && focus !== undefined) completeViewRequest()
@@ -393,6 +440,7 @@ export function StatisticsView({ remote, t, viewRequest, completeViewRequest }: 
 
   return (
     <MedPanel title={t('view.statistics')} state={t(STATISTICS_STATE_KEY[state])}>
+      <MedBreadcrumb page={t('view.statistics')} project={projectName} t={t} />
       {focus === undefined ? <p>{t('empty.datasets')}</p> : null}
       {profile.error === undefined ? null : (
         <MedFailure message={profile.error} label={t('error.load')} onReload={profile.reload} />

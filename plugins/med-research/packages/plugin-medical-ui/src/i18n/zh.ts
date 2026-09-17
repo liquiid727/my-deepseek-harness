@@ -22,6 +22,7 @@ export const zh: Dictionary = {
   'nav.library': '文献库',
   'nav.statistics': '统计',
   'nav.skills': '技能',
+  'nav.breadcrumb': '面包屑导航',
   'nav.skillsUnavailable': '技能工作台尚未在当前部署中启用',
 
   'knowledge.title': '项目知识库',
@@ -134,6 +135,7 @@ export const zh: Dictionary = {
   'research.workspace': '研究工作区',
   'research.question': '研究问题',
   'research.questionPlaceholder': '你正在研究什么临床问题？',
+  'research.composerPlaceholder': '针对这些检索结果继续追问…',
   'research.plan': '检索计划',
   'research.unconfirmed': '未确认',
   'research.confirmed': '已确认',

@@ -116,6 +116,12 @@ button.medTile:hover{border-color:var(--med-blue)}
 .researchPanel .primaryButton{min-height:44px;padding:0 16px;border:0;border-radius:9px;color:var(--dsw-alias-label-on-accent);background:var(--med-blue-deep);font:inherit;font-weight:700;cursor:pointer}
 .researchPanel .primaryButton:hover{background:var(--med-blue-deep)}
 .researchPanel .primaryButton:disabled{opacity:.55;cursor:wait}
+/* Page breadcrumb: 项目 › 页面, the prototype's page header. */
+.medCrumb{display:flex;align-items:center;gap:8px;min-height:24px;color:var(--med-muted);font-size:12px}
+.medCrumbSep{color:var(--med-muted)}
+.medCrumbPage{color:var(--med-ink);font-weight:700}
+/* Resident composer destination: the result column owns the Session input. */
+.researchComposer{width:100%;min-width:0;padding-top:4px}
 .resultSection{padding-top:4px}
 .resultFilters{display:flex;gap:8px;margin-bottom:8px;color:var(--med-blue);font-size:12px}
 .resultFilters span{padding:5px 10px;border:1px solid var(--dsw-alias-border-l2);border-radius:999px;background:var(--med-surface)}

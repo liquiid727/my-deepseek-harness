@@ -1,5 +1,6 @@
 import { Button, Tag } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { ReactElement, ReactNode } from 'react'
+import type { MedUiKey } from '../i18n/index.ts'
 import { MedArrowIcon } from './icons.tsx'
 
 /**
@@ -19,6 +20,27 @@ export function MedViewFrame({ title, state, children }: {
         {children}
       </div>
     </section>
+  )
+}
+
+/**
+ * Page breadcrumb of the prototype (`PONV 研究 › Research + Evidence`): the
+ * bound project, then the page the user is on.
+ * @param props - Bound project name (absent before the binding resolves), the
+ *   localized page name, and the locale reader.
+ * @returns the breadcrumb navigation.
+ */
+export function MedBreadcrumb({ project, page, t }: {
+  readonly project: string | undefined
+  readonly page: string
+  readonly t: (key: MedUiKey) => string
+}) {
+  return (
+    <nav aria-label={t('nav.breadcrumb')} className="medCrumb">
+      <span className="medCrumbProject">{project ?? t('home.noProject')}</span>
+      <span aria-hidden="true" className="medCrumbSep">›</span>
+      <span className="medCrumbPage">{page}</span>
+    </nav>
   )
 }
 

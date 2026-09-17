@@ -3,15 +3,18 @@
 import { useCallback, useState } from 'react'
 import { Input } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { MedViewProps } from './views.tsx'
-import { MedFailure, useMedLoad } from './views.tsx'
-import { MedViewFrame as MedPanel } from './components.tsx'
+import { MedFailure, useMedLoad, useMedProjectName, useMedSessionProject } from './views.tsx'
+import { MedBreadcrumb, MedViewFrame as MedPanel } from './components.tsx'
 import css from './components.module.css'
 
 /** Inspect all required built-in skill definitions and their declared seams. */
-export function SkillsView({ remote, t }: MedViewProps) {
+export function SkillsView({ remote, t, sessionId }: MedViewProps) {
   const [query, setQuery] = useState('')
+  const binding = useMedSessionProject(remote, sessionId)
+  const projectName = useMedProjectName(remote, binding.value?.projectId)
   const skills = useMedLoad(useCallback((signal: AbortSignal) => remote.skills.catalog(query, signal), [remote, query]), [remote, query])
   return <MedPanel title={t('view.skills')} state={t('skills.builtin')}>
+    <MedBreadcrumb page={t('view.skills')} project={projectName} t={t} />
     <p>{t('skills.description')}</p>
     <Input aria-label={t('skills.title')} size="md" value={query} onChange={event => { setQuery(event.currentTarget.value) }} />
     {skills.error === undefined ? null : <MedFailure message={skills.error} label={t('action.retry')} onReload={skills.reload} />}

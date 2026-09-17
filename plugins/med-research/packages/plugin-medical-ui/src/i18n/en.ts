@@ -22,6 +22,7 @@ export const en = {
   'nav.library': 'Library',
   'nav.statistics': 'Statistics',
   'nav.skills': 'Skills',
+  'nav.breadcrumb': 'Breadcrumb',
   'nav.skillsUnavailable': 'The skills workbench is not part of this deployment yet',
 
   'knowledge.title': 'Project knowledge',
@@ -134,6 +135,7 @@ export const en = {
   'research.workspace': 'Research workspace',
   'research.question': 'Research question',
   'research.questionPlaceholder': 'What clinical question are you investigating?',
+  'research.composerPlaceholder': 'Ask a follow-up about these results…',
   'research.plan': 'Query plan',
   'research.unconfirmed': 'Not confirmed',
   'research.confirmed': 'Confirmed',
