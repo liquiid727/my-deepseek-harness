@@ -24,14 +24,13 @@ import { en, zh } from '../i18n/index.ts'
 import { NS } from './locales.ts'
 import { createMedRemote } from './remote.ts'
 import { MedSettingsSection } from './settings.tsx'
-import { MedResearchLaunch, MedResearchRootLaunch } from './hero-action.tsx'
+import { MedResearchRootLaunch } from './hero-action.tsx'
 import { MedModeAction } from './mode-action.tsx'
 import { MED_TOOL_NAMES, MedToolCard } from './toolview.tsx'
 import { MedSidebarBrandMark, MedSidebarBrandName, MED_NAV_ENTRIES, MedPrimaryNavEntry } from './nav.tsx'
-import { EvidenceView, PapersView, ResearchView, StatisticsView } from './views.tsx'
+import { ResearchView, StatisticsView } from './views.tsx'
 import { KnowledgeView } from './knowledge-view.tsx'
 import { SkillsView } from './skills-view.tsx'
-import { WritingView } from './writing-view.tsx'
 import { MedHomeView } from './home.tsx'
 import './views.css'
 import './nav.css'
@@ -46,16 +45,18 @@ export { MED_NAV_ENTRIES } from './nav.tsx'
 /** Required services: the slot registry, the locale service, the Connection RPC caller, and the host navigation seams. */
 export const inject = ['slots', 'locale', 'connection', 'uiConversation', 'uiWorkspace', 'theme']
 
-/** The Conversation views this plugin owns; the home is the S01 workbench entry. */
+/**
+ * The Conversation views this plugin owns: exactly the five prototype
+ * navigation entries. Every registered view becomes a host tab, so the paper
+ * reader, the evidence list, and the draft editor are sections of the library
+ * and research pages instead of views of their own.
+ */
 const VIEWS = [
   { id: 'med-home', order: 20, label: 'view.home', View: MedHomeView },
   { id: 'med-research', order: 30, label: 'view.research', View: ResearchView },
-  { id: 'med-papers', order: 31, label: 'view.papers', View: PapersView },
-  { id: 'med-evidence', order: 32, label: 'view.evidence', View: EvidenceView },
+  { id: 'med-knowledge', order: 31, label: 'view.knowledge', View: KnowledgeView },
   { id: 'med-statistics', order: 33, label: 'view.statistics', View: StatisticsView },
-  { id: 'med-knowledge', order: 34, label: 'view.knowledge', View: KnowledgeView },
   { id: 'med-skills', order: 35, label: 'view.skills', View: SkillsView },
-  { id: 'med-writing', order: 36, label: 'view.writing', View: WritingView },
 ] as const
 
 /**
@@ -156,13 +157,8 @@ export function apply(ctx: ClientContext): void {
     }, View)), `med-research-ui: view ${id}`)
   }
 
-  ctx.effect(() => ctx.slots.inject('conversation.hero.actions', () => ctx.slots.register({
-    name: 'conversation.hero.actions',
-    id: 'med-research',
-    order: 30,
-    locale: NS,
-  }, MedResearchLaunch)), 'med-research-ui: Hero launch')
-
+  // The home is the Session landing surface (startSession('med-home')), so the
+  // blank-Session Hero row keeps no launch control of its own.
   ctx.effect(() => ctx.slots.inject('conversation.hero.launch', () => ctx.slots.register({
     name: 'conversation.hero.launch',
     id: 'med-research',

@@ -126,13 +126,18 @@ describe('plugin-medical-ui browser half', () => {
     expect(entries(app.ctx, 'conversation.view')).toEqual([])
 
     declareParents(app.ctx)
+    // Exactly the five prototype entries: the reader, the evidence list, and
+    // the draft editor are page sections, so they contribute no tab.
     expect(entries(app.ctx, 'conversation.view').map(entry => entry.options.id))
-      .toEqual(['med-home', 'med-research', 'med-papers', 'med-evidence', 'med-statistics', 'med-knowledge', 'med-skills', 'med-writing'])
+      .toEqual(['med-home', 'med-research', 'med-knowledge', 'med-statistics', 'med-skills'])
     expect(entries(app.ctx, 'sidebar.primary.action').map(entry => entry.options.id))
       .toEqual(['med-nav-home', 'med-nav-research', 'med-nav-library', 'med-nav-statistics', 'med-nav-skills'])
     expect(entries(app.ctx, 'sidebar.brand.mark').length).toBe(1)
     expect(entries(app.ctx, 'sidebar.brand.name').length).toBe(1)
-    expect(entries(app.ctx, 'conversation.hero.actions').map(entry => entry.options.id))
+    // The home is the Session landing surface: the blank-Session Hero row
+    // carries no launch control, only the root Hero does.
+    expect(entries(app.ctx, 'conversation.hero.actions')).toEqual([])
+    expect(entries(app.ctx, 'conversation.hero.launch').map(entry => entry.options.id))
       .toEqual(['med-research'])
     expect(entries(app.ctx, 'tool.call.toolview').map(entry => entry.options.key).sort())
       .toEqual([...MED_TOOL_NAMES].sort())
@@ -145,6 +150,7 @@ describe('plugin-medical-ui browser half', () => {
     expect(entries(app.ctx, 'sidebar.brand.mark').length).toBe(0)
     expect(entries(app.ctx, 'sidebar.brand.name').length).toBe(0)
     expect(entries(app.ctx, 'conversation.hero.actions')).toEqual([])
+    expect(entries(app.ctx, 'conversation.hero.launch')).toEqual([])
     expect(entries(app.ctx, 'tool.call.toolview')).toEqual([])
     expect(entries(app.ctx, 'conversation.session.header.actions')).toEqual([])
     await app.ctx.fiber.dispose()
@@ -175,8 +181,7 @@ describe('plugin-medical-ui browser half', () => {
     const labels = entries(app.ctx, 'conversation.view')
       .map(entry => typeof entry.options.label === 'function' ? entry.options.label() : entry.options.label)
     expect(labels).toEqual([
-      en['view.home'], en['view.research'], en['view.papers'], en['view.evidence'], en['view.statistics'],
-      en['view.knowledge'], en['view.skills'], en['view.writing'],
+      en['view.home'], en['view.research'], en['view.knowledge'], en['view.statistics'], en['view.skills'],
     ])
     const navLabels = entries(app.ctx, 'sidebar.primary.action')
       .map(entry => typeof entry.options.label === 'function' ? entry.options.label() : entry.options.label)

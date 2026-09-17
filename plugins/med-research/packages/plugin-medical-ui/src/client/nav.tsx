@@ -69,10 +69,12 @@ export const MED_NAV_ENTRIES: readonly MedNavEntry[] = [
 ] as const
 
 /**
- * Render one primary-navigation entry. The wide column shows icon plus label;
- * the rail (wide=false) shows the centered icon only. The entry whose View is
- * active on the current Session carries the blue pill highlight; unavailable
- * targets render disabled with their localized reason.
+ * Render one primary-navigation entry. The entry is always the stacked rail
+ * unit — icon above its localized label — because the host-owned strip hands
+ * down `wide: false` in both column states (`SidebarRoot` renders the additive
+ * strip as an icon rail); a label gated on `wide` never renders. The entry
+ * whose View is active on the current Session carries the blue pill
+ * highlight; unavailable targets render disabled with their localized reason.
  * @param props - strip owner state, injected navigation, the entry
  *   definition, and locale.
  * @returns the entry control.
@@ -100,7 +102,7 @@ export function MedPrimaryNavEntry(props: MedNavProps & { readonly entry: MedNav
   const body = (
     <>
       <span className="medNavIcon" aria-hidden="true"><Icon size={18} /></span>
-      {wide ? <span className="medNavLabel">{t(entry.label)}</span> : null}
+      <span className="medNavLabel">{t(entry.label)}</span>
     </>
   )
   if (entry.view !== undefined) {
