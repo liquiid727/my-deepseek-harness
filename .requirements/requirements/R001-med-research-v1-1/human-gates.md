@@ -34,7 +34,9 @@
    （Source Integrity=0、relocatability≥98% 且误接受=0、Relation≥0.85、Claim Support Precision≥0.85、
    Unsupported=0、Provenance=100%、P50≤90s/P95≤240s）。Owner：Medical Reviewer。
 5. **逐 Spec 交付评审放行**：把 8 个 `review.md` 从 `open` 推进到通过（或记录 waive），含处置
-   `REVIEW-R001-S01-002` 首页实现视觉 finding。Owner：评审人（非实现者）。
+   两条 open finding `REVIEW-R001-S01-002`（首页 composer 遮挡，须真实 profile 证据）与
+   `REVIEW-R001-S02-003`（五界面 + Reader parity，缺浏览器截图）。逐包工作项见
+   [review-checklist.md](review-checklist.md)。Owner：评审人（非实现者）。
 6. **指派 QA owner 并签署 acceptance**：每个 `acceptance.md` 填 `qa_owner`、复核 evidence→
    requirement 覆盖后给出 `decision`。Owner：各包 QA。
 
