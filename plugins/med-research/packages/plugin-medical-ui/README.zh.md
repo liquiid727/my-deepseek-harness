@@ -44,7 +44,8 @@ pnpm run verify:client   # rebuild + check the module-loader artifact contract
 
 ## 已知限制与后续工作
 
-- **右栏席位未实现**：`@deepseek-ai/dsh-client-ui-sidebar-right` 及其依赖 `dsh-client-ui-dockkit` 未发布到 npm，out-of-tree 客户端插件无法声明 `sidebar.right.pane.tab`。引用改为通过 `med-papers` 的 focus 契约打开 Papers 视图；见 `docs/decisions/2026-09-08-citation-focus.md`。
+- **右栏席位未实现**：`@deepseek-ai/dsh-client-ui-sidebar-right` 及其依赖 `dsh-client-ui-dockkit` 未发布到 npm，out-of-tree 客户端插件无法声明 `sidebar.right.pane.tab`。引用改为通过 `med-knowledge` 的 paper focus 契约打开文献库页（阅读器是该页的区段，不再是独立视图）；见 `docs/decisions/2026-09-08-citation-focus.md` 与 `docs/decisions/2026-09-17-shell-prototype-alignment.md`。
+- **只注册五个视图**：每个 `conversation.view` 条目都会变成宿主的一个 tab，因此本包只注册原型五个入口（首页/研究/文献库/统计/技能）。论文阅读器（S03）、证据列表（S04）、草稿编辑器（S08）是页面内区段，通过 opaque focus（`encodePaperFocus` / `encodeClaimFocus`）寻址；见 `docs/decisions/2026-09-17-shell-prototype-alignment.md`。
 - **视图是 focus-driven 而非列表驱动**：已发布的 Remote 面没有项目论文、项目证据、数据集、分析运行、文档段落的列表读取。读整篇需要段落列表方法；定位单条被引 span 不需要。Home 视图会列出项目并读取已持久化的项目概览计数。
 - **未贡献 `shell.overlay`**：目前没有需要进度浮层的长任务客户端流程。
 - 客户端当前通过 `ctx.connection.rpc` 调用免生成的 SRC 端点；迁移到生成的 `ctx.remote` 描述符与 Typert 产物构建一并延后。

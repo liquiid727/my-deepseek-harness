@@ -26,7 +26,7 @@ import { nextStatisticsState, type StatisticsUiEvent, type StatisticsUiState } f
 import { MissingValuesChart } from './profile-chart.tsx'
 import { MedResearchIcon } from './icons.tsx'
 import { MedAsyncState, MedBreadcrumb, MedSectionHeader, MedViewFrame as MedPanel } from './components.tsx'
-import { decodePaperFocus, encodePaperFocus } from './focus.ts'
+import { decodeClaimFocus, decodePaperFocus, encodePaperFocus, type PaperFocus } from './focus.ts'
 import {
   EVIDENCE_STATE_KEY, NS, RESEARCH_STATE_KEY, STATISTICS_STATE_KEY, type MedViewInjected,
 } from './locales.ts'
@@ -169,18 +169,23 @@ export function ResearchView({
   const [searchError, setSearchError] = useState<string>()
   const [savedPaperIds, setSavedPaperIds] = useState<Set<Paper['id']>>(new Set())
 
-  // The home view (or a navigation entry) addresses the research question as
-  // this view's focus; consume it once into the query input.
+  // The home view (or a navigation entry) addresses either the research
+  // question or the page's Evidence section as this view's focus; consume it
+  // once into the query input or the claim selection.
   const focus = viewRequest?.focus || viewFocus
+  const claim = focus === undefined || focus === '' ? undefined : decodeClaimFocus(focus)
+  const [claimId, setClaimId] = useState<ClaimId | undefined>(claim?.claimId)
   useEffect(() => {
     if (viewRequest === null) return
-    if (focus !== undefined && focus !== '') {
+    if (claim !== undefined) {
+      setClaimId(claim.claimId)
+    } else if (focus !== undefined && focus !== '') {
       setQuery(focus)
       setApprovedQueryId(undefined)
       setSearchResult(undefined)
     }
     completeViewRequest()
-  }, [viewRequest, focus, completeViewRequest])
+  }, [viewRequest, focus, claim, completeViewRequest])
 
   const binding = useMedSessionProject(remote, sessionId)
   const projectId = binding.value?.projectId
@@ -266,25 +271,31 @@ export function ResearchView({
         </div>
         {searchError === undefined ? null : <MedFailure message={searchError} label={t('action.retry')} onReload={() => { void approveAndSearch() }} />}
         {searchResult !== undefined ? <section className="resultSection"><MedSectionHeader title={t('research.results')} meta={`${searchResult.papers.length} / ${searchResult.totalCount}`} /><div className="resultFilters"><span>{t('research.filterAll')}</span><span>{t('research.filterCounter')}</span><span>{t('research.filterRelated')}</span></div><div className="resultList">{searchResult.papers.map((paper, index) => <article className="resultRow" key={paper.id}><div className="resultBadge" aria-hidden="true">{index + 1}</div><div className="resultBody"><strong>{paper.title}</strong><span>{paper.authors.slice(0, 3).map(author => author.name).join(', ')} · {paper.journal ?? ''} · {paper.publicationDate ?? ''}</span><small>PMID {paper.pmid ?? '—'} {paper.doi === undefined ? '' : `· DOI ${paper.doi}`}</small></div><Button size="sm" variant="outline" data-saved={savedPaperIds.has(paper.id) || undefined} onClick={() => { void remote.projects.savePaper(projectId, paper.id).then(() => { setSavedPaperIds(current => new Set(current).add(paper.id)) }) }}>{savedPaperIds.has(paper.id) ? t('research.saved') : t('research.save')}</Button></article>)}</div></section> : null}
+        {/* Evidence is a section of this page (UI-RESEARCH), never a View tab. */}
+        <MedEvidenceList
+          claimId={claimId}
+          onOpenSource={paperFocus => { openView('med-knowledge', paperFocus) }}
+          remote={remote}
+          t={t}
+        />
         <div className="researchComposer" id={composerId} />
       </section>
     </MedPanel>
   )
 }
 
-/** Papers view: one paper's metadata plus the cited paragraph, highlighted. */
-export function PapersView({ remote, t, viewRequest, viewFocus, completeViewRequest }: MedViewProps) {
-  const focusString = viewRequest?.focus || viewFocus
-  // The decoded focus is a fresh object; memoize on the string so the load
-  // effects below do not restart on every render.
-  const focus = useMemo(
-    () => focusString === undefined || focusString === '' ? undefined : decodePaperFocus(focusString),
-    [focusString],
-  )
+/**
+ * Paper reader section (S03): one paper's metadata plus the cited paragraph,
+ * highlighted. It is a section of the library page, not a registered View, so
+ * the owning page passes the decoded focus instead of the View kit.
+ */
+export function MedPaperReader({ remote, t, focus, title }: {
+  readonly remote: MedViewProps['remote']
+  readonly t: MedViewProps['t']
+  readonly focus: PaperFocus | undefined
+  readonly title: string
+}) {
   const paragraphRef = useRef<HTMLParagraphElement>(null)
-  useEffect(() => {
-    if (viewRequest !== null && focus !== undefined) completeViewRequest()
-  }, [viewRequest, focus, completeViewRequest])
 
   const paper = useMedLoad(
     useCallback(
@@ -333,7 +344,7 @@ export function PapersView({ remote, t, viewRequest, viewFocus, completeViewRequ
     : undefined
 
   return (
-    <MedPanel title={t('view.papers')} state={paper.loading ? t('research.SEARCHING') : t('research.PAPERS_READY')}>
+    <MedPanel title={title} state={paper.loading ? t('research.SEARCHING') : t('research.PAPERS_READY')}>
       {focus === undefined ? <p>{t('empty.papers')}</p> : null}
       {paper.error === undefined ? null : (
         <MedFailure message={paper.error} label={t('error.load')} onReload={paper.reload} />
@@ -367,26 +378,30 @@ export function PapersView({ remote, t, viewRequest, viewFocus, completeViewRequ
   )
 }
 
-/** Evidence view: every stored evidence of one claim, with its display state. */
-export function EvidenceView({ remote, t, viewRequest, viewFocus, completeViewRequest, openView }: MedViewProps) {
-  const focusValue = viewRequest?.focus || viewFocus
-  const focus = focusValue === '' ? undefined : focusValue
-  useEffect(() => {
-    if (viewRequest !== null && focus !== undefined) completeViewRequest()
-  }, [viewRequest, focus, completeViewRequest])
-
+/**
+ * Evidence section (S04): every stored evidence of one claim with its display
+ * state. The Research page owns the section, so the claim arrives as a prop
+ * and "open source" is the host page's navigation.
+ */
+export function MedEvidenceList({ remote, t, claimId, onOpenSource }: {
+  readonly remote: MedViewProps['remote']
+  readonly t: MedViewProps['t']
+  readonly claimId: ClaimId | undefined
+  readonly onOpenSource: (focus: string) => void
+}) {
   const evidence = useMedLoad(
     useCallback(
       (signal: AbortSignal): Promise<Evidence[]> =>
-        focus === undefined ? Promise.resolve([]) : remote.evidence.listForClaim(focus as ClaimId, signal),
-      [remote, focus],
+        claimId === undefined ? Promise.resolve([]) : remote.evidence.listForClaim(claimId, signal),
+      [remote, claimId],
     ),
-    [focus],
+    [claimId],
   )
 
   return (
-    <MedPanel title={t('view.evidence')} state={t('research.VERIFYING')}>
-      {focus === undefined ? <p>{t('empty.evidence')}</p> : null}
+    <section aria-label={t('view.evidence')} className="medEvidenceSection">
+      <MedSectionHeader title={t('view.evidence')} meta={t('research.VERIFYING')} />
+      {claimId === undefined ? <p className="state">{t('empty.evidence')}</p> : null}
       {evidence.error === undefined ? null : (
         <MedFailure message={evidence.error} label={t('error.load')} onReload={evidence.reload} />
       )}
@@ -397,7 +412,7 @@ export function EvidenceView({ remote, t, viewRequest, viewFocus, completeViewRe
             <li className={css.evidenceItem} key={item.id}>
               <strong className={css.evidenceState}><StateDot state={state.endsWith('_FOUND') ? 'done' : state === 'NOT_FOUND' || state === 'REJECTED' ? 'error' : 'warning'} /> {t(EVIDENCE_STATE_KEY[state])}</strong>
               <blockquote className={css.evidenceQuote}>{item.originalText}</blockquote>
-              <Button size="sm" variant="outline" onClick={() => { openView('med-papers', encodePaperFocus({
+              <Button size="sm" variant="outline" onClick={() => { onOpenSource(encodePaperFocus({
                 paperId: item.paperId,
                 documentId: item.documentId,
                 ...item.paragraphId === undefined ? {} : { paragraphId: item.paragraphId },
@@ -410,7 +425,7 @@ export function EvidenceView({ remote, t, viewRequest, viewFocus, completeViewRe
           )
         })}
       </ul>
-    </MedPanel>
+    </section>
   )
 }
 

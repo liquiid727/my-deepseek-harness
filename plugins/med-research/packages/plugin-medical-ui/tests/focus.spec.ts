@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, it } from 'vitest'
-import { decodePaperFocus, encodePaperFocus } from '../src/client/focus.ts'
+import { decodeClaimFocus, decodePaperFocus, encodeClaimFocus, encodePaperFocus } from '../src/client/focus.ts'
 
 describe('paper focus identity (SPEC §42.3)', () => {
   it('round-trips a full span and a paper-only focus', () => {
@@ -27,5 +27,17 @@ describe('paper focus identity (SPEC §42.3)', () => {
     expect(decodePaperFocus('paper-1|document-1|paragraph-1|nope|34')).toBeUndefined()
     expect(decodePaperFocus('paper-1|document-1|paragraph-1|34|12')).toBeUndefined()
     expect(decodePaperFocus('|document-1|paragraph-1|1|2')).toBeUndefined()
+  })
+})
+
+describe('claim focus identity (Evidence section)', () => {
+  it('round-trips a claim and the section-only form', () => {
+    expect(decodeClaimFocus(encodeClaimFocus('claim-1' as never))).toEqual({ claimId: 'claim-1' })
+    expect(decodeClaimFocus(encodeClaimFocus())).toEqual({})
+  })
+
+  it('leaves a research question and a paper focus alone', () => {
+    expect(decodeClaimFocus('PONV risk factors')).toBeUndefined()
+    expect(decodeClaimFocus(encodePaperFocus({ paperId: 'paper-1' as never }))).toBeUndefined()
   })
 })

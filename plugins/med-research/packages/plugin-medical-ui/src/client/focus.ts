@@ -6,7 +6,7 @@
  * @module @medresearch/dsh-plugin-medical-ui/src/client/focus
  */
 
-import type { DocumentId, PaperId, ParagraphId } from '@medresearch/dsh-medical-contracts'
+import type { ClaimId, DocumentId, PaperId, ParagraphId } from '@medresearch/dsh-medical-contracts'
 
 /** Where one citation points inside a paper. */
 export interface PaperFocus {
@@ -71,4 +71,27 @@ export function decodePaperFocus(value: string): PaperFocus | undefined {
     ...startOffset === undefined ? {} : { startOffset },
     ...endOffset === undefined ? {} : { endOffset },
   }
+}
+
+/**
+ * Encode the Evidence section of the Research page as a focus identity. The
+ * Evidence list is a section of that page, not a View of its own, so the only
+ * way to address it from the outside is through the opaque focus.
+ * @param claimId - Claim whose evidence to show; absent opens the section empty.
+ * @returns the opaque focus string `openView` carries.
+ */
+export function encodeClaimFocus(claimId?: ClaimId): string {
+  return `claim:${claimId ?? ''}`
+}
+
+/**
+ * Decode a Claim focus identity.
+ * @param value - the opaque focus string from `viewRequest`.
+ * @returns the claim id when present, or undefined when the string is not a
+ *   claim focus (a research question, for instance).
+ */
+export function decodeClaimFocus(value: string): { readonly claimId?: ClaimId } | undefined {
+  if (!value.startsWith('claim:')) return undefined
+  const id = value.slice('claim:'.length)
+  return id === '' ? {} : { claimId: id as ClaimId }
 }

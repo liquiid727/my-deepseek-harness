@@ -120,6 +120,10 @@ button.medTile:hover{border-color:var(--med-blue)}
 .medCrumb{display:flex;align-items:center;gap:8px;min-height:24px;color:var(--med-muted);font-size:12px}
 .medCrumbSep{color:var(--med-muted)}
 .medCrumbPage{color:var(--med-ink);font-weight:700}
+/* Library: list column plus the reader/draft section it owns. */
+.medLibraryColumns{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start}
+.medLibraryList,.medLibraryDetail{min-width:0}
+.medEvidenceSection{display:grid;gap:8px;margin-top:16px}
 /* Resident composer destination: the result column owns the Session input. */
 .researchComposer{width:100%;min-width:0;padding-top:4px}
 .resultSection{padding-top:4px}
@@ -136,6 +140,7 @@ button.medTile:hover{border-color:var(--med-blue)}
 /* Narrow: single column, two-column counters, always-reachable input */
 @media (max-width:699px){
 .medHeroTitle{font-size:36px}
+.medLibraryColumns{grid-template-columns:minmax(0,1fr)}
 .medTileRow{grid-template-columns:repeat(2,minmax(0,1fr))}
 .medCardRow{grid-template-columns:1fr}
 .medCreateGrid{grid-template-columns:1fr}

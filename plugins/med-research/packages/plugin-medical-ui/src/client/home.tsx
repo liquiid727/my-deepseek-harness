@@ -24,6 +24,7 @@ import {
   MedRestoreIcon, MedSearchIcon, MedSkillsIcon, MedStatisticsIcon,
 } from './icons.tsx'
 import { MedCapabilityCard, MedMetricTile } from './components.tsx'
+import { encodeClaimFocus } from './focus.ts'
 import { MedFailure, useMedLoad } from './views.tsx'
 import { NS, type MedViewInjected } from './locales.ts'
 
@@ -47,6 +48,8 @@ interface OverviewDomain {
   readonly counter: ProjectOverviewCounter
   /** Declared view opened on click; absent renders a localized disabled tile. */
   readonly view?: string
+  /** Opaque focus for the addressed page section. */
+  readonly focus?: string
   /** Icon shown beside the count. */
   readonly Icon: (props: { readonly size?: number }) => React.JSX.Element
   readonly tone: 'blue' | 'green' | 'purple' | 'orange'
@@ -56,15 +59,21 @@ interface OverviewDomain {
 interface QuickEntry {
   readonly key: MedUiKey
   readonly view?: string
+  /** Opaque focus for the addressed page; opens the page section it names. */
+  readonly focus?: string
   readonly unavailable?: MedUiKey
   readonly Icon: (props: { readonly size?: number }) => React.JSX.Element
 }
 
-/** The five quick entries (prototype shortcut row); Skills has no live target yet. */
+/**
+ * The five quick entries (prototype shortcut row). Reader and Evidence address
+ * the library and research pages with a section focus: only those five pages
+ * are registered Views, so a section is addressed through the focus.
+ */
 const QUICK_ENTRIES: readonly QuickEntry[] = [
   { key: 'home.quick.pubmed', view: 'med-research', Icon: MedResearchIcon },
-  { key: 'home.quick.reader', view: 'med-papers', Icon: MedPaperIcon },
-  { key: 'home.quick.evidence', view: 'med-evidence', Icon: MedEvidenceIcon },
+  { key: 'home.quick.reader', view: 'med-knowledge', Icon: MedPaperIcon },
+  { key: 'home.quick.evidence', view: 'med-research', focus: encodeClaimFocus(), Icon: MedEvidenceIcon },
   { key: 'home.quick.statistics', view: 'med-statistics', Icon: MedStatisticsIcon },
   { key: 'home.quick.skills', unavailable: 'nav.skillsUnavailable', Icon: MedSkillsIcon },
 ] as const
@@ -186,8 +195,8 @@ export function MedHomeView({
   }, [inspireOffset, t])
 
   const overviewDomains: readonly OverviewDomain[] = overview.value === undefined ? [] : [
-    { key: 'home.count.papers', counter: overview.value.papers, view: 'med-papers', Icon: MedPaperIcon, tone: 'blue' },
-    { key: 'home.count.evidence', counter: overview.value.evidences, view: 'med-evidence', Icon: MedEvidenceIcon, tone: 'green' },
+    { key: 'home.count.papers', counter: overview.value.papers, view: 'med-knowledge', Icon: MedPaperIcon, tone: 'blue' },
+    { key: 'home.count.evidence', counter: overview.value.evidences, view: 'med-research', focus: encodeClaimFocus(), Icon: MedEvidenceIcon, tone: 'green' },
     { key: 'home.count.datasets', counter: overview.value.datasets, Icon: MedDatasetIcon, tone: 'purple' },
     { key: 'home.count.analyses', counter: overview.value.analyses, Icon: MedAnalysisIcon, tone: 'orange' },
     { key: 'home.count.charts', counter: overview.value.charts, Icon: MedChartIcon, tone: 'blue' },
@@ -270,7 +279,7 @@ export function MedHomeView({
                   key={entry.key}
                   size="lg"
                   variant="outline"
-                  onClick={() => { openView(entry.view as string, '') }}
+                  onClick={() => { openView(entry.view as string, entry.focus ?? '') }}
                 >
                   <Icon size={16} />
                   {t(entry.key)}
@@ -311,7 +320,9 @@ export function MedHomeView({
                     label={t(domain.key)}
                     tone={domain.tone}
                     value={counted ? domain.counter.value : t('home.count.unknown')}
-                    {...domain.view === undefined ? { disabledLabel: t('home.listUnavailable') } : { onOpen: () => { openView(domain.view as string, '') } }}
+                    {...domain.view === undefined
+                      ? { disabledLabel: t('home.listUnavailable') }
+                      : { onOpen: () => { openView(domain.view as string, domain.focus ?? '') } }}
                     {...counted ? {} : { onRetry: overview.reload, retryLabel: t('home.count.retry') }}
                   />
                 )
@@ -335,7 +346,7 @@ export function MedHomeView({
           />
           <MedCapabilityCard
             icon={<MedLibraryIcon size={18} />}
-            onOpen={() => { openView('med-papers', '') }}
+            onOpen={() => { openView('med-knowledge', '') }}
             openLabel={t('home.card.open')}
             tags={[t('home.card.readerTag1'), t('home.card.readerTag2')]}
             text={t('home.card.readerText')}
