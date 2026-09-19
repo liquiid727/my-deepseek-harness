@@ -36,7 +36,7 @@ describe('bundle-medical patch (SPEC §4.1, §15.1)', () => {
     expect(manifest.dsh?.bundle?.patch).toBe('./cordis.patch.yml')
 
     const inserted = rows()
-    expect(inserted.length).toBe(14)
+    expect(inserted.length).toBe(15)
     expect(new Set(inserted.map(row => row.id)).size).toBe(inserted.length)
     expect(inserted.every(row => typeof row.id === 'string' && typeof row.name === 'string')).toBe(true)
   })
