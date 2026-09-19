@@ -146,6 +146,29 @@ describe('S04 evidence lifecycle (SPEC-R001-S04)', () => {
     }
   })
 
+  it('lists a project claims newest first and never leaks another project', async () => {
+    const app = await boot()
+    const claim = (id: string, projectId: string, createdAt: string) => ({
+      id,
+      projectId,
+      researchQueryId: QUERY,
+      text: `claim-${id}`,
+      evidenceIds: [],
+      counterEvidenceIds: [],
+      evidenceStatus: 'INSUFFICIENT' as const,
+      supportStatus: 'UNCERTAIN' as const,
+      rejectionReasons: [],
+      createdAt,
+    })
+    await app.storage.claims.put('c-old' as never, claim('c-old', PROJECT, '2025-01-01T00:00:00.000Z') as never)
+    await app.storage.claims.put('c-new' as never, claim('c-new', PROJECT, '2025-06-01T00:00:00.000Z') as never)
+    await app.storage.claims.put('c-other' as never, claim('c-other', 'project-2', '2025-12-01T00:00:00.000Z') as never)
+
+    const claims = await app.service.listClaims(PROJECT)
+    expect(claims.map(item => item.id)).toEqual(['c-new', 'c-old'])
+    expect(await app.service.listClaims('project-3' as never)).toEqual([])
+  })
+
   it('refuses to qualify a PARTIAL record that carries no exact matched span', async () => {
     const app = await boot()
     const evidence = await verified(app, SUPPORT_QUOTE)

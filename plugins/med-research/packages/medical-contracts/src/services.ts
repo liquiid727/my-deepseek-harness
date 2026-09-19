@@ -8,8 +8,9 @@
  */
 
 import { z } from 'zod'
-import type { AnalysisRunId, AnnotationId, ArtifactId, ClaimId, DatasetId, DocumentId, DraftId, EvidenceId, NoteId, PaperId, ParagraphId, ProjectId, ResearchQueryId, TagId } from './ids.ts'
+import type { AnalysisRunId, AnnotationId, ArtifactId, ClaimId, DatasetId, DocumentId, DraftId, EvidenceId, NoteId, PaperId, ParagraphId, ProjectId, ResearchQueryId, TagId, TaskId } from './ids.ts'
 import type {
+  Claim,
   Evidence,
   EvidenceChunk,
   EvidenceRelation,
@@ -51,6 +52,11 @@ import type {
   Tag,
 } from './knowledge.ts'
 import type {
+  Task,
+  TaskCreateInput,
+  TaskPatch,
+} from './tasks.ts'
+import type {
   Skill,
   SkillDefinition,
   SkillInstallation,
@@ -91,28 +97,66 @@ export const projectCreateInputSchema = z.strictObject({
 /** Mutable project fields; identity, workspace binding, and timestamps are owned by the service. */
 export type ProjectPatch = Partial<Omit<Project, 'id' | 'workspacePath' | 'createdAt' | 'updatedAt'>>
 
+/**
+ * Trailing window the overview reports record growth over. A fixed spec
+ * constant rather than a tunable: two clients asking the same question in the
+ * same session must not disagree about what "recent" means.
+ */
+export const PROJECT_OVERVIEW_DELTA_WINDOW_DAYS = 30
+
+/**
+ * Records added inside the trailing window. Reported only when the counted
+ * entity carries the timestamp that makes the comparison meaningful; a counter
+ * without one omits `delta` entirely rather than reporting a zero increase as
+ * if nothing had happened.
+ */
+export interface ProjectOverviewDelta {
+  readonly value: number
+  readonly windowDays: number
+}
+
 /** Availability of one overview counter (SPEC-R001-S01-002). */
 export interface ProjectOverviewCounter {
   /** `counted` carries the persisted total; `unavailable` reports the domain read failure. */
   status: 'counted' | 'unavailable'
   /** Persisted count; present exactly when `status` is `counted`. */
   value?: number
+  /** Growth over {@link PROJECT_OVERVIEW_DELTA_WINDOW_DAYS}; absent when unknown. */
+  delta?: ProjectOverviewDelta
 }
 
 /**
  * One counted overview domain, or the record that reading it failed. An
  * `unavailable` domain is never reported as zero: the client shows unknown.
  */
-export type ProjectOverviewDomain = 'papers' | 'evidences' | 'datasets' | 'analyses' | 'charts'
+export type ProjectOverviewDomain =
+  | 'papers'
+  | 'evidences'
+  | 'notes'
+  | 'documents'
+  | 'datasets'
+  | 'sessions'
+  | 'tasks'
+  | 'analyses'
+  | 'charts'
 
 /** Project overview counters (US-001, SPEC-R001-S01-002). */
 export interface ProjectOverview {
   projectId: ProjectId
   /** ISO time the overview was computed. */
   updatedAt: string
+  /** Papers saved into the project library. */
   papers: ProjectOverviewCounter
   evidences: ProjectOverviewCounter
+  /** Notes that are not soft-deleted. */
+  notes: ProjectOverviewCounter
+  /** Parsed documents of the project's saved papers. */
+  documents: ProjectOverviewCounter
   datasets: ProjectOverviewCounter
+  /** Sessions bound to this project. */
+  sessions: ProjectOverviewCounter
+  /** Tasks that are neither done nor dropped. */
+  tasks: ProjectOverviewCounter
   analyses: ProjectOverviewCounter
   charts: ProjectOverviewCounter
 }
@@ -253,6 +297,14 @@ export interface MedPapersService {
   document(id: PaperId): Promise<PaperDocument[]>
   /** Sections of one document, ordered. */
   sections(id: DocumentId): Promise<PaperSection[]>
+  /**
+   * Every paragraph of one document, in reading order. The reader page renders
+   * a section's body, so it needs the document's paragraphs and not only the
+   * single paragraph an evidence span points at.
+   * @param id - document id.
+   * @returns paragraphs ordered by section order, then paragraph order.
+   */
+  paragraphs(id: DocumentId): Promise<PaperParagraph[]>
   /** Read one paragraph by id. */
   paragraph(paragraphId: ParagraphId): Promise<PaperParagraph | undefined>
   /** Resolve a programmatically allowed full-text channel. */
@@ -437,6 +489,13 @@ export interface MedEvidenceService {
   withdraw(id: EvidenceId, reason?: string): Promise<Evidence>
   /** All evidence bound to one claim. */
   listForClaim(id: ClaimId): Promise<Evidence[]>
+  /**
+   * Every claim of one project, newest first. The evidence page groups its
+   * cards by claim, so it needs the claims themselves and not only the
+   * evidence hanging off one of them.
+   * @param projectId - owning project.
+   */
+  listClaims(projectId: ProjectId): Promise<Claim[]>
   /** Create and gate a claim from currently stored evidence. */
   gateClaim(input: { projectId: ProjectId; researchQueryId: ResearchQueryId; text: string; evidenceIds: EvidenceId[]; counterEvidenceIds?: EvidenceId[] }): Promise<ClaimGateResult>
   /** Serialize the current claim evidence into deterministic citation entries. */
@@ -583,6 +642,32 @@ export interface MedArtifactsService {
   get(id: ArtifactId): Promise<Artifact | undefined>
   /** Export an artifact's bytes in the requested format. */
   export(id: ArtifactId, format: 'png' | 'svg' | 'csv' | 'json'): Promise<Uint8Array>
+}
+
+/**
+ * Project task service (0917 图 1 的「当前任务」). Tasks are project records, not
+ * the agent's per-turn todo list, so they outlive the session that created them.
+ */
+export interface MedTasksService {
+  /** Create one task. */
+  create(input: TaskCreateInput): Promise<Task>
+  /**
+   * List one project's tasks. Open work comes first, then priority, then the
+   * nearest deadline — the order the project page's task list reads in.
+   * @param projectId - owning project.
+   * @param options - `includeClosed` also returns done and dropped tasks.
+   */
+  list(projectId: ProjectId, options?: { includeClosed?: boolean }): Promise<Task[]>
+  /** Read one task. */
+  get(id: TaskId): Promise<Task | undefined>
+  /**
+   * Apply a patch.
+   * @param id - task id.
+   * @param patch - fields to change; `dueAt: null` clears the deadline.
+   */
+  update(id: TaskId, patch: TaskPatch): Promise<Task>
+  /** Delete one task. */
+  remove(id: TaskId): Promise<void>
 }
 
 /** Project knowledge aggregation service (SPEC-R001-S06). */

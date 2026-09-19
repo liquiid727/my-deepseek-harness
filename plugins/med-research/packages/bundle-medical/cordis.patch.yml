@@ -20,6 +20,9 @@
     - id: med-project
       name: '@medresearch/dsh-plugin-project'
 
+    - id: med-task
+      name: '@medresearch/dsh-plugin-task'
+
     - id: med-literature
       name: '@medresearch/dsh-plugin-literature'
 

@@ -353,6 +353,25 @@ export class EvidenceService implements MedEvidenceService {
   }
 
   /**
+   * List every claim of one project, newest first. The evidence page groups its
+   * cards by claim, so it needs the claims themselves rather than only the
+   * evidence bound to one of them.
+   * @param projectId - owning project.
+   * @returns the project's claims, newest first.
+   */
+  @Remote
+  async listClaims(projectId: ProjectId): Promise<Claim[]> {
+    const claims: Claim[] = []
+    for (const [, claim] of this.options.storage.claims.entries()) {
+      if (claim.projectId === projectId) claims.push(claim)
+    }
+    // Newest first, with the id as a tiebreaker so two claims recorded in the
+    // same millisecond still come back in a stable order.
+    return claims.sort((left, right) =>
+      right.createdAt.localeCompare(left.createdAt) || right.id.localeCompare(left.id))
+  }
+
+  /**
    * Create a claim and gate it against current, project-scoped evidence.
    *
    * Only qualified evidence counts: a secondary citation, an unverified or

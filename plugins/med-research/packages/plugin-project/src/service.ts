@@ -6,7 +6,12 @@
  * @module @medresearch/dsh-plugin-project/src/service
  */
 
-import { agentModeSchema, projectCreateInputSchema, projectSchema } from '@medresearch/dsh-medical-contracts'
+import {
+  agentModeSchema,
+  PROJECT_OVERVIEW_DELTA_WINDOW_DAYS,
+  projectCreateInputSchema,
+  projectSchema,
+} from '@medresearch/dsh-medical-contracts'
 import type {
   AgentMode,
   MedProjectsService,
@@ -16,6 +21,7 @@ import type {
   ProjectId,
   ProjectOverview,
   ProjectOverviewCounter,
+  ProjectOverviewDelta,
   ProjectPaper,
   ProjectPatch,
   SessionProject,
@@ -300,33 +306,71 @@ export class ProjectsService implements MedProjectsService {
   async overview(id: ProjectId): Promise<ProjectOverview> {
     this.requireProject(id)
     const { storage } = this.options
-    const count = <T extends { projectId?: string }>(entries: IterableIterator<[string, T]>): number => {
-      let total = 0
-      for (const [, record] of entries) if (record.projectId === id) total += 1
-      return total
+    const windowStartMs = Date.parse(this.options.now()) - PROJECT_OVERVIEW_DELTA_WINDOW_DAYS * 86_400_000
+    /**
+     * Count the records of one domain that belong to this project, and how many
+     * of them arrived inside the trailing window. `at` is optional on purpose:
+     * a domain whose records carry no timestamp reports a total and **no**
+     * delta, rather than a delta of zero that would read as "nothing happened".
+     */
+    const tally = <T>(
+      entries: IterableIterator<[string, T]>,
+      belongs: (record: T) => boolean,
+      at?: (record: T) => string | undefined,
+    ): { value: number; delta?: ProjectOverviewDelta } => {
+      let value = 0
+      let recent = 0
+      for (const [, record] of entries) {
+        if (!belongs(record)) continue
+        value += 1
+        if (at === undefined) continue
+        const stamp = at(record)
+        if (stamp !== undefined && Date.parse(stamp) >= windowStartMs) recent += 1
+      }
+      return at === undefined || value === 0
+        // With nothing recorded there is no growth to report: a delta of zero
+        // beside a total of zero reads as "nothing happened recently" when the
+        // truth is "nothing happened at all".
+        ? { value }
+        : { delta: { value: recent, windowDays: PROJECT_OVERVIEW_DELTA_WINDOW_DAYS }, value }
     }
-    const countDomain = (read: () => number): ProjectOverviewCounter => {
+    const countDomain = (read: () => { value: number; delta?: ProjectOverviewDelta }): ProjectOverviewCounter => {
       try {
-        return { status: 'counted', value: read() }
+        const { value, delta } = read()
+        return delta === undefined ? { status: 'counted', value } : { delta, status: 'counted', value }
       } catch {
-        // One domain's storage failure must not zero or fail the other four
+        // One domain's storage failure must not zero or fail the other
         // counters; the client renders this domain as unknown with a retry.
         return { status: 'unavailable' }
       }
     }
+    // A document has no project of its own — it belongs to the project that
+    // saved its paper.
+    const savedPaperIds = new Set<string>()
+    for (const [, link] of storage.projectPapers.entries()) {
+      if (link.projectId === id) savedPaperIds.add(link.paperId)
+    }
     return {
       projectId: id,
       updatedAt: this.options.now(),
-      papers: countDomain(() => count(storage.projectPapers.entries())),
-      evidences: countDomain(() => count(storage.evidences.entries())),
-      datasets: countDomain(() => count(storage.datasets.entries())),
-      analyses: countDomain(() => count(storage.analysisRuns.entries())),
+      papers: countDomain(() => tally(storage.projectPapers.entries(), link => link.projectId === id, link => link.savedAt)),
+      evidences: countDomain(() => tally(storage.evidences.entries(), row => row.projectId === id, row => row.createdAt)),
+      // A soft-deleted note is not a note the user can open, so it is not
+      // counted; the row stays for the audit trail.
+      notes: countDomain(() => tally(storage.notes.entries(), row => row.projectId === id && row.deletedAt === undefined, row => row.createdAt)),
+      documents: countDomain(() => tally(storage.documents.entries(), row => savedPaperIds.has(row.paperId), row => row.createdAt)),
+      datasets: countDomain(() => tally(storage.datasets.entries(), row => row.projectId === id, row => row.createdAt)),
+      sessions: countDomain(() => tally(storage.sessionProjects.entries(), row => row.projectId === id, row => row.updatedAt)),
+      // Open work only: a finished or dropped task is not what the project page
+      // is asking about when it shows how much is left.
+      tasks: countDomain(() => tally(storage.tasks.entries(), row => row.projectId === id && row.status !== 'done' && row.status !== 'dropped', row => row.createdAt)),
+      analyses: countDomain(() => tally(storage.analysisRuns.entries(), row => row.projectId === id)),
       charts: countDomain(() => {
         let total = 0
         for (const [, artifact] of storage.artifacts.entries()) {
           if (artifact.projectId === id && artifact.type === 'figure') total += 1
         }
-        return total
+        return { value: total }
       }),
     }
   }

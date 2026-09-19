@@ -26,6 +26,7 @@ import {
   paperDomain,
   projectDomain,
   skillsDomain,
+  taskDomain,
 } from './domains.ts'
 
 /**
@@ -92,6 +93,8 @@ export interface MedStorage {
   readonly artifacts: KvTable<contracts.ArtifactId, contracts.Artifact>
   /** Audit rows. */
   readonly auditLogs: KvTable<contracts.AuditLogId, contracts.AuditLog>
+  /** Project tasks (0917 图 1 的「当前任务」). */
+  readonly tasks: KvTable<contracts.TaskId, contracts.Task>
   /** Reader notes. */
   readonly notes: KvTable<contracts.NoteId, contracts.Note>
   /** Reader highlights. */
@@ -206,9 +209,10 @@ async function openSharedDomains(facility: DomainFacility): Promise<SharedDomain
     const analysis = await open(analysisDomain)
     const audit = await open(auditDomain)
     const knowledge = await open(knowledgeDomain)
+    const tasks = await open(taskDomain)
     const skills = await open(skillsDomain)
 
-    const views = [project, literature, paper, document, evidence, dataset, analysis, audit, knowledge, skills]
+    const views = [project, literature, paper, document, evidence, dataset, analysis, audit, knowledge, tasks, skills]
     return {
       async release() {
         for (const entry of [...opened].reverse()) await entry.domain.close()
@@ -232,6 +236,7 @@ async function openSharedDomains(facility: DomainFacility): Promise<SharedDomain
         analysisRuns: analysis.domain.table('med_analysis_runs'),
         artifacts: analysis.domain.table('med_artifacts'),
         auditLogs: audit.domain.table('med_audit_logs'),
+        tasks: tasks.domain.table('med_tasks'),
         notes: knowledge.domain.table('med_notes'),
         annotations: knowledge.domain.table('med_annotations'),
         tags: knowledge.domain.table('med_tags'),

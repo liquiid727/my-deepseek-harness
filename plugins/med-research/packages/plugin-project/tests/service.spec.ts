@@ -95,10 +95,43 @@ describe('ProjectsService (SPEC §32)', () => {
       updatedAt: '2026-01-01T00:00:00.000Z',
       papers: { status: 'counted', value: 0 },
       evidences: { status: 'counted', value: 0 },
+      notes: { status: 'counted', value: 0 },
+      documents: { status: 'counted', value: 0 },
       datasets: { status: 'counted', value: 0 },
+      sessions: { status: 'counted', value: 0 },
       analyses: { status: 'counted', value: 0 },
       charts: { status: 'counted', value: 0 },
     })
+  })
+
+  it('reports growth inside the trailing window and no delta beside an empty domain', async () => {
+    const app = await harness('/tmp/root')
+    const project = await app.service.create({ name: 'One' })
+    // Two notes: one inside the window, one older than it, and one soft-deleted.
+    const note = (id: string, createdAt: string, deletedAt?: string) => ({
+      id,
+      projectId: project.id,
+      scope: 'project' as const,
+      title: id,
+      content: 'body',
+      version: 1,
+      createdAt,
+      updatedAt: createdAt,
+      ...(deletedAt === undefined ? {} : { deletedAt }),
+    })
+    await app.storage.notes.put('note-recent' as never, note('note-recent', '2025-12-31T00:00:00.000Z') as never)
+    await app.storage.notes.put('note-old' as never, note('note-old', '2025-01-01T00:00:00.000Z') as never)
+    await app.storage.notes.put('note-deleted' as never, note('note-deleted', '2025-12-31T00:00:00.000Z', '2025-12-31T00:00:00.000Z') as never)
+
+    const overview = await app.service.overview(project.id)
+    // The harness clock is fixed at 2026-01-01, so the 30-day window opens on
+    // 2025-12-02: the recent note is inside it, the January one is not, and the
+    // soft-deleted note is not a note the user can open.
+    expect(overview.notes).toEqual({ status: 'counted', value: 2, delta: { value: 1, windowDays: 30 } })
+    // Empty domains report a total and nothing else.
+    expect(overview.evidences).toEqual({ status: 'counted', value: 0 })
+    // Domains whose records carry no timestamp never report a delta.
+    expect(overview.analyses).toEqual({ status: 'counted', value: 0 })
   })
 
   it('reports an unavailable domain instead of zero when a storage read fails', async () => {
@@ -229,7 +262,8 @@ describe('ProjectsService (SPEC §32)', () => {
 
     const membership = await app.service.savePaper(project.id, paper.id)
     expect(membership).toEqual({ projectId: project.id, paperId: paper.id, savedAt: '2026-01-01T00:00:00.000Z' })
-    expect((await app.service.overview(project.id)).papers).toEqual({ status: 'counted', value: 1 })
+    expect((await app.service.overview(project.id)).papers)
+      .toEqual({ status: 'counted', value: 1, delta: { value: 1, windowDays: 30 } })
 
     await expect(app.service.savePaper(project.id, paperIdSchema.parse('ghost')))
       .rejects.toMatchObject({ code: 'PAPER_NOT_FOUND' })

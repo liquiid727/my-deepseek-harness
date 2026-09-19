@@ -39,12 +39,12 @@ const surfaces: readonly Surface[] = [{
 }, {
   service: 'PapersService',
   namespace: 'medPapers',
-  methods: ['createAnnotation', 'createNote', 'deleteAnnotation', 'deleteNote', 'document', 'focus', 'get', 'getNote', 'listAnnotations', 'listNotes', 'paragraph', 'resolveFulltext', 'search', 'sections', 'summary', 'translate', 'updateNote', 'upload'],
+  methods: ['createAnnotation', 'createNote', 'deleteAnnotation', 'deleteNote', 'document', 'focus', 'get', 'getNote', 'listAnnotations', 'listNotes', 'paragraph', 'paragraphs', 'resolveFulltext', 'search', 'sections', 'summary', 'translate', 'updateNote', 'upload'],
   create: () => new PapersService({} as never),
 }, {
   service: 'EvidenceService',
   namespace: 'medEvidence',
-  methods: ['chase', 'compare', 'gateClaim', 'listForClaim', 'retrieve', 'save', 'serializeCitations', 'verify', 'withdraw'],
+  methods: ['chase', 'compare', 'gateClaim', 'listClaims', 'listForClaim', 'retrieve', 'save', 'serializeCitations', 'verify', 'withdraw'],
   create: () => new EvidenceService({} as never),
 }, {
   service: 'DatasetsService',

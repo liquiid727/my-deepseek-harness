@@ -25,6 +25,7 @@
     "@medresearch/dsh-plugin-project": "workspace:*",
     "@medresearch/dsh-plugin-statistics": "workspace:*",
     "@medresearch/dsh-plugin-skills": "workspace:*",
+    "@medresearch/dsh-plugin-task": "workspace:*",
     "@medresearch/dsh-plugin-writing": "workspace:*"
   },
   "devDependencies": {

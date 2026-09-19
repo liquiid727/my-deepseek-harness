@@ -179,6 +179,9 @@ importers:
       '@medresearch/dsh-plugin-statistics':
         specifier: workspace:*
         version: link:../plugin-statistics
+      '@medresearch/dsh-plugin-task':
+        specifier: workspace:*
+        version: link:../plugin-task
       '@medresearch/dsh-plugin-writing':
         specifier: workspace:*
         version: link:../plugin-writing
@@ -518,6 +521,9 @@ importers:
       '@deepseek-ai/dsh-client-ui-conversation':
         specifier: link:../../../../packages/client/ui-conversation
         version: link:../../../../packages/client/ui-conversation
+      '@deepseek-ai/dsh-client-ui-sidebar-right':
+        specifier: link:../../../../packages/client/ui-sidebar-right
+        version: link:../../../../packages/client/ui-sidebar-right
 
   packages/plugin-paper:
     dependencies:
@@ -636,6 +642,24 @@ importers:
       '@medresearch/dsh-medical-runner-container':
         specifier: workspace:*
         version: link:../medical-runner-container
+
+  packages/plugin-task:
+    dependencies:
+      '@deepseek-ai/cordis':
+        specifier: ^4.0.2
+        version: 4.0.2(@deepseek-ai/cordis-plugin-include@1.0.7)(@deepseek-ai/cordis-plugin-loader@1.0.3)
+      '@deepseek-ai/dsh-storage-domain':
+        specifier: ^0.1.3-alpha.2
+        version: 0.1.3-alpha.2(@deepseek-ai/cordis@4.0.2)(@deepseek-ai/dsh-invariants@0.1.3-alpha.2(@deepseek-ai/cordis@4.0.2))(@deepseek-ai/dsh-storage@0.1.3-alpha.2(@deepseek-ai/cordis@4.0.2))
+      '@deepseek-ai/dsh-typert-protocol':
+        specifier: ^0.1.3-alpha.2
+        version: 0.1.3-alpha.2(@deepseek-ai/cordis@4.0.2)
+      '@medresearch/dsh-medical-contracts':
+        specifier: workspace:*
+        version: link:../medical-contracts
+      '@medresearch/dsh-medical-storage':
+        specifier: workspace:*
+        version: link:../medical-storage
 
   packages/plugin-writing:
     dependencies:

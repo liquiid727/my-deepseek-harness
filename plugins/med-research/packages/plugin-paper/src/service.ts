@@ -150,6 +150,27 @@ export class PapersService implements MedPapersService {
   }
 
   /**
+   * Every paragraph of one document, in reading order. Sections order the
+   * paragraphs: a paragraph's own `order` restarts inside its section, so
+   * sorting on it alone would interleave the sections.
+   * @param id - Document id.
+   * @returns paragraphs in section order, then paragraph order.
+   */
+  @Remote
+  async paragraphs(id: DocumentId): Promise<PaperParagraph[]> {
+    const sectionOrder = new Map<string, number>()
+    for (const [, section] of this.options.storage.sections.entries()) {
+      if (section.documentId === id) sectionOrder.set(section.id, section.order)
+    }
+    return [...this.options.storage.paragraphs.entries()]
+      .map(([, paragraph]) => paragraph)
+      .filter(paragraph => sectionOrder.has(paragraph.sectionId))
+      .sort((left, right) =>
+        (sectionOrder.get(left.sectionId) ?? 0) - (sectionOrder.get(right.sectionId) ?? 0)
+        || left.order - right.order)
+  }
+
+  /**
    * Read one paragraph.
    * @param paragraphId - Paragraph id.
    * @returns the paragraph, or `undefined`.

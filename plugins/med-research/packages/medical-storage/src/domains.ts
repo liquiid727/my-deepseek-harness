@@ -109,6 +109,15 @@ export const knowledgeDomain = defineDomain({
   },
 })
 
+/** Project tasks (0917 图 1 的「当前任务」). */
+export const taskDomain = defineDomain({
+  name: 'med_task',
+  version: MED_DOMAIN_VERSION,
+  tables: {
+    med_tasks: domainTable<contracts.TaskId, contracts.Task>(contracts.taskSchema),
+  },
+})
+
 /** Skill definitions, immutable versions, controlled tests, and installs. */
 export const skillsDomain = defineDomain({
   name: 'med_skills',
@@ -132,6 +141,7 @@ export const medDomains = [
   analysisDomain,
   auditDomain,
   knowledgeDomain,
+  taskDomain,
   skillsDomain,
 ] as const
 

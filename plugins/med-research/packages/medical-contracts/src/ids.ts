@@ -117,3 +117,8 @@ export type SkillTestRunId = z.infer<typeof skillTestRunIdSchema>
 export const skillInstallationIdSchema = z.string().min(1).brand<'SkillInstallationId'>()
 /** Identifier of a workspace skill installation. */
 export type SkillInstallationId = z.infer<typeof skillInstallationIdSchema>
+
+/** Identifier of a project task. */
+export const taskIdSchema = z.string().min(1).brand<'TaskId'>()
+/** Identifier of a project task. */
+export type TaskId = z.infer<typeof taskIdSchema>
