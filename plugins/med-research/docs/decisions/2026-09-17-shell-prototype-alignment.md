@@ -5,6 +5,11 @@
 约束来源：`AGENTS.md` §2；`.requirements/requirements/R001-med-research-v1-1/ui-acceptance.md`；
 `docs/decisions/2026-09-13-design-system-adoption.md`、`2026-09-13-single-home-composer.md`、`2026-09-13-s01-workbench-home.md`。
 
+> **后续修订（同日）**：同日 `asset/0917/` 四张图被确立为新的验收基线，`asset/首页.png` 与 `asset/搜索研究.png` 退役。
+> 本记录里以 UI-HOME / 首页为参照的结论（P0-1 的 rail 形态、P0-3 的 Hero 入口）仍然有效，但
+> "五个视图 + 首页 Hero" 这一页面结构已被 [`2026-09-17-0917-prototype-zone-alignment.md`](2026-09-17-0917-prototype-zone-alignment.md)
+> 里的三栏壳体取代；`scripts/ui-parity-regions.mjs` 的场景表已从五张改为六张（0917 四张 + 沿用的统计/技能）。
+
 ---
 
 ## 问题
@@ -78,7 +83,7 @@
 
 已交付两件东西，执行只差能起 profile 的环境：
 
-- `scripts/capture-ui-parity.mjs`（`pnpm run ui:parity`）：走 CDP 在三个锁定视口 + 独立 200% zoom 轮采集截图，记录 revision / dirty / profile config hash / 服务数据 / console 到 `run.json`，并按 `scripts/ui-parity-regions.mjs` 里五张场景的区域表生成 `parity.md` 骨架。`--dry-run` 只出骨架不打截图（已在本机验证：表格与参数解析正常）。
+- `scripts/capture-ui-parity.mjs`（`pnpm run ui:parity`）：走 CDP 在三个锁定视口 + 独立 200% zoom 轮采集截图，记录 revision / dirty / profile config hash / 服务数据 / console 到 `run.json`，并按 `scripts/ui-parity-regions.mjs` 的场景区域表生成 `parity.md` 骨架（当时为五张，同日基线切换后改为六张，见文首修订）。`--dry-run` 只出骨架不打截图（已在本机验证：表格与参数解析正常）。
 - `docs/checklists/ui-parity-record.md`：采集前置、命令、八个维度怎么记、以及 blocking 判定清单（含"未声明的宿主差异"必须写进备注）。
 
 ## 放弃的方案

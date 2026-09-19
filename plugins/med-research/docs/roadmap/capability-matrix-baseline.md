@@ -23,13 +23,17 @@
 
 ## UI 素材映射
 
-| 素材 | Spec owner | 阻塞验收 |
-|---|---|---|
-| `首页.png` | S01 | 工作台壳、Project、输入、概览、核心能力和状态 |
-| `搜索研究.png` | S02/S04/S03 | Research 主区、Evidence 分组和右侧 Reader 联动 |
-| `论文阅读器.png` | S03 | 章节、正文模式、选区工具、AI 阅读、Notes 和 Evidence |
-| `统计lab.png` | S05 | Dataset、Plan、Approval、Code、Result、Charts 和 provenance |
-| `skill工作台.png` | S07 | Inventory、Builder、Preview、test 和生命周期操作 |
+原型基线自 2026-09-17 起为 `asset/0917/` 四张图；`asset/首页.png` 与 `asset/搜索研究.png` 已被取代。区域级断言见 [`ui-parity-regions.mjs`](../../scripts/ui-parity-regions.mjs)，场景表见 [`ui-acceptance.md`](../../../../.requirements/requirements/R001-med-research-v1-1/ui-acceptance.md)。
+
+| 素材 | Spec owner | 阻塞验收 | 状态 |
+|---|---|---|---|
+| `0917/1.png` 项目概览 | S01 | 页头三件套、页内页签、六项计数、继续上次工作、最近双列、当前任务、单项目紧凑左栏、右栏项目助手 | 基线 |
+| `0917/2.png` 会话 | S01/S02/S04 | 消息流、助手清单与发现、附件 chip、中栏 composer、L2 工作区树、右栏结果与森林图 | 基线 |
+| `0917/3.png` 论文阅读器 | S03 | 目录/正文/右栏三列、阅读模式、选区工具条、右栏摘要与选中文本解析 | 基线 |
+| `0917/4.png` 证据与笔记 | S04/S08 | 页内页签、筛选行、按论题分组、证据卡、L2 工作区树、右栏详情与操作条 | 基线 |
+| `统计lab.png` | S05 | Dataset、Plan、Approval、Code、Result、Charts 和 provenance | 沿用（0917 未覆盖） |
+| `skill工作台.png` | S07 | Inventory、Builder、Preview、test 和生命周期操作 | 沿用（0917 未覆盖） |
+| `首页.png` / `搜索研究.png` | S01 / S02+S04 | 已被 `0917/1.png`、`0917/2.png`、`0917/4.png` 取代 | 已退役 |
 
 每张图在 1672×941 与真实 profile 并排评审，并补 1440×900 和 390×844。布局、间距、字体、颜色、图标、密度、滚动、主操作和遮挡均是阻塞项；实现不得用静态 mock 或仅组件存在断言替代。
 

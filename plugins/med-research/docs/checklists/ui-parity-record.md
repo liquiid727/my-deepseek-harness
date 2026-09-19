@@ -2,6 +2,10 @@
 
 > 用途：按 R001 `ui-acceptance.md` §45，在**一个集成 run 内**产出原型与实际截图，并逐区域记录差异。
 > 表格由脚本生成骨架，人工（或带截图的会话）填写判定列。**纯抗锯齿差异不阻塞**；其余缺失一律阻塞。
+>
+> 基线：`asset/0917/` 四张图（UI-PROJECT / UI-SESSION / UI-READER / UI-EVIDENCE），2026-09-17 起取代
+> `asset/首页.png` 与 `asset/搜索研究.png`。UI-STATS 与 UI-SKILLS 沿用既有原型（0917 未覆盖）。
+> 场景与区域表定义在 `scripts/ui-parity-regions.mjs`，改一处必须同步 `ui-acceptance.md` 的场景表。
 
 ## 1. 准备
 
@@ -20,7 +24,7 @@
 node scripts/capture-ui-parity.mjs \
   --url http://127.0.0.1:3100/ \
   --cdp http://127.0.0.1:9222 \
-  --scene UI-HOME,UI-RESEARCH \
+  --scene UI-PROJECT,UI-SESSION \
   --locale zh,en \
   --zoom 100,200 \
   --settle-ms 2000 \
@@ -62,4 +66,4 @@ node scripts/capture-ui-parity.mjs \
 ## 5. 归档
 
 把 `.parity/<run>/` 的截图与 `parity.md` 复制到
-`.requirements/requirements/R001-med-research-v1-1/specs/<对应 spec>/evidence/`，并在该目录的 `index.yaml` 登记：本次断言、限制、以及仍未覆盖的子断言（例如 UI-HOME 的非零计数与"单域失败为未知"需要 S05 Runner 真实写入）。
+`.requirements/requirements/R001-med-research-v1-1/specs/<对应 spec>/evidence/`，并在该目录的 `index.yaml` 登记：本次断言、限制、以及仍未覆盖的子断言（例如 UI-PROJECT 的六项计数与"单域失败为未知"需要 S05 Runner 真实写入，UI-PROJECT 的环比在服务提供 delta 前始终记未覆盖）。

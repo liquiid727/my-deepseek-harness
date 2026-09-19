@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 /**
- * Capture one prototype-vs-actual parity run for the five UI scenes
- * (R001 `ui-acceptance.md` §45): screenshots at the three locked viewports
- * (plus an independent 200% zoom pass), the run metadata the acceptance rules
- * require, and a per-region comparison table to fill in.
+ * Capture one prototype-vs-actual parity run for the acceptance-baseline UI
+ * scenes (R001 `ui-acceptance.md` §45): screenshots at the three locked
+ * viewports (plus an independent 200% zoom pass), the run metadata the
+ * acceptance rules require, and a per-region comparison table to fill in.
+ * The scene roster lives in `ui-parity-regions.mjs` — the 0917 four plus the
+ * two pages the set does not cover.
  *
  * The prerequisites of a scene (seeded projects, a real Research chain, an
  * uploaded PDF, a Runner run) are performed by the operator in the running
@@ -12,8 +14,8 @@
  *
  * Usage:
  *   node scripts/capture-ui-parity.mjs --url http://127.0.0.1:3100/ \
- *     --scene UI-HOME --locale zh --out .parity/2026-09-17 \
- *     --data "project=住院时长队列" --note "empty-project home"
+ *     --scene UI-PROJECT --locale zh --out .parity/2026-09-17 \
+ *     --data "project=住院时长队列" --note "empty-project overview"
  *   node scripts/capture-ui-parity.mjs --dry-run --out .parity/template
  *
  * @module med-research/scripts/capture-ui-parity
@@ -240,6 +242,15 @@ async function main() {
     scenes: flags(argv, 'scene', PARITY_SCENES.map(scene => scene.id)),
     settle: Number(flag(argv, 'settle-ms', '1500')),
   }
+  // A renamed or retired prototype must fail here, not become a dead link in
+  // the comparison table. The roster changed with the 0917 baseline, so the
+  // check is part of the run rather than an operator habit.
+  const unknown = options.scenes.filter(id => !PARITY_SCENES.some(scene => scene.id === id))
+  if (unknown.length > 0) throw new Error(`unknown scene id(s): ${unknown.join(', ')}`)
+  const missingAssets = PARITY_SCENES.filter(scene => options.scenes.includes(scene.id))
+    .filter(scene => !existsSync(resolve(import.meta.dirname, scene.asset)))
+    .map(scene => `${scene.id} → ${scene.asset}`)
+  if (missingAssets.length > 0) throw new Error(`parity scene asset(s) not found:\n  ${missingAssets.join('\n  ')}`)
   const run = { ...collectRun(options), scenes: options.scenes }
   const shotsDir = join(out, 'screenshots')
   mkdirSync(shotsDir, { recursive: true })
