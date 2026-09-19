@@ -9,6 +9,8 @@ kind: "package-group"
 
 Workbench 组包含与运行时无关的约定、内嵌 Pi 运行时适配器，以及 Pi Runtime Bridge POC 使用的 DSH 兼容桥接。
 
+DSH 桥接器的 Host 集成见 [core 子系统参考](../../docs/subsystems/core.zh.md)。
+
 ## 包
 
 - [`workbench-contract/`](workbench-contract/README.zh.md)：独立于 DSH 与 Pi 的会话、agent 和生命周期事件接口。

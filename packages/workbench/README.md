@@ -9,6 +9,8 @@ English | [中文](README.zh.md)
 
 The Workbench group contains the runtime-neutral contract, embedded Pi runtime adapter, and DSH compatibility bridge used by the Pi Runtime Bridge proof of concept.
 
+The DSH bridge's host integration is documented in the [core subsystem reference](../../docs/subsystems/core.md).
+
 ## Packages
 
 - [`workbench-contract/`](workbench-contract/README.md) — session, agent, and lifecycle-event interfaces independent of DSH and Pi.
