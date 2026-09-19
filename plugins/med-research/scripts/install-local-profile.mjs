@@ -265,6 +265,11 @@ mkdirSync(profileDir, { recursive: true })
 writeFileSync(join(profileDir, 'package.json'), `${JSON.stringify(profileManifest, null, 2)}\n`)
 writeFileSync(join(profileDir, 'pnpm-workspace.yaml'), profileWorkspace)
 writeFileSync(join(profileDir, 'cordis.patch.yml'), profilePatch)
+// A `file:` spec with an unchanged package version stays satisfied from
+// pnpm's existing install, even after its tarball was rebuilt. `--force`
+// promises a refreshed local profile, so discard only its regenerable
+// dependency tree before resolving the freshly packed workspace packages.
+if (options.force) rmSync(join(profileDir, 'node_modules'), { recursive: true, force: true })
 execFileSync('pnpm', ['install'], { cwd: profileDir, stdio: 'inherit' })
 
 console.log(`installed profile ${options.profile} at ${profileDir}`)
