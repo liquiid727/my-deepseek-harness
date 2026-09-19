@@ -35,6 +35,7 @@ Pi 仍是模型运行时；本适配器暴露 `AgentSession` 流式、工具、�
 
 由 Pi 管理 Provider 请求缓存；本适配器不添加前缀内容。
 
+<a id="known-limitations-and-deferred-work"></a>
 ## 已知限制和延后工作
 
 - 适配器仅支持列出的 Pi `AgentSession` 事件变体。Pi 专有事件字段不会进入 Workbench 接口。

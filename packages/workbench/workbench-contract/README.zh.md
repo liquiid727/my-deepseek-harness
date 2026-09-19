@@ -35,6 +35,7 @@ kind: "package-reference"
 
 没有直接缓存影响。
 
+<a id="known-limitations-and-deferred-work"></a>
 ## 已知限制和延后工作
 
 - 事件联合类型是最小化的共享投影。运行时专有 payload 必须先归一化为事件，Workbench Shell 才能消费它。

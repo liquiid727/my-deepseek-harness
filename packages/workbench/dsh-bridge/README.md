@@ -39,3 +39,13 @@ The bridge preserves the existing DSH event prefix and does not add cache-invali
 
 - The Pi path is an opt-in POC enabled through `DSH_PI_RUNTIME=1`. The bridge accepts text prompts and projects message and terminal tool events; `thinking.delta` and `tool.update` do not reach the DSH log.
 - `mappingPath` must name a persistent writable JSON file when a Host restart must preserve a DSH-to-Pi session mapping.
+
+<a id="dev-note"></a>
+### Dev Note
+
+<details>
+<summary>Working context for maintainers — click to expand</summary>
+
+None.
+
+</details>

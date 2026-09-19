@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write packages/workbench/pi-adapter/README.md
-README.md: 515d070f5a0d465206eeddab29ba5018418bf558
-README.zh.md: 4b86598996783824a7c369038606257a082d1bc1
+README.md: d0fd7eb5e6d6c71bafc73d2273c9fa4817d8fc46
+README.zh.md: 1f8981a862a8295f818830f57d0ab5dcc5660eb3
