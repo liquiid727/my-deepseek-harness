@@ -99,6 +99,7 @@ describe('ProjectsService (SPEC §32)', () => {
       documents: { status: 'counted', value: 0 },
       datasets: { status: 'counted', value: 0 },
       sessions: { status: 'counted', value: 0 },
+      tasks: { status: 'counted', value: 0 },
       analyses: { status: 'counted', value: 0 },
       charts: { status: 'counted', value: 0 },
     })
