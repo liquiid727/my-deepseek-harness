@@ -1,3 +1,8 @@
+---
+description: "The Workbench package group: what the packages under packages/workbench/ own, for readers choosing or navigating the family."
+kind: "package-group"
+---
+
 # Workbench
 
 English | [中文](README.zh.md)

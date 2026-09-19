@@ -1,8 +1,23 @@
+---
+description: "Opt-in DSH projection of normalized Workbench runtime events for readers migrating the session stream or debugging the Pi runtime path behind `DSH_PI_RUNTIME`."
+kind: "package-reference"
+---
+
 # `@deepseek-ai/dsh-workbench-bridge`
 
 English | [中文](README.zh.md)
 
-Projects normalized Workbench runtime events into the existing append-only DSH session log so the current mux and conversation/tool UI can remain in place during migration.
+## Summary
+
+`dsh-workbench-bridge` projects normalized Workbench runtime events into the existing append-only DSH session log, so the current mux and conversation/tool UI stay in place while the runtime behind them is migrated. Choose it when a Host must run the Pi runtime without replacing the DSH session surfaces; enable it with `DSH_PI_RUNTIME=1` and keep it off otherwise. Prompts are then processed by Pi and rendered through the existing DSH `conversation` and tool surfaces. The bridge preserves the existing DSH event prefix, so it neither adds system prompt text nor invalidates caches, and it is a POC rather than a shipped runtime path.
+
+## Table of Contents
+
+- [Model Experience](#model-experience)
+- [Known Limitations and Deferred Work](#known-limitations-and-deferred-work)
+- [Dev Note](#dev-note)
+
+-----
 
 ## Model Experience
 
