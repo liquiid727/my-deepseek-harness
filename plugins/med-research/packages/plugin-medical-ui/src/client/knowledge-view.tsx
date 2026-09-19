@@ -51,8 +51,11 @@ export function KnowledgeView({ remote, t, sessionId, openView, viewRequest, vie
 
   const selectedPaper = paperFocus === undefined ? undefined : decodePaperFocus(paperFocus)
   return (
-    <MedPanel title={t('view.knowledge')} state={t('research.PAPERS_READY')}>
-      <MedBreadcrumb page={t('view.knowledge')} project={projectName} t={t} />
+    <MedPanel
+      crumb={<MedBreadcrumb page={t('view.knowledge')} project={projectName} t={t} />}
+      state={t('research.PAPERS_READY')}
+      title={t('view.knowledge')}
+    >
       <div className="researchQuestionBar"><Input aria-label={t('knowledge.search')} size="md" value={query} onChange={event => { setQuery(event.currentTarget.value) }} placeholder={t('knowledge.searchPlaceholder')} /></div>
       {papers.error === undefined ? null : <MedFailure message={papers.error} label={t('action.retry')} onReload={papers.reload} />}
       <div className="medLibraryColumns">

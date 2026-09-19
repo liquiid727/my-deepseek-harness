@@ -1,5 +1,5 @@
 /* Med Research view geometry. Product colors resolve through the host design system. */
-.medHome,.researchPanel{--med-blue:var(--dsw-alias-accent-primary);--med-blue-deep:var(--dsw-alias-accent-strong);--med-blue-soft:var(--dsw-alias-accent-soft);--med-green:var(--dsw-alias-state-success-label);--med-green-soft:var(--dsw-alias-state-success-tertiary);--med-purple:var(--med-accent-statistics);--med-purple-soft:var(--med-accent-statistics-soft);--med-orange:var(--dsw-alias-state-warn-label);--med-orange-soft:var(--dsw-alias-state-warn-tertiary);--med-ink:var(--dsw-alias-label-primary);--med-muted:var(--dsw-alias-label-secondary);--med-line:var(--dsw-alias-border-l1);--med-surface:var(--dsw-alias-bg-layer-1);--med-canvas:var(--dsw-alias-bg-base);--med-danger:var(--dsw-alias-state-error-label);box-sizing:border-box;color:var(--med-ink);font-size:14px;line-height:1.5}
+.medHome,.researchPanel,.medInspect{--med-blue:var(--dsw-alias-accent-primary);--med-blue-deep:var(--dsw-alias-accent-strong);--med-blue-soft:var(--dsw-alias-accent-soft);--med-green:var(--dsw-alias-state-success-label);--med-green-soft:var(--dsw-alias-state-success-tertiary);--med-purple:var(--med-accent-statistics);--med-purple-soft:var(--med-accent-statistics-soft);--med-orange:var(--dsw-alias-state-warn-label);--med-orange-soft:var(--dsw-alias-state-warn-tertiary);--med-ink:var(--dsw-alias-label-primary);--med-muted:var(--dsw-alias-label-secondary);--med-line:var(--dsw-alias-border-l1);--med-surface:var(--dsw-alias-bg-layer-1);--med-canvas:var(--dsw-alias-bg-base);--med-danger:var(--dsw-alias-state-error-label);box-sizing:border-box;color:var(--med-ink);font-size:14px;line-height:1.5}
 .medHome{min-height:100%;background:var(--med-canvas)}
 .visuallyHidden{position:absolute;width:1px;height:1px;margin:-1px;padding:0;border:0;clip:rect(0 0 0 0);overflow:hidden;white-space:nowrap}
 .medHome button,.researchPanel button{font:inherit}
@@ -13,6 +13,145 @@
 .medStatusBadge{padding:2px 10px;border-radius:999px;font-size:12px;font-weight:700}
 .medStatusBadge[data-status="active"]{color:var(--med-green);background:var(--med-green-soft)}
 .medStatusBadge[data-status="archived"]{color:var(--med-orange);background:var(--med-orange-soft)}
+.medStatusBadge[data-status="neutral"]{color:var(--med-muted);background:var(--med-canvas)}
+/* Page header of the 0917 shell: crumb › H1 (+badge, +actions) › description › meta. */
+.medPageHeader{display:grid;gap:6px;margin-bottom:16px}
+.medPageTitleRow{display:flex;align-items:center;flex-wrap:wrap;gap:10px;min-width:0}
+.medPageTitle{margin:0;font-size:26px;line-height:1.2;font-weight:750}
+.medPageHeader[data-display="true"] .medPageTitle{font-size:clamp(30px,3vw,36px)}
+.medPageActions{display:flex;align-items:center;gap:8px;margin-left:auto}
+.medPageDescription{margin:0;color:var(--med-muted);font-size:14px;line-height:1.55}
+.medPageMeta{display:flex;align-items:center;flex-wrap:wrap;gap:6px 14px;color:var(--med-muted);font-size:12px}
+/* In-page exclusive segments (page structure, never host View tabs). */
+.medPageTabs{display:flex;align-items:center;flex-wrap:wrap;gap:4px;margin-bottom:12px;border-bottom:1px solid var(--med-line)}
+.medPageTab{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:6px 12px;border:0;border-bottom:2px solid transparent;color:var(--med-muted);background:transparent;font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+.medPageTab:hover{color:var(--med-ink)}
+.medPageTab[data-active]{color:var(--med-blue);border-bottom-color:var(--med-blue)}
+.medPageTabCount{padding:1px 7px;border-radius:999px;color:var(--med-muted);background:var(--med-canvas);font-size:11px;font-weight:700}
+.medPageTab[data-active] .medPageTabCount{color:var(--med-blue);background:var(--med-blue-soft)}
+/* Ratio-parameterised column grid; every ratio collapses under 1000px. */
+.medSplit{--med-split-cols:minmax(0,1fr);display:grid;grid-template-columns:var(--med-split-cols);gap:16px;align-items:start;min-width:0}
+.medSplit>*{min-width:0}
+.medSplit[data-ratio="even"]{--med-split-cols:minmax(0,1fr) minmax(0,1fr)}
+.medSplit[data-ratio="even-3"]{--med-split-cols:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr)}
+.medSplit[data-ratio="52-48"]{--med-split-cols:minmax(0,52fr) minmax(0,48fr)}
+.medSplit[data-ratio="14-48-38"]{--med-split-cols:minmax(0,14fr) minmax(0,48fr) minmax(0,38fr)}
+.medSplit[data-ratio="30-70"]{--med-split-cols:minmax(0,30fr) minmax(0,70fr)}
+.medSplit[data-ratio="23-45-32"]{--med-split-cols:minmax(0,23fr) minmax(0,45fr) minmax(0,32fr)}
+/* Right-column inspector: one tab body inside the host's right Sidebar. The
+   column itself belongs to the host; this only styles what we put in it. */
+.medInspect{display:grid;grid-template-rows:auto auto minmax(0,1fr) auto;gap:10px;height:100%;min-height:0;padding:10px 12px 12px;overflow:hidden}
+.medInspectHead{display:flex;align-items:center;gap:8px;min-width:0}
+.medInspectMark{display:grid;place-items:center;flex:none;width:26px;height:26px;border-radius:8px;color:var(--med-blue);background:var(--med-blue-soft)}
+.medInspectTitle{overflow:hidden;font-size:14px;font-weight:700;text-overflow:ellipsis;white-space:nowrap}
+.medInspect .medPageTabs{margin-bottom:0}
+.medInspectSection{display:grid;gap:6px;align-content:start}
+.medInspectSectionHead{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.medInspectSectionTitle{margin:0;padding-left:8px;border-left:2px solid var(--med-blue);font-size:13px;font-weight:700}
+.medInspectBody{margin:0;color:var(--med-ink);font-size:13px;line-height:1.6}
+.medInspectList{display:grid;gap:4px;margin:0}
+.medInspectRow{display:grid;grid-template-columns:88px minmax(0,1fr);gap:8px;align-items:baseline}
+.medInspectKey{margin:0;color:var(--med-muted);font-size:12px}
+.medInspectValue{margin:0;font-size:13px;line-height:1.5;word-break:break-word}
+.medInspectRow[data-empty] .medInspectValue{color:var(--med-muted)}
+.medInspectEditor{display:grid;gap:6px}
+.medInspectTextarea{box-sizing:border-box;width:100%;min-height:44px;padding:8px 10px;border:1px solid var(--dsw-alias-border-l3);border-radius:8px;color:var(--med-ink);background:var(--med-surface);font:inherit;font-size:13px;line-height:1.5;resize:vertical}
+.medInspectTextarea:focus{outline:2px solid var(--dsw-alias-focus-ring);outline-offset:1px;border-color:var(--med-blue)}
+.medInspectEditorActions{display:flex;justify-content:flex-end;gap:8px}
+.medInspectQuick{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.medInspectQuickItem{display:inline-flex;align-items:center;justify-content:flex-start;gap:6px;min-height:40px;text-align:left}
+.medInspectQuickItem[data-unavailable]{opacity:.55;cursor:not-allowed}
+.medInspectQuickIcon{display:inline-grid;place-items:center;flex:none;color:inherit}
+.medInspectAsk{padding:10px;border:1px solid var(--med-line);border-radius:10px;background:var(--med-blue-soft)}
+.medInspectAskList{display:grid;gap:6px;margin:0;padding:0;list-style:none}
+.medInspectAskItem{display:flex;align-items:flex-start;gap:6px;width:100%;min-height:32px;padding:6px 8px;border:0;border-radius:8px;color:var(--med-ink);background:transparent;font:inherit;font-size:12px;line-height:1.45;text-align:left;cursor:pointer}
+.medInspectAskItem:hover{background:var(--med-surface)}
+.medInspectAskIcon{display:inline-grid;place-items:center;flex:none;margin-top:2px;color:var(--med-blue)}
+.medInspectComposer{display:grid;gap:6px;padding-top:8px;border-top:1px solid var(--med-line)}
+.medInspectComposerBar{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.medInspectComposerHint{color:var(--med-muted);font-size:11px;line-height:1.4}
+.medInspectSend{flex:none;min-width:44px;min-height:32px}
+/* Project overview (0917 图 1): counters, resume strip, recent split, tasks. */
+.medOverviewTabs{margin-bottom:8px}
+.medCounters{display:grid;gap:8px;margin-top:8px}
+.medResume{display:flex;align-items:center;gap:12px;margin-top:16px;padding:14px 16px;border:1px solid var(--med-line);border-radius:12px;background:var(--med-surface)}
+.medResumeLabel{flex:none;color:var(--med-blue);font-size:12px;font-weight:700}
+.medResumeTitle{flex:1;min-width:0;overflow:hidden;font-size:14px;font-weight:700;text-overflow:ellipsis;white-space:nowrap}
+.medResumeMeta{flex:none;color:var(--med-muted);font-size:12px}
+.medRecent{display:grid;gap:8px;min-width:0;margin-top:16px}
+.medRecent .medSectionTitle{font-size:15px}
+.medRecentList{display:grid;gap:2px;margin:0;padding:0;list-style:none;min-width:0}
+.medRecentRow{display:flex;align-items:baseline;gap:10px;width:100%;min-height:40px;padding:8px 10px;border:1px solid var(--med-line);border-radius:10px;color:var(--med-ink);background:var(--med-surface);font:inherit;text-align:left;cursor:pointer}
+.medRecentRow:hover{border-color:var(--med-blue)}
+.medRecentRowTitle{flex:1;min-width:0;overflow:hidden;font-size:13px;line-height:1.4;text-overflow:ellipsis;white-space:nowrap}
+.medRecentRowMeta{flex:none;color:var(--med-muted);font-size:11px}
+.medRecentNote{display:flex;align-items:baseline;gap:10px;min-height:40px;padding:8px 10px;border:1px solid var(--med-line);border-radius:10px;background:var(--med-surface)}
+/* The project overview hands its input to the assistant panel: the host still
+   renders its composer for an unclaimed outlet, so the page claims the outlet
+   into this node and does not draw it. See home.tsx and the declared host
+   differences in ui-acceptance.md. */
+.medComposerHandoff{display:none}
+/* Evidence and notes page (0917 图 4): tabs, tool row, grouped cards, notes. */
+.medEvidenceHead{display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
+.medEvidenceTools{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px}
+.medEvidenceTools input{min-width:220px;flex:1}
+.medEvidenceGroup{color:var(--med-muted);font-size:12px}
+.medEvidenceCount{padding:2px 10px;border-radius:999px;color:var(--med-muted);background:var(--med-canvas);font-size:12px;font-weight:700;font-variant-numeric:tabular-nums}
+.medEvidenceFilters{display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--med-line)}
+.medEvidenceFilter{display:inline-flex;align-items:center;gap:6px;color:var(--med-muted);font-size:12px}
+.medEvidenceFilter select{min-height:32px;padding:2px 8px;border:1px solid var(--med-line);border-radius:8px;color:var(--med-ink);background:var(--med-surface);font:inherit;font-size:12px}
+.medEvidenceGroups{display:grid;gap:18px}
+.medEvidenceGroupBlock{display:grid;gap:8px;min-width:0}
+.medEvidenceGroupTitle{display:flex;align-items:baseline;gap:8px;margin:0;padding-left:8px;border-left:2px solid var(--med-blue);font-size:14px;font-weight:700}
+.medEvidenceGroupCount{flex:none;padding:1px 8px;border-radius:999px;color:var(--med-blue);background:var(--med-blue-soft);font-size:11px;font-weight:700}
+.medEvidenceCards{display:grid;gap:10px;margin:0;padding:0;list-style:none;min-width:0}
+.medEvidenceCard{display:grid;gap:8px;padding:12px 14px;border:1px solid var(--med-line);border-radius:12px;background:var(--med-surface)}
+.medEvidenceCard:hover{border-color:var(--med-blue)}
+.medEvidenceBadges{display:flex;align-items:center;flex-wrap:wrap;gap:6px}
+.medRelation,.medEvidenceType,.medEvidenceSource{padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700}
+.medRelation[data-relation="SUPPORT"]{color:var(--med-green);background:var(--med-green-soft)}
+.medRelation[data-relation="AGAINST"]{color:var(--med-danger);background:var(--med-canvas)}
+.medRelation[data-relation="UNCERTAIN"]{color:var(--med-muted);background:var(--med-canvas)}
+.medEvidenceType{color:var(--med-ink);background:var(--med-canvas);border:1px solid var(--med-line)}
+.medEvidenceSource{color:var(--med-muted);background:transparent}
+.medEvidenceQuote{margin:0;padding-left:10px;border-left:2px solid var(--med-line);color:var(--med-ink);font-size:13px;line-height:1.6}
+.medEvidenceFooter{display:flex;align-items:center;flex-wrap:wrap;gap:8px;color:var(--med-muted);font-size:11px}
+.medEvidenceFooter button{margin-left:auto}
+.medEvidencePaper{overflow:hidden;max-width:42ch;text-overflow:ellipsis;white-space:nowrap}
+.medEvidenceMeta{color:var(--med-muted)}
+.medEvidenceHint{display:flex;align-items:center;gap:6px;margin:16px 0 0;color:var(--med-muted);font-size:11px;line-height:1.5}
+.medEvidenceGroups[data-layout="list"] .medEvidenceQuote{display:none}
+.medEvidenceGroups[data-layout="list"] .medEvidenceCard{padding:8px 12px}
+.medNoteList{display:grid;gap:8px;margin:0;padding:0;list-style:none;min-width:0}
+.medNoteRow{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 10px;padding:10px 12px;border:1px solid var(--med-line);border-radius:10px;background:var(--med-surface)}
+.medNoteRow svg{margin-top:3px;color:var(--med-muted)}
+.medNoteTitle{overflow:hidden;font-size:13px;font-weight:700;text-overflow:ellipsis;white-space:nowrap}
+.medNoteBody{grid-column:2;overflow:hidden;color:var(--med-muted);font-size:12px;line-height:1.5;text-overflow:ellipsis;white-space:nowrap}
+.medNoteMeta{grid-column:2;color:var(--med-muted);font-size:11px}
+/* Reader page (0917 图 3): metadata, mode + zoom tool row, catalogue | body. */
+.medReaderHead{display:grid;gap:6px;margin-bottom:12px}
+.medReaderTools{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:12px}
+.medReaderTools .medPageTabs{margin-bottom:0;border-bottom:0}
+.medReaderZoom{display:flex;align-items:center;gap:6px;flex:none}
+.medReaderZoomValue{min-width:44px;color:var(--med-muted);font-size:12px;font-variant-numeric:tabular-nums;text-align:right}
+.medReaderCatalog{display:grid;gap:2px;align-content:start;min-width:0;max-height:60vh;overflow-y:auto}
+.medReaderCatalog ul{display:grid;gap:1px;margin:0;padding:0;list-style:none}
+.medReaderSectionLink{display:block;width:100%;min-height:32px;padding:5px 8px;border:0;border-radius:8px;color:var(--med-muted);background:transparent;font:inherit;font-size:12px;line-height:1.4;text-align:left;cursor:pointer}
+.medReaderSectionLink:hover{color:var(--med-ink);background:var(--med-canvas)}
+.medReaderSectionLink[data-active]{color:var(--med-blue);background:var(--med-blue-soft);font-weight:700}
+.medReaderBody{display:grid;gap:12px;min-width:0;max-height:64vh;overflow-y:auto;padding-right:4px}
+.medReaderBody .readerBody,
+.medReaderBody p{margin:0;color:var(--med-ink);font-family:var(--font-serif,Georgia,serif);font-size:17px;line-height:1.65}
+.medReaderBody[data-zoom="80"]{font-size:80%}
+.medReaderBody[data-zoom="100"]{font-size:100%}
+.medReaderBody[data-zoom="120"]{font-size:120%}
+.medReaderBody[data-zoom="140"]{font-size:140%}
+.medReaderBody[data-zoom="160"]{font-size:160%}
+.medReaderBody[data-zoom="180"]{font-size:180%}
+.medReaderBody[data-zoom="200"]{font-size:200%}
+.medReaderAbstract{margin-top:16px;border-top:1px solid var(--med-line);padding-top:10px}
+.medReaderAbstract summary{cursor:pointer;color:var(--med-muted);font-size:12px}
+.medReaderAbstract p{margin:8px 0 0;color:var(--med-muted);font-size:13px;line-height:1.6}
 .medGhostButton{display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:4px 12px;border:1px solid var(--med-line);border-radius:8px;color:var(--med-ink);background:var(--med-surface);font-size:12px;cursor:pointer}
 .medGhostButton:hover{border-color:var(--med-blue);color:var(--med-blue)}
 /* Hero + primary input */
@@ -31,21 +170,27 @@
 .medSectionHead{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:8px}
 .medSectionTitle{margin:0;font-size:22px;font-weight:750}
 .medSectionMeta{color:var(--med-muted);font-size:12px}
-.medTileRow{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
-.medTile{display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;column-gap:12px;align-items:center;min-width:0;min-height:44px;padding:12px;border:1px solid var(--med-line);border-radius:12px;background:var(--med-surface);text-align:left}
+.medTileRow{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px}
+.medTile{display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:12px;align-items:start;min-width:0;min-height:44px;padding:12px;border:1px solid var(--med-line);border-radius:12px;background:var(--med-surface);text-align:left}
 button.medTile{cursor:pointer}
 button.medTile:hover{border-color:var(--med-blue)}
 .medTile[data-disabled]{cursor:default}
 .medTile[data-disabled]:hover{border-color:var(--med-line)}
-.medTileIcon{grid-row:1 / span 2;display:grid;place-items:center;width:40px;height:40px;border-radius:10px}
+.medTileIcon{display:grid;place-items:center;width:40px;height:40px;border-radius:10px}
 .medTileIcon[data-tone="blue"]{color:var(--med-blue);background:var(--med-blue-soft)}
 .medTileIcon[data-tone="green"]{color:var(--med-green);background:var(--med-green-soft)}
 .medTileIcon[data-tone="purple"]{color:var(--med-purple);background:var(--med-purple-soft)}
 .medTileIcon[data-tone="orange"]{color:var(--med-orange);background:var(--med-orange-soft)}
-.medTileValue{font-size:24px;font-weight:750;line-height:1}
-.medTileLabel{margin-top:4px;color:var(--med-muted);font-size:12px}
+.medTileBody{display:grid;gap:2px;min-width:0}
+.medTileValueRow{display:flex;align-items:baseline;flex-wrap:wrap;gap:6px}
+.medTileValue{font-size:24px;font-weight:750;line-height:1.1}
+.medTileDelta{padding:1px 7px;border-radius:999px;font-size:11px;font-weight:700}
+.medTileDelta[data-tone="up"]{color:var(--med-green);background:var(--med-green-soft)}
+.medTileDelta[data-tone="flat"]{color:var(--med-muted);background:var(--med-canvas)}
+.medTileLabel{color:var(--med-muted);font-size:12px}
+.medTileNote{color:var(--med-muted);font-size:11px;line-height:1.4}
 .medTileUnknown{color:var(--med-muted)}
-.medTileRetry{grid-column:2;justify-self:start;min-height:32px;padding:2px 10px;border:1px solid var(--med-line);border-radius:8px;color:var(--med-blue);background:var(--med-blue-soft);font-size:12px;cursor:pointer}
+.medTileRetry{justify-self:start;min-height:32px;padding:2px 10px;border:1px solid var(--med-line);border-radius:8px;color:var(--med-blue);background:var(--med-blue-soft);font-size:12px;cursor:pointer}
 /* Capability cards */
 .medCardRow{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
 .medCard{display:grid;gap:10px;padding:16px;border:1px solid var(--med-line);border-radius:16px;background:var(--med-surface);text-align:left;cursor:pointer;transition:transform .15s ease,border-color .15s ease}
@@ -138,8 +283,16 @@ button.medTile:hover{border-color:var(--med-blue)}
 .resultBody span,.resultBody small{color:var(--med-muted);font-size:11px;line-height:1.35}
 .researchPanel .saveButton{border:1px solid var(--dsw-alias-border-l2);border-radius:7px;padding:6px 9px;background:var(--med-blue-soft);color:var(--med-blue-deep);font-size:11px;cursor:pointer;min-height:32px}
 /* Narrow: single column, two-column counters, always-reachable input */
+@media (max-width:999px){
+/* A page's columns stack; the 700-999px "secondary column becomes a drawer"
+   rule is not implemented yet, so stacking is the whole behaviour. */
+.medSplit{--med-split-cols:minmax(0,1fr)}
+.medPageTabs{flex-wrap:nowrap;overflow-x:auto}
+}
 @media (max-width:699px){
 .medHeroTitle{font-size:36px}
+.medPageTitle{font-size:24px}
+.medPageHeader[data-display="true"] .medPageTitle{font-size:30px}
 .medLibraryColumns{grid-template-columns:minmax(0,1fr)}
 .medTileRow{grid-template-columns:repeat(2,minmax(0,1fr))}
 .medCardRow{grid-template-columns:1fr}

@@ -1,4 +1,15 @@
 .medBrandName{display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* The host's conversation-header tab strip is a projection of every
+   Conversation View. The medical workbench keeps those Views as the render
+   seam but exposes the five user-facing destinations only through L1, as in
+   the 0917 shell. The data attribute identifies this exact host header so
+   page-local tablists (project, reader, inspector) remain visible. */
+body.medResearchWorkbench header:has([data-conversation-header-corner]) > [role="tablist"]{display:none}
+/* The host's default sidebar is a 280px column. Move its 56px L1 rail into a
+   true 64px track (including its own gutter), so the icon and label always
+   have a 44px content box and L2 begins at a clean vertical boundary. */
+body.medResearchWorkbench nav:has(.medNavEntry){box-sizing:border-box;flex-basis:64px;width:64px;margin-left:-12px;padding:2px 10px 6px}
+body.medResearchWorkbench nav:has(.medNavEntry) .medNavEntry{width:44px;margin:2px 0}
 /* Stacked rail unit: the host strip is an icon rail (56px) in both column
    states, so the label sits under the icon instead of beside it. */
 .medNavEntry{
@@ -22,7 +33,62 @@
 .medNavEntry[data-disabled]:hover{background:transparent;color:var(--med-nav-muted)}
 /* Both column states keep the stacked unit; only the available width differs. */
 .medNavEntry[data-wide="false"]{width:calc(100% - 8px);margin:2px 4px;padding:6px 2px}
-.medNavEntry[data-active]{color:var(--med-nav-blue);background:var(--dsw-alias-accent-soft)}
+.medNavEntry[data-active]{position:relative;color:var(--med-nav-blue);background:var(--dsw-alias-accent-soft)}
+.medNavEntry[data-active]::before{position:absolute;top:8px;bottom:8px;left:-6px;width:2px;border-radius:0 2px 2px 0;background:var(--med-nav-blue);content:""}
 @media (prefers-reduced-motion:reduce){
 .medNavEntry{transition:none}
 }
+/* Second panel: the project tree that replaces the host's Workspace browser
+   (0917 图 2 的 L2). Colours resolve through the host design system. */
+.medNav{
+  --med-nav-blue:var(--dsw-alias-accent-primary);
+  --med-nav-ink:var(--dsw-alias-label-primary);
+  --med-nav-muted:var(--dsw-alias-label-secondary);
+  --med-nav-line:var(--dsw-alias-border-l1);
+  --med-nav-surface:var(--dsw-alias-bg-layer-1);
+  --med-nav-canvas:var(--dsw-alias-bg-base);
+  --med-nav-danger:var(--dsw-alias-state-error-label);
+  box-sizing:border-box;display:grid;gap:10px;align-content:start;min-width:0;max-width:100%;height:100%;
+  overflow-x:hidden;overflow-y:auto;padding:4px 8px 12px;color:var(--med-nav-ink);font-size:13px;line-height:1.5;
+}
+.medNavRailButton{width:100%;min-height:36px}
+.medNav .state{margin:0;padding:8px 4px;color:var(--med-nav-muted);font-size:12px}
+.medNav .alert{margin:0;padding:6px 8px;border-radius:8px;color:var(--med-nav-danger);background:var(--med-nav-canvas);font-size:12px}
+.medNavScope{display:grid;gap:4px;min-width:0}
+.medNavScopeLabel{color:var(--med-nav-muted);font-size:11px;font-weight:700;letter-spacing:.04em}
+.medNavPicker{box-sizing:border-box;width:100%;min-height:36px;padding:4px 8px;border:1px solid var(--med-nav-line);border-radius:8px;color:var(--med-nav-ink);background:var(--med-nav-surface);font:inherit;font-size:13px;font-weight:600}
+.medNavPicker:focus-visible{outline:2px solid var(--dsw-alias-focus-ring);outline-offset:1px}
+.medNavSearch{position:relative;display:flex;align-items:center;min-width:0}
+.medNavSearchIcon{position:absolute;left:9px;display:inline-grid;place-items:center;color:var(--med-nav-muted)}
+.medNavSearch input{box-sizing:border-box;width:100%;padding-left:28px}
+.medNavGroup{display:grid;gap:2px;min-width:0;max-width:100%}
+.medNavGroupHead{display:flex;align-items:center;gap:6px;min-height:28px;padding:0 4px}
+.medNavGroupTitle{color:var(--med-nav-muted);font-size:11px;font-weight:700;letter-spacing:.04em}
+.medNavGroupCount{padding:1px 6px;border-radius:999px;color:var(--med-nav-muted);background:var(--med-nav-canvas);font-size:11px;font-weight:700}
+.medNavGroupAction{margin-left:auto;min-height:28px;font-size:12px}
+.medNavList{display:grid;gap:1px;margin:0;padding:0;list-style:none;min-width:0;max-width:100%}
+.medNavList>li{min-width:0;max-width:100%}
+.medNavRow{box-sizing:border-box;display:flex;align-items:center;gap:8px;width:100%;min-width:0;min-height:34px;padding:4px 8px;border:0;border-radius:8px;color:var(--med-nav-ink);background:transparent;font:inherit;font-size:13px;text-align:left;cursor:pointer}
+.medNavRow:hover{background:var(--dsw-alias-interactive-bg-hover)}
+.medNavRow:focus-visible{outline:2px solid var(--dsw-alias-focus-ring);outline-offset:1px}
+.medNavRow[data-active]{color:var(--med-nav-blue);background:var(--dsw-alias-accent-soft);font-weight:700}
+.medNavRow[data-unavailable]{color:var(--med-nav-muted);cursor:not-allowed}
+.medNavRow[data-unavailable]:hover{background:transparent}
+.medNavRowIcon{display:inline-grid;place-items:center;flex:none;color:inherit}
+.medNavRowTitle{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.medNavRowMeta{flex:none;color:var(--med-nav-muted);font-size:11px;font-variant-numeric:tabular-nums}
+.medNavSessionRow{display:flex;align-items:center;gap:2px;min-width:0;border-radius:8px}
+.medNavSessionRow.is-active{background:var(--dsw-alias-accent-soft)}
+.medNavSessionRow .medNavRow{flex:1;min-width:0;width:auto}
+.medNavSessionRow .medNavRow[data-active]{background:transparent}
+.medNavSessionAction{display:grid;place-items:center;flex:none;width:26px;height:26px;padding:0;border:0;border-radius:6px;color:var(--med-nav-muted);background:transparent;cursor:pointer;opacity:.72}
+.medNavSessionRow:hover .medNavSessionAction,.medNavSessionAction:focus-visible{opacity:1}
+.medNavSessionAction:hover{color:var(--med-nav-blue);background:var(--dsw-alias-interactive-bg-hover)}
+.medNavSessionAction:focus-visible{outline:2px solid var(--dsw-alias-focus-ring);outline-offset:1px}
+.medNavRenameForm{box-sizing:border-box;display:flex;align-items:center;gap:4px;width:100%;min-width:0;padding:3px 4px}
+.medNavRenameForm .dshInput{min-width:0;flex:1}
+.medNavSubRow{display:flex;align-items:center;gap:8px;min-height:32px;padding:2px 8px 2px 20px;color:var(--med-nav-muted);font-size:12px}
+.medNavSubRow .medNavRowTitle{color:var(--med-nav-ink);font-size:12px}
+.medNavCreate{display:grid;gap:6px;min-width:0;padding:10px;border:1px solid var(--med-nav-line);border-radius:10px;background:var(--med-nav-surface)}
+.medNavCreate input{box-sizing:border-box;width:100%}
+.medNavCreate button{justify-self:start;min-height:36px}

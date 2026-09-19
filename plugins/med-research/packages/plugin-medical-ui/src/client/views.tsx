@@ -7,28 +7,29 @@
  */
 
 import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { Button, Field, Input, StateDot } from '@deepseek-ai/dsh-client-ui-primitives'
+import { Button, Field, Input } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { ConvViewProps } from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type { InjectFace, PropsLocale } from '@deepseek-ai/dsh-client-ui-slots'
 import type {
   ClaimId,
   DatasetId,
-  Evidence,
   Paper,
+  Project,
   ProjectId,
   QueryPlan,
   LiteratureSearchResult,
   ResearchQuery,
 } from '@medresearch/dsh-medical-contracts'
-import { evidenceUiState } from '../state/evidence.ts'
 import { nextResearchState, type ResearchUiEvent, type ResearchUiState } from '../state/research.ts'
 import { nextStatisticsState, type StatisticsUiEvent, type StatisticsUiState } from '../state/statistics.ts'
 import { MissingValuesChart } from './profile-chart.tsx'
 import { MedResearchIcon } from './icons.tsx'
-import { MedAsyncState, MedBreadcrumb, MedSectionHeader, MedViewFrame as MedPanel } from './components.tsx'
-import { decodeClaimFocus, decodePaperFocus, encodePaperFocus, type PaperFocus } from './focus.ts'
+import { MedAsyncState, MedBreadcrumb, MedPageTabs, MedSectionHeader, MedSplit, MedViewFrame as MedPanel } from './components.tsx'
+import { MedEvidencePage } from './evidence-view.tsx'
+import { useHandOffInput } from './panel-input.ts'
+import { decodeClaimFocus, decodePageFocus, encodePaperFocus, type MedPageSegment, type PaperFocus } from './focus.ts'
 import {
-  EVIDENCE_STATE_KEY, NS, RESEARCH_STATE_KEY, STATISTICS_STATE_KEY, type MedViewInjected,
+  NS, RESEARCH_STATE_KEY, STATISTICS_STATE_KEY, type MedViewInjected,
 } from './locales.ts'
 import css from './components.module.css'
 
@@ -124,6 +125,40 @@ export function useMedSessionProject(remote: MedViewProps['remote'], sessionId: 
 }
 
 /**
+ * Resolve a Session's project through its persisted binding, with the
+ * workspace directory as the same fallback used by the left project tree.
+ * Older Sessions predate project bindings but still retain their workspace
+ * path; treating that path as a fallback keeps the selected project and its
+ * overview from disagreeing for those Sessions.
+ * @param remote - Project Remote surface.
+ * @param sessionId - Current host Session id.
+ * @param cwd - Session working directory, if the host recorded one.
+ * @returns The bound or workspace-derived project id and its loading state.
+ */
+export function useMedResolvedSessionProject(
+  remote: MedViewProps['remote'], sessionId: string, cwd: string | undefined,
+): MedLoad<{ projectId?: ProjectId } | undefined> {
+  const binding = useMedSessionProject(remote, sessionId)
+  const projects = useMedLoad(
+    useCallback(
+      (signal: AbortSignal) => cwd === undefined ? Promise.resolve<readonly Project[]>([]) : remote.projects.list(signal),
+      [remote, cwd],
+    ),
+    [remote, cwd],
+  )
+  const fallback = cwd === undefined
+    ? undefined
+    : projects.value?.find(project => project.status === 'active' && project.workspacePath === cwd)?.id
+  const projectId = binding.value?.projectId ?? fallback
+  return {
+    value: projectId === undefined ? binding.value : { projectId },
+    error: binding.error ?? projects.error,
+    loading: binding.loading || (binding.value?.projectId === undefined && cwd !== undefined && projects.loading),
+    reload: () => { binding.reload(); projects.reload() },
+  }
+}
+
+/**
  * Read one project's name for a page breadcrumb.
  * @param remote - typed Remote client.
  * @param projectId - bound project, absent before the binding resolves.
@@ -168,38 +203,43 @@ export function ResearchView({
   const [searching, setSearching] = useState(false)
   const [searchError, setSearchError] = useState<string>()
   const [savedPaperIds, setSavedPaperIds] = useState<Set<Paper['id']>>(new Set())
+  const [segment, setSegment] = useState<MedPageSegment>('search')
 
-  // The home view (or a navigation entry) addresses either the research
-  // question or the page's Evidence section as this view's focus; consume it
-  // once into the query input or the claim selection.
+  // The L2 tree, the home page, and the navigation entries address this View
+  // through an opaque focus: a page segment (0917 图 4), a claim whose evidence
+  // to show, or a research question to prefill.
   const focus = viewRequest?.focus || viewFocus
   const claim = focus === undefined || focus === '' ? undefined : decodeClaimFocus(focus)
-  const [claimId, setClaimId] = useState<ClaimId | undefined>(claim?.claimId)
+  const pageSegment = focus === undefined || focus === '' ? undefined : decodePageFocus(focus)
   useEffect(() => {
     if (viewRequest === null) return
-    if (claim !== undefined) {
-      setClaimId(claim.claimId)
+    if (pageSegment !== undefined) {
+      setSegment(pageSegment)
+    } else if (claim !== undefined) {
+      // A claim focus opens the evidence page: that is where claims live.
+      setSegment('evidence')
     } else if (focus !== undefined && focus !== '') {
+      setSegment('search')
       setQuery(focus)
       setApprovedQueryId(undefined)
       setSearchResult(undefined)
     }
     completeViewRequest()
-  }, [viewRequest, focus, claim, completeViewRequest])
+  }, [viewRequest, focus, claim, pageSegment, completeViewRequest])
 
   const binding = useMedSessionProject(remote, sessionId)
   const projectId = binding.value?.projectId
   const projectName = useMedProjectName(remote, projectId)
 
-  // The results column owns the resident Session composer while this View is
-  // active (UI-RESEARCH pins the input to the bottom of the result column).
-  // The host requires the destination element to be mounted inside the
-  // Conversation scrollport before it is claimed, so the mount waits for the
-  // branch that actually renders the outlet.
+  // The results column owns the resident Session composer while the search
+  // segment is showing (UI-SESSION pins the input to the bottom of the result
+  // column). The evidence page has no centre input — 图 4 shows none — so there
+  // the page hands its box to the assistant panel instead.
   const composerId = useId()
   const composerPlaceholder = t('research.composerPlaceholder')
   const onMessageAccepted = useCallback(() => { openView('chat', '') }, [openView])
-  const composerReady = session !== undefined && binding.error === undefined && projectId !== undefined
+  const composerReady = segment === 'search' && session !== undefined && binding.error === undefined && projectId !== undefined
+  useHandOffInput('med-research:evidence', segment === 'evidence' && projectId !== undefined)
   useLayoutEffect(() => {
     if (!composerReady) return
     return mountComposer(composerId, { placeholder: composerPlaceholder, onMessageAccepted })
@@ -257,8 +297,29 @@ export function ResearchView({
   }
 
   return (
-    <MedPanel title={t('view.research')} state={t(RESEARCH_STATE_KEY[state])}>
-      <MedBreadcrumb page={t('view.research')} project={projectName} t={t} />
+    <MedPanel
+      crumb={<MedBreadcrumb page={t('view.research')} project={projectName} t={t} />}
+      state={t(RESEARCH_STATE_KEY[state])}
+      title={t('view.research')}
+    >
+      <MedPageTabs
+        label={t('view.research')}
+        onChange={setSegment}
+        tabs={[
+          { id: 'search', label: t('research.tab.search') },
+          { id: 'evidence', label: t('evidence.title') },
+        ]}
+        value={segment}
+      />
+      {segment === 'evidence' ? (
+        <MedEvidencePage
+          onAddEvidence={() => { setSegment('search') }}
+          onOpenSource={paperFocus => { openView('med-knowledge', paperFocus) }}
+          projectId={projectId}
+          remote={remote}
+          t={t}
+        />
+      ) : (
       <section className="researchWorkspace" aria-label={t('research.workspace')}>
           <div className="researchQuestionBar"><Input aria-label={t('research.question')} icon={<MedResearchIcon size={16} />} size="md" value={query} onChange={event => { setQuery(event.currentTarget.value); setApprovedQueryId(undefined); setSearchResult(undefined) }} placeholder={t('research.questionPlaceholder')} /></div>
         <div className="planCard">
@@ -271,23 +332,23 @@ export function ResearchView({
         </div>
         {searchError === undefined ? null : <MedFailure message={searchError} label={t('action.retry')} onReload={() => { void approveAndSearch() }} />}
         {searchResult !== undefined ? <section className="resultSection"><MedSectionHeader title={t('research.results')} meta={`${searchResult.papers.length} / ${searchResult.totalCount}`} /><div className="resultFilters"><span>{t('research.filterAll')}</span><span>{t('research.filterCounter')}</span><span>{t('research.filterRelated')}</span></div><div className="resultList">{searchResult.papers.map((paper, index) => <article className="resultRow" key={paper.id}><div className="resultBadge" aria-hidden="true">{index + 1}</div><div className="resultBody"><strong>{paper.title}</strong><span>{paper.authors.slice(0, 3).map(author => author.name).join(', ')} · {paper.journal ?? ''} · {paper.publicationDate ?? ''}</span><small>PMID {paper.pmid ?? '—'} {paper.doi === undefined ? '' : `· DOI ${paper.doi}`}</small></div><Button size="sm" variant="outline" data-saved={savedPaperIds.has(paper.id) || undefined} onClick={() => { void remote.projects.savePaper(projectId, paper.id).then(() => { setSavedPaperIds(current => new Set(current).add(paper.id)) }) }}>{savedPaperIds.has(paper.id) ? t('research.saved') : t('research.save')}</Button></article>)}</div></section> : null}
-        {/* Evidence is a section of this page (UI-RESEARCH), never a View tab. */}
-        <MedEvidenceList
-          claimId={claimId}
-          onOpenSource={paperFocus => { openView('med-knowledge', paperFocus) }}
-          remote={remote}
-          t={t}
-        />
         <div className="researchComposer" id={composerId} />
       </section>
+      )}
     </MedPanel>
   )
 }
 
 /**
- * Paper reader section (S03): one paper's metadata plus the cited paragraph,
- * highlighted. It is a section of the library page, not a registered View, so
- * the owning page passes the decoded focus instead of the View kit.
+ * The reader page body (0917 图 3, UI-READER): the paper's metadata, its
+ * catalogue, and its body, with the reading modes and zoom controls above them.
+ * It is a section of the library page, not a registered View, so the owning
+ * page passes the decoded focus instead of the View kit.
+ *
+ * The two columns are in-page; the prototype's third column is the host's right
+ * panel, not something this page draws. 翻译 and 双语对照 render disabled with
+ * their reason: the papers service validates a caller-provided translation, it
+ * does not produce one, and this page has no translator to call.
  */
 export function MedPaperReader({ remote, t, focus, title }: {
   readonly remote: MedViewProps['remote']
@@ -296,6 +357,8 @@ export function MedPaperReader({ remote, t, focus, title }: {
   readonly title: string
 }) {
   const paragraphRef = useRef<HTMLParagraphElement>(null)
+  const [zoom, setZoom] = useState(100)
+  const [sectionId, setSectionId] = useState<string>()
 
   const paper = useMedLoad(
     useCallback(
@@ -312,7 +375,27 @@ export function MedPaperReader({ remote, t, focus, title }: {
     ),
     [focus],
   )
-  const paragraph = useMedLoad(
+  // The focused paper's document, which the catalogue and the body both read.
+  const documentId = focus?.documentId ?? documents.value?.[0]?.id
+  const sections = useMedLoad(
+    useCallback(
+      (signal: AbortSignal) => documentId === undefined
+        ? Promise.resolve([])
+        : remote.papers.sections(documentId, signal),
+      [remote, documentId],
+    ),
+    [documentId],
+  )
+  const paragraphs = useMedLoad(
+    useCallback(
+      (signal: AbortSignal) => documentId === undefined
+        ? Promise.resolve([])
+        : remote.papers.paragraphs(documentId, signal),
+      [remote, documentId],
+    ),
+    [documentId],
+  )
+  const cited = useMedLoad(
     useCallback(
       (signal: AbortSignal) => focus?.paragraphId === undefined
         ? Promise.resolve(undefined)
@@ -321,111 +404,119 @@ export function MedPaperReader({ remote, t, focus, title }: {
     ),
     [focus],
   )
-  const sections = useMedLoad(
-    useCallback(
-      (signal: AbortSignal) => focus?.documentId === undefined
-        ? Promise.resolve([])
-        : remote.papers.sections(focus.documentId, signal),
-      [remote, focus],
-    ),
-    [focus],
-  )
-  // Bring the cited paragraph into view once it has loaded.
-  useEffect(() => {
-    if (paragraph.value !== undefined) paragraphRef.current?.scrollIntoView({ block: 'center' })
-  }, [paragraph.value])
 
-  const sectionTitle = sections.value?.find(section => section.id === paragraph.value?.sectionId)?.title
-  const text = paragraph.value?.text ?? ''
-  const start = focus?.startOffset
-  const end = focus?.endOffset
-  const highlighted = start !== undefined && end !== undefined && start < end && end <= text.length
-    ? { before: text.slice(0, start), span: text.slice(start, end), after: text.slice(end) }
-    : undefined
+  // The catalogue follows the selection; a citation moves it to its own section.
+  const citedSectionId = cited.value?.sectionId
+  useEffect(() => {
+    if (citedSectionId !== undefined) setSectionId(citedSectionId)
+  }, [citedSectionId])
+  const activeSectionId = sectionId ?? citedSectionId ?? sections.value?.[0]?.id
+  const body = useMemo(
+    () => (paragraphs.value ?? []).filter(paragraph => paragraph.sectionId === activeSectionId),
+    [paragraphs.value, activeSectionId],
+  )
+
+  // Bring the cited paragraph into view once the body it belongs to is rendered.
+  useEffect(() => {
+    if (cited.value !== undefined && cited.value.sectionId === activeSectionId) {
+      paragraphRef.current?.scrollIntoView({ block: 'center' })
+    }
+  }, [cited.value, activeSectionId])
+
+  const highlight = (text: string): React.ReactNode => {
+    const start = focus?.startOffset
+    const end = focus?.endOffset
+    if (start === undefined || end === undefined || start >= end || end > text.length) return text
+    return (
+      <>
+        {text.slice(0, start)}
+        <mark data-med-quote="true">{text.slice(start, end)}</mark>
+        {text.slice(end)}
+      </>
+    )
+  }
 
   return (
-    <MedPanel title={title} state={paper.loading ? t('research.SEARCHING') : t('research.PAPERS_READY')}>
+    <MedPanel crumb={<MedBreadcrumb page={t('view.papers')} project={paper.value?.journal} t={t} />} state={t('research.PAPERS_READY')} title={title}>
       {focus === undefined ? <p>{t('empty.papers')}</p> : null}
       {paper.error === undefined ? null : (
         <MedFailure message={paper.error} label={t('error.load')} onReload={paper.reload} />
       )}
       {paper.value === undefined ? null : (
-        <article>
+        <article className="medReaderHead">
           <h3 className={css.paperTitle}>{paper.value.title}</h3>
-          <p className={css.paperAbstract}>{paper.value.abstract}</p>
-        </article>
-      )}
-      {paragraph.value === undefined ? null : (
-        <article className={css.readerQuote}>
-          {sectionTitle === undefined ? null : <h4 className={css.readerSection}>{sectionTitle}</h4>}
-          <p ref={paragraphRef} className={css.readerBody}>
-            {highlighted === undefined ? text : (
-              <>
-                {highlighted.before}
-                <mark data-med-quote="true">{highlighted.span}</mark>
-                {highlighted.after}
-              </>
-            )}
+          <p className={css.paperAbstract}>
+            {[paper.value.journal, paper.value.publicationDate, paper.value.doi === undefined ? undefined : `DOI ${paper.value.doi}`, paper.value.pmid === undefined ? undefined : `PMID ${paper.value.pmid}`]
+              .filter((value): value is string => value !== undefined && value !== '')
+              .join(' · ')}
           </p>
         </article>
       )}
-      <ul className={css.documentList}>
-        {(documents.value ?? []).map(document => (
-          <li key={document.id}>{document.sourceType} — {document.parseStatus}</li>
-        ))}
-      </ul>
-    </MedPanel>
-  )
-}
 
-/**
- * Evidence section (S04): every stored evidence of one claim with its display
- * state. The Research page owns the section, so the claim arrives as a prop
- * and "open source" is the host page's navigation.
- */
-export function MedEvidenceList({ remote, t, claimId, onOpenSource }: {
-  readonly remote: MedViewProps['remote']
-  readonly t: MedViewProps['t']
-  readonly claimId: ClaimId | undefined
-  readonly onOpenSource: (focus: string) => void
-}) {
-  const evidence = useMedLoad(
-    useCallback(
-      (signal: AbortSignal): Promise<Evidence[]> =>
-        claimId === undefined ? Promise.resolve([]) : remote.evidence.listForClaim(claimId, signal),
-      [remote, claimId],
-    ),
-    [claimId],
-  )
+      <div className="medReaderTools">
+        <MedPageTabs
+          label={t('reader.mode')}
+          onChange={() => {}}
+          tabs={[
+            { id: 'source', label: t('reader.mode.source') },
+            { id: 'translated', label: t('reader.mode.translated'), reason: t('reader.mode.reason') },
+            { id: 'bilingual', label: t('reader.mode.bilingual'), reason: t('reader.mode.reason') },
+          ]}
+          value="source"
+        />
+        <div className="medReaderZoom">
+          <span className="medReaderZoomValue">{zoom}%</span>
+          <Button aria-label={t('reader.zoomOut')} onClick={() => { setZoom(value => Math.max(80, value - 20)) }} size="sm" variant="outline">−</Button>
+          <Button aria-label={t('reader.zoomIn')} onClick={() => { setZoom(value => Math.min(200, value + 20)) }} size="sm" variant="outline">+</Button>
+          <Button onClick={() => { setZoom(100) }} size="sm" variant="outline">{t('reader.zoomFit')}</Button>
+        </div>
+      </div>
 
-  return (
-    <section aria-label={t('view.evidence')} className="medEvidenceSection">
-      <MedSectionHeader title={t('view.evidence')} meta={t('research.VERIFYING')} />
-      {claimId === undefined ? <p className="state">{t('empty.evidence')}</p> : null}
-      {evidence.error === undefined ? null : (
-        <MedFailure message={evidence.error} label={t('error.load')} onReload={evidence.reload} />
+      {paragraphs.error === undefined ? null : (
+        <MedFailure message={paragraphs.error} label={t('error.load')} onReload={paragraphs.reload} />
       )}
-      <ul className={css.evidenceList}>
-        {(evidence.value ?? []).map(item => {
-          const state = evidenceUiState(item)
-          return (
-            <li className={css.evidenceItem} key={item.id}>
-              <strong className={css.evidenceState}><StateDot state={state.endsWith('_FOUND') ? 'done' : state === 'NOT_FOUND' || state === 'REJECTED' ? 'error' : 'warning'} /> {t(EVIDENCE_STATE_KEY[state])}</strong>
-              <blockquote className={css.evidenceQuote}>{item.originalText}</blockquote>
-              <Button size="sm" variant="outline" onClick={() => { onOpenSource(encodePaperFocus({
-                paperId: item.paperId,
-                documentId: item.documentId,
-                ...item.paragraphId === undefined ? {} : { paragraphId: item.paragraphId },
-                ...item.startOffset === undefined ? {} : { startOffset: item.startOffset },
-                ...item.endOffset === undefined ? {} : { endOffset: item.endOffset },
-              })) }}>
-                {t('action.openSource')}
-              </Button>
-            </li>
-          )
-        })}
-      </ul>
-    </section>
+
+      <MedSplit label={t('reader.body')} ratio="23-77">
+        <nav aria-label={t('reader.catalog')} className="medReaderCatalog">
+          {sections.loading ? <p className="state">{t('home.loading')}</p> : null}
+          {(sections.value ?? []).length === 0 && !sections.loading ? <p className="state">{t('reader.noDocument')}</p> : null}
+          <ul>
+            {(sections.value ?? []).map(section => (
+              <li key={section.id}>
+                <button
+                  aria-current={section.id === activeSectionId ? 'true' : undefined}
+                  className="medReaderSectionLink"
+                  data-active={section.id === activeSectionId || undefined}
+                  onClick={() => { setSectionId(section.id) }}
+                  type="button"
+                >
+                  {section.title}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </nav>
+        <div className="medReaderBody" data-zoom={zoom}>
+          {body.length === 0 && !paragraphs.loading ? <p className="state">{t('reader.noBody')}</p> : null}
+          {body.map(paragraph => (
+            <p
+              className={css.readerBody}
+              key={paragraph.id}
+              ref={paragraph.id === cited.value?.id ? paragraphRef : undefined}
+            >
+              {paragraph.id === cited.value?.id ? highlight(paragraph.text) : paragraph.text}
+            </p>
+          ))}
+        </div>
+      </MedSplit>
+
+      {paper.value?.abstract === undefined ? null : (
+        <details className="medReaderAbstract">
+          <summary>{t('reader.abstract')}</summary>
+          <p>{paper.value.abstract}</p>
+        </details>
+      )}
+    </MedPanel>
   )
 }
 
@@ -454,8 +545,11 @@ export function StatisticsView({ remote, t, viewRequest, completeViewRequest, se
   )
 
   return (
-    <MedPanel title={t('view.statistics')} state={t(STATISTICS_STATE_KEY[state])}>
-      <MedBreadcrumb page={t('view.statistics')} project={projectName} t={t} />
+    <MedPanel
+      crumb={<MedBreadcrumb page={t('view.statistics')} project={projectName} t={t} />}
+      state={t(STATISTICS_STATE_KEY[state])}
+      title={t('view.statistics')}
+    >
       {focus === undefined ? <p>{t('empty.datasets')}</p> : null}
       {profile.error === undefined ? null : (
         <MedFailure message={profile.error} label={t('error.load')} onReload={profile.reload} />

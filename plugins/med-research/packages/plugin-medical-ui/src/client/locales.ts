@@ -38,6 +38,27 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
     }
     'sidebar.brand.mark': { kind: 'single'; scope: 'root'; owner: { size: number } }
     'sidebar.brand.name': { kind: 'single'; scope: 'root'; owner: { children?: never } }
+    /**
+     * The workspace/session browsing region. The host shell declares this row
+     * and ui-workspace fills it with the Workspace browser; the medical
+     * workbench takes it over instead, because the 0917 prototype's second
+     * column is a project tree (current project, its sessions, its domain
+     * counts, its settings group) rather than a workspace list. Declaring is
+     * claiming, so this restatement must stay identical to the host's.
+     */
+    'sidebar.workspaces': {
+      kind: 'single'
+      scope: 'root'
+      owner: { wide: boolean; expandSidebar: () => void }
+      inject: {
+        remote: MedRemote
+        openView: (view: string, focus: string) => void
+        startSession: (workspaceId?: string) => void
+        renameSession: (id: string, title: string) => Promise<void>
+        forkSession: (id: string) => Promise<void>
+        archiveSession: (id: string) => Promise<void>
+      }
+    }
     /** Root-level launch control exposed by the Conversation Hero. */
     'conversation.hero.launch': {
       kind: 'list'
@@ -104,4 +125,10 @@ export const EVIDENCE_STATE_KEY: Record<EvidenceUiState, MedUiKey> = {
 export interface MedViewInjected {
   /** Typed Remote client over the live Connection. */
   readonly remote: MedRemote
+  /**
+   * Reveal the right column's medical inspector, or `undefined` when the
+   * deployment ships no right Sidebar. The project overview hands its message
+   * input to that panel, so it needs a way to bring it forward.
+   */
+  readonly openInspector?: (() => void) | undefined
 }

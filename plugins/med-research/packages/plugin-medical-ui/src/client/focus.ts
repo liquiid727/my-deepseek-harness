@@ -95,3 +95,31 @@ export function decodeClaimFocus(value: string): { readonly claimId?: ClaimId } 
   const id = value.slice('claim:'.length)
   return id === '' ? {} : { claimId: id as ClaimId }
 }
+
+/** The page segments the research View hosts (0917 图 2 的检索流 与 图 4 的证据与笔记). */
+export const MED_PAGE_SEGMENTS = ['search', 'evidence'] as const
+
+/** One page segment of the research View. */
+export type MedPageSegment = (typeof MED_PAGE_SEGMENTS)[number]
+
+/**
+ * Address one page segment of the research View. 0917 gives 证据与笔记 its own
+ * page, but the View roster is fixed at the five navigation entries, so the
+ * page is a segment and the L2 tree reaches it through this focus.
+ * @param segment - which segment to show.
+ * @returns the opaque focus string `openView` carries.
+ */
+export function encodePageFocus(segment: MedPageSegment): string {
+  return `page:${segment}`
+}
+
+/**
+ * Decode a page-segment focus identity.
+ * @param value - the opaque focus string from `viewRequest`.
+ * @returns the segment, or undefined when the string addresses something else.
+ */
+export function decodePageFocus(value: string): MedPageSegment | undefined {
+  if (!value.startsWith('page:')) return undefined
+  const segment = value.slice('page:'.length)
+  return (MED_PAGE_SEGMENTS as readonly string[]).includes(segment) ? segment as MedPageSegment : undefined
+}

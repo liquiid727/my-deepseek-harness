@@ -19,6 +19,7 @@ import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
 import type {} from '@deepseek-ai/dsh-client-ui-tool/client'
 import type {} from '@deepseek-ai/dsh-client-ui-layout/client'
+import type { ISidebarRight } from '@deepseek-ai/dsh-client-ui-sidebar-right/client'
 import type { ThemeRuntime } from '@deepseek-ai/dsh-client-ui-theme/client'
 import { en, zh } from '../i18n/index.ts'
 import { NS } from './locales.ts'
@@ -26,6 +27,8 @@ import { createMedRemote } from './remote.ts'
 import { MedSettingsSection } from './settings.tsx'
 import { MedResearchRootLaunch } from './hero-action.tsx'
 import { MedModeAction } from './mode-action.tsx'
+import { MED_INSPECTOR_ID, MED_INSPECTOR_KIND, MedInspectorBody } from './inspector.tsx'
+import { MedProjectNav } from './project-nav.tsx'
 import { MED_TOOL_NAMES, MedToolCard } from './toolview.tsx'
 import { MedSidebarBrandMark, MedSidebarBrandName, MED_NAV_ENTRIES, MedPrimaryNavEntry } from './nav.tsx'
 import { ResearchView, StatisticsView } from './views.tsx'
@@ -42,8 +45,10 @@ export type { MedNavInjected, MedNavEntry } from './nav.tsx'
 export { NS } from './locales.ts'
 export { MED_NAV_ENTRIES } from './nav.tsx'
 
-/** Required services: the slot registry, the locale service, the Connection RPC caller, and the host navigation seams. */
-export const inject = ['slots', 'locale', 'connection', 'uiConversation', 'uiWorkspace', 'theme']
+/** Required services: slot, navigation, and the 0917 layout's right-inspector seams. */
+export const inject = [
+  'slots', 'locale', 'connection', 'uiConversation', 'uiWorkspace', 'theme', 'sidebarRightTabs', 'sidebarRight',
+]
 
 /**
  * The Conversation views this plugin owns: exactly the five prototype
@@ -74,6 +79,27 @@ interface ConversationNavigation {
 }
 interface WorkspaceNavigation {
   startSession(workspaceId?: string): void
+  archiveSession(id: string): Promise<void>
+}
+
+/**
+ * Minimal face of the sessions service, resolved by name so the bundle keeps
+ * its type-only imports of DSH client packages. `prompt` is the public
+ * behaviour verb for putting one turn into a session.
+ */
+interface PromptableSession {
+  prompt(
+    content: readonly { readonly type: 'text'; readonly text: string }[],
+    mode: 'queue' | 'steer',
+  ): Promise<{ readonly ok: boolean; readonly error?: { readonly message?: string } | undefined }>
+  rename(title: string): Promise<{ readonly ok: boolean; readonly error?: { readonly message?: string } | undefined }>
+}
+interface SessionsNavigation {
+  scope(id: string): unknown
+  sessionOf(ctx: unknown): PromptableSession | undefined
+  /** Select one of the host's Sessions as current. */
+  open(id: string): void
+  fork(opts: { sessionId: string; increaseTitle?: boolean }): Promise<string>
 }
 
 /**
@@ -83,6 +109,14 @@ interface WorkspaceNavigation {
  */
 export function apply(ctx: ClientContext): void {
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'med-research-ui: dictionaries')
+  // Session Views remain the rendering seam, but the workbench owns their
+  // navigation in the left rail. Without this profile-scoped marker the host
+  // projects Chat, Trajectory, and every medical View into a duplicate tab
+  // row above the workspace, which the 0917 shell does not have.
+  ctx.effect(() => {
+    document.body.classList.add('medResearchWorkbench')
+    return () => { document.body.classList.remove('medResearchWorkbench') }
+  }, 'med-research-ui: workbench shell marker')
   const theme = ctx.get('theme') as ThemeRuntime | undefined
   if (theme === undefined) throw new Error('med-research-ui: the Theme service is unavailable')
   ctx.effect(() => theme.overrideTokens('@medresearch/dsh-plugin-medical-ui', {
@@ -98,22 +132,63 @@ export function apply(ctx: ClientContext): void {
 
   const conversation = ctx.get('uiConversation') as ConversationNavigation | undefined
   const workspaces = ctx.get('uiWorkspace') as WorkspaceNavigation | undefined
+  const sessions = ctx.get('sessions') as SessionsNavigation | undefined
+  const sidebarRightTabs = ctx.get('sidebarRightTabs')
+  const sidebarRight = ctx.get('sidebarRight') as ISidebarRight | undefined
+  if (sidebarRightTabs === undefined || sidebarRight === undefined) {
+    throw new Error('med-research-ui: the right Sidebar services are unavailable')
+  }
+  /**
+   * Bring the assistant panel forward. The project overview hands its message
+   * box to that panel, so it asks for it on mount; without a right Sidebar the
+   * page simply keeps the host's docked composer.
+   */
+  // The shell seeds a generic “Start” guide. Project overview owns this right
+  // column, so replace that guide rather than leaving an unrelated tab beside
+  // the inspector; the host chrome keeps its explicit collapse button.
+  const openInspector = (): void => {
+    const active = sidebarRight.active()
+    sidebarRight.openTab(
+      MED_INSPECTOR_KIND,
+      active === undefined ? {} : { replaceTab: active.id },
+    )
+  }
   /**
    * Activate a View on the current Session, or launch a Session through the
    * host flow and activate the View once its binding is addressable. With no
    * Session the retry window is bounded; the host Hero remains the fallback
    * launch surface.
+   * @param view - registered View id.
+   * @param focus - opaque focus identity the View decodes, when the caller has one.
    */
-  const navigate = (view: string): void => {
-    if (conversation?.openView(view) === true) return
+  const navigate = (view: string, focus?: string): void => {
+    const options = focus === undefined ? undefined : { focus }
+    if (conversation?.openView(view, options) === true) return
     workspaces?.startSession()
     let attempts = 0
     const retry = (): void => {
-      if (attempts >= 20 || conversation?.openView(view) === true) return
+      if (attempts >= 20 || conversation?.openView(view, options) === true) return
       attempts += 1
       setTimeout(retry, 50)
     }
     setTimeout(retry, 50)
+  }
+
+  /**
+   * Put one text turn into a Session, through the sessions service's public
+   * `prompt` verb. A refusal is the caller's to show: the inspector keeps the
+   * draft and offers a retry rather than dropping what the user typed.
+   * @param sessionId - the Session to prompt.
+   * @param text - trimmed, non-empty message body.
+   */
+  const promptSession = async (sessionId: string, text: string): Promise<void> => {
+    const scoped = sessions?.scope(sessionId)
+    const face = scoped === undefined ? undefined : sessions?.sessionOf(scoped)
+    if (face === undefined) throw new Error('med-research-ui: this Session exposes no promptable agent face')
+    const result = await face.prompt([{ type: 'text', text }], 'queue')
+    if (result.ok !== true) {
+      throw new Error(result.error?.message ?? 'med-research-ui: the Session refused the prompt')
+    }
   }
 
   // Brand seats: replace the host fallbacks with the medical identity. Single
@@ -153,7 +228,7 @@ export function apply(ctx: ClientContext): void {
       order,
       locale: NS,
       label: () => t(label),
-      inject: () => ({ remote }),
+      inject: () => ({ openInspector, remote }),
     }, View)), `med-research-ui: view ${id}`)
   }
 
@@ -189,4 +264,59 @@ export function apply(ctx: ClientContext): void {
     locale: NS,
     inject: () => ({ remote }),
   }, MedModeAction)), 'med-research-ui: mode action')
+
+  // The sidebar's second panel (0917 图 2 的 L2). This seat is `single` and the
+  // host's Workspace browser has the default priority 0. A lower priority
+  // shadows that browser with the project tree the baseline asks for.
+  ctx.effect(() => ctx.slots.inject('sidebar.workspaces', () => ctx.slots.register({
+    name: 'sidebar.workspaces',
+    priority: -1,
+    locale: NS,
+    inject: () => ({
+      openSession: (id: string) => {
+        if (sessions === undefined) throw new Error('med-research-ui: the Sessions service is unavailable')
+        sessions.open(id)
+      },
+      openView: (view: string, focus: string) => { navigate(view, focus) },
+      remote,
+      startSession: () => { workspaces?.startSession() },
+      renameSession: async (id: string, title: string) => {
+        const scoped = sessions?.scope(id)
+        const face = scoped === undefined ? undefined : sessions?.sessionOf(scoped)
+        if (face === undefined) throw new Error('med-research-ui: this Session exposes no rename face')
+        const result = await face.rename(title)
+        if (result.ok !== true) throw new Error(result.error?.message ?? 'med-research-ui: the Session rejected the title')
+      },
+      forkSession: async (id: string) => {
+        if (sessions === undefined) throw new Error('med-research-ui: the Sessions service is unavailable')
+        const childId = await sessions.fork({ sessionId: id, increaseTitle: true })
+        sessions.open(childId)
+      },
+      archiveSession: async (id: string) => {
+        if (workspaces === undefined) throw new Error('med-research-ui: the Workspace navigation service is unavailable')
+        await workspaces.archiveSession(id)
+      },
+    }),
+  }, MedProjectNav)), 'med-research-ui: project panel')
+
+  // The right column's inspector (0917 右侧检视栏). Stage one is the tab type;
+  // stage two is its body under the same id, exactly the path the host's own
+  // guide type takes. Both services are injected above, so an assembly that
+  // cannot render this required third column fails at plugin load.
+  ctx.effect(() => sidebarRightTabs.register({
+    id: MED_INSPECTOR_ID,
+    kind: MED_INSPECTOR_KIND,
+    title: () => t('inspector.title'),
+  }), 'med-research-ui: inspector tab type')
+
+  ctx.effect(() => ctx.slots.inject('sidebar.right.pane.tab', () => ctx.slots.register({
+    name: 'sidebar.right.pane.tab',
+    key: MED_INSPECTOR_ID,
+    locale: NS,
+    inject: () => ({
+      openView: (view: string, focus: string) => { navigate(view, focus) },
+      promptSession,
+      remote,
+    }),
+  }, MedInspectorBody)), 'med-research-ui: inspector body')
 }

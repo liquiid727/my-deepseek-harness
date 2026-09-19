@@ -17,6 +17,7 @@ import type {
   ChaseInput,
   ChaseResult,
   CitationMap,
+  Claim,
   ClaimGateResult,
   ClaimId,
   Dataset,
@@ -154,6 +155,8 @@ export interface MedRemote {
     get(id: PaperId, signal?: AbortSignal): Promise<Paper | undefined>
     document(id: PaperId, signal?: AbortSignal): Promise<PaperDocument[]>
     sections(id: DocumentId, signal?: AbortSignal): Promise<PaperSection[]>
+    /** Every paragraph of one document, in reading order. */
+    paragraphs(id: DocumentId, signal?: AbortSignal): Promise<PaperParagraph[]>
     paragraph(paragraphId: ParagraphId, signal?: AbortSignal): Promise<PaperParagraph | undefined>
     resolveFulltext(id: PaperId, signal?: AbortSignal): Promise<FulltextResolution>
     upload(projectId: ProjectId, fileRef: string, signal?: AbortSignal): Promise<Paper>
@@ -177,6 +180,12 @@ export interface MedRemote {
     ): Promise<Evidence>
     withdraw(id: EvidenceId, reason?: string, signal?: AbortSignal): Promise<Evidence>
     listForClaim(id: ClaimId, signal?: AbortSignal): Promise<Evidence[]>
+    /**
+     * Every claim of one project, newest first. The evidence page groups its
+     * cards by claim, so it needs the claims themselves.
+     * @param projectId - owning project.
+     */
+    listClaims(projectId: ProjectId, signal?: AbortSignal): Promise<Claim[]>
     gateClaim(input: { projectId: ProjectId; researchQueryId: ResearchQuery['id']; text: string; evidenceIds: EvidenceId[]; counterEvidenceIds?: EvidenceId[] }, signal?: AbortSignal): Promise<ClaimGateResult>
     serializeCitations(claimId: ClaimId, signal?: AbortSignal): Promise<CitationMap>
     compare(projectId: ProjectId, evidenceIds: EvidenceId[], signal?: AbortSignal): Promise<EvidenceComparison>
@@ -283,6 +292,7 @@ export function createMedRemote(caller: RemoteCaller): MedRemote {
       get: (id, signal) => invoke<Paper | undefined>('medPapers/get', { id }, signal),
       document: (id, signal) => invoke<PaperDocument[]>('medPapers/document', { id }, signal),
       sections: (id, signal) => invoke<PaperSection[]>('medPapers/sections', { id }, signal),
+      paragraphs: (id, signal) => invoke<PaperParagraph[]>('medPapers/paragraphs', { id }, signal),
       paragraph: (paragraphId, signal) => invoke<PaperParagraph | undefined>('medPapers/paragraph', { paragraphId }, signal),
       resolveFulltext: (id, signal) => invoke<FulltextResolution>('medPapers/resolveFulltext', { id }, signal),
       upload: (projectId, fileRef, signal) => invoke<Paper>('medPapers/upload', { projectId, fileRef }, signal),
@@ -309,6 +319,7 @@ export function createMedRemote(caller: RemoteCaller): MedRemote {
         signal,
       ),
       listForClaim: (id, signal) => invoke<Evidence[]>('medEvidence/listForClaim', { id }, signal),
+      listClaims: (projectId, signal) => invoke<Claim[]>('medEvidence/listClaims', { projectId }, signal),
       gateClaim: (input, signal) => invoke<ClaimGateResult>('medEvidence/gateClaim', { input }, signal),
       serializeCitations: (claimId, signal) => invoke<CitationMap>('medEvidence/serializeCitations', { claimId }, signal),
       compare: (projectId, evidenceIds, signal) => invoke<EvidenceComparison>('medEvidence/compare', { projectId, evidenceIds }, signal),

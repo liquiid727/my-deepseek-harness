@@ -43,6 +43,7 @@ describe('med Remote client (SPEC §30)', () => {
     await remote.papers.sections('doc-1' as never)
     await remote.papers.search('paper-1' as never, 'nausea')
     await remote.evidence.verify('evidence-1' as never, 'VERIFIED')
+    await remote.evidence.listClaims('project-1' as never)
     await remote.datasets.profile('dataset-1' as never)
     await remote.statistics.generateCode('run-1' as never, 'print(1)')
     await remote.artifacts.get('artifact-1' as never)
@@ -57,6 +58,7 @@ describe('med Remote client (SPEC §30)', () => {
       ['/api', 'medPapers/sections'],
       ['/api', 'medPapers/search'],
       ['/api', 'medEvidence/verify'],
+      ['/api', 'medEvidence/listClaims'],
       ['/api', 'medDatasets/profile'],
       ['/api', 'medStatistics/generateCode'],
       ['/api', 'medArtifacts/get'],
@@ -67,9 +69,10 @@ describe('med Remote client (SPEC §30)', () => {
     expect(calls[2]!.payload).toEqual({ args: { input: { name: 'PONV' } } })
     expect(calls[5]!.payload).toEqual({ args: { id: 'paper-1', query: 'nausea' } })
     expect(calls[6]!.payload).toEqual({ args: { id: 'evidence-1', verdict: 'VERIFIED' } })
-    expect(calls[8]!.payload).toEqual({ args: { id: 'run-1', code: 'print(1)' } })
-    expect(calls[10]!.payload).toEqual({ args: { sessionId: 'session-1' } })
-    expect(calls[11]!.payload).toEqual({ args: { sessionId: 'session-1', mode: 'paper' } })
+    expect(calls[7]!.payload).toEqual({ args: { projectId: 'project-1' } })
+    expect(calls[9]!.payload).toEqual({ args: { id: 'run-1', code: 'print(1)' } })
+    expect(calls[11]!.payload).toEqual({ args: { sessionId: 'session-1' } })
+    expect(calls[12]!.payload).toEqual({ args: { sessionId: 'session-1', mode: 'paper' } })
   })
 
   it('forwards cancellation to the connection caller', async () => {

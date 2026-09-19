@@ -15,7 +15,10 @@ import { en } from '../src/i18n/index.ts'
 import { NS } from '../src/client/locales.ts'
 import type { MedRemote } from '../src/client/remote.ts'
 import { decodePaperFocus, encodeClaimFocus, encodePaperFocus } from '../src/client/focus.ts'
-import { MedEvidenceList, MedPaperReader, ResearchView, StatisticsView } from '../src/client/views.tsx'
+import { MedPaperReader, ResearchView, StatisticsView } from '../src/client/views.tsx'
+import { MedEvidencePage } from '../src/client/evidence-view.tsx'
+import { encodePageFocus } from '../src/client/focus.ts'
+import { panelInputOwner } from '../src/client/panel-input.ts'
 import { KnowledgeView } from '../src/client/knowledge-view.tsx'
 import { MedHomeView } from '../src/client/home.tsx'
 import { MedPrimaryNavEntry, MED_NAV_ENTRIES } from '../src/client/nav.tsx'
@@ -34,6 +37,7 @@ function project(overrides: Record<string, unknown> = {}): Project {
   return {
     id: 'project-1',
     name: 'PONV 研究',
+    researchQuestion: '地塞米松能否预防 PONV？',
     keywords: [],
     workspacePath: '/tmp/med/ponv-project1',
     status: 'active',
@@ -82,7 +86,7 @@ function evidence(overrides: Record<string, unknown> = {}): Evidence {
   } as unknown as Evidence
 }
 
-function overview(counts: { papers?: number | undefined; evidences?: number | undefined; datasets?: number | undefined; analyses?: number | undefined; charts?: number | undefined } = {}): ProjectOverview {
+function overview(counts: { papers?: number | undefined; evidences?: number | undefined; notes?: number | undefined; documents?: number | undefined; datasets?: number | undefined; sessions?: number | undefined; tasks?: number | undefined; analyses?: number | undefined; charts?: number | undefined } = {}): ProjectOverview {
   const counted = (value?: number) => value === undefined
     ? { status: 'unavailable' as const }
     : { status: 'counted' as const, value }
@@ -91,7 +95,11 @@ function overview(counts: { papers?: number | undefined; evidences?: number | un
     updatedAt: '2026-01-01T00:00:00.000Z',
     papers: counted(counts.papers),
     evidences: counted(counts.evidences),
+    notes: counted(counts.notes),
+    documents: counted(counts.documents),
     datasets: counted(counts.datasets),
+    sessions: counted(counts.sessions),
+    tasks: counted(counts.tasks),
     analyses: counted(counts.analyses),
     charts: counted(counts.charts),
   }
@@ -106,6 +114,7 @@ function viewProps(overrides: Record<string, unknown> = {}) {
     mountComposer: vi.fn(() => () => {}),
     completeViewRequest: vi.fn(),
     useSession: () => ({}),
+    useSessions: (select: (state: { byId: Record<string, { cwd?: string }> }) => unknown) => select({ byId: {} }),
     sessionId: 'session-1',
     useProjection: () => undefined,
     useInput: (select: (state: { draft: string }) => string) => select({ draft: '' }),
@@ -119,177 +128,206 @@ function remoteWith(overrides: Partial<MedRemote>): MedRemote {
   return overrides as MedRemote
 }
 
-describe('MedHomeView', () => {
-  it('does not render outside a conversation session', () => {
-    const remote = remoteWith({ projects: { sessionProject: async () => undefined, list: async () => [] } as never })
-    render(createElement(MedHomeView, viewProps({ remote, useSession: () => undefined }) as never))
-    expect(screen.queryByRole('heading', { name: en['home.heroTitle'] })).toBeNull()
-  })
-
-  it('shows the persisted counters of the bound project and links the declared views', async () => {
-    const openView = vi.fn()
-    const remote = remoteWith({
+describe('MedHomeView (0917 图 1 project overview)', () => {
+  /** A Remote whose project, paper and note reads all succeed. */
+  function overviewRemote(overrides: Record<string, unknown> = {}): MedRemote {
+    return remoteWith({
+      ...overrides,
+      knowledge: { listPapers: async () => [], ...((overrides.knowledge ?? {}) as Record<string, unknown>) } as never,
+      papers: { listNotes: async () => [], ...((overrides.papers ?? {}) as Record<string, unknown>) } as never,
       projects: {
+        get: async () => project(),
+        overview: async () => overview({ papers: 2, evidences: 1, notes: 3, documents: 4, datasets: 1, sessions: 5 }),
         sessionProject: async () => ({ sessionId: 'session-1', projectId: 'project-1' as never, updatedAt: '2026-01-01T00:00:00.000Z' }),
-        list: async () => [project()],
-        overview: async () => overview({ papers: 2, evidences: 1, datasets: 1, analyses: 2, charts: 1 }),
+        ...((overrides.projects ?? {}) as Record<string, unknown>),
       } as never,
     })
-    render(createElement(MedHomeView, viewProps({ remote, openView }) as never))
+  }
 
-    expect(await screen.findByText(en['home.heroTitle'])).toBeDefined()
-    await screen.findByText(en['home.count.papers'])
-    expect(screen.getAllByText('2').length).toBeGreaterThan(0)
-    expect(screen.getAllByText('1').length).toBeGreaterThan(0)
-    // Papers tile opens the library page; the Datasets/Analyses/Charts tiles
-    // are disabled with the localized reason until S05 ships its lists.
-    screen.getByRole('button', { name: new RegExp(en['home.count.papers']) }).click()
-    expect(openView).toHaveBeenCalledWith('med-knowledge', '')
-    const disabledTiles = screen.getAllByLabelText(new RegExp(en['home.listUnavailable']))
-    expect(disabledTiles.length).toBe(3)
+  /** The six counter cards, scoped so a segment label of the same name cannot match. */
+  function counterTiles(container: HTMLElement): HTMLElement[] {
+    return [...container.querySelectorAll<HTMLElement>('.medCounters .medTile')]
+  }
+
+  it('renders nothing outside a conversation session', () => {
+    render(createElement(MedHomeView, viewProps({ remote: overviewRemote(), useSession: () => undefined }) as never))
+    expect(screen.queryByRole('heading', { level: 1 })).toBeNull()
   })
 
-  it('renders zero for an empty project instead of hiding the counters', async () => {
-    const remote = remoteWith({
+  it('points at the project panel instead of claiming the composer when no project is bound', async () => {
+    const mountComposer = vi.fn(() => () => {})
+    const remote = overviewRemote({ projects: { sessionProject: async () => undefined } })
+    render(createElement(MedHomeView, viewProps({ remote, mountComposer }) as never))
+    expect(await screen.findByText(en['home.noProjectHint'])).toBeDefined()
+    expect(mountComposer).not.toHaveBeenCalled()
+  })
+
+  it('uses the session workspace to recover a project for sessions created before bindings', async () => {
+    const mountComposer = vi.fn(() => () => {})
+    const remote = overviewRemote({
+      projects: { sessionProject: async () => undefined, list: async () => [project()] },
+    })
+    const useSessions = (select: (state: { byId: Record<string, { cwd?: string }> }) => unknown) => select({
+      byId: { 'session-1': { cwd: project().workspacePath } },
+    })
+    render(createElement(MedHomeView, viewProps({ remote, mountComposer, useSessions }) as never))
+    expect(await screen.findByRole('heading', { level: 1, name: project().name })).toBeDefined()
+    expect(mountComposer).toHaveBeenCalledTimes(1)
+  })
+
+  it('heads the page with the project record and its lifecycle badge', async () => {
+    render(createElement(MedHomeView, viewProps({ remote: overviewRemote() }) as never))
+    expect(await screen.findByRole('heading', { level: 1, name: project().name })).toBeDefined()
+    expect(screen.getByText(en['home.status.active']).getAttribute('data-status')).toBe('active')
+    expect(screen.getByText(project().researchQuestion!)).toBeDefined()
+    expect(screen.getByText(new RegExp(`${en['home.createdAt']}`, 'u'))).toBeDefined()
+  })
+
+  it('renders all six persisted counters with their notes', async () => {
+    const { container } = render(createElement(MedHomeView, viewProps({ remote: overviewRemote() }) as never))
+    await screen.findByRole('heading', { level: 1, name: project().name })
+    await waitFor(() => { expect(counterTiles(container)).toHaveLength(6) })
+    const text = counterTiles(container).map(tile => tile.textContent)
+    for (const [label, value] of [
+      ['Papers', '2'], ['Evidence', '1'], ['Notes', '3'],
+      ['Documents', '4'], ['Data', '1'], ['Sessions', '5'],
+    ] as const) {
+      expect(text.some(entry => entry?.includes(label) && entry.includes(value))).toBe(true)
+    }
+    expect(text.some(entry => entry?.includes(en['home.note.papers']))).toBe(true)
+  })
+
+  it('shows the growth chip the service reported and nothing when it reported none', async () => {
+    const remote = overviewRemote({
       projects: {
-        sessionProject: async () => ({ sessionId: 'session-1', projectId: 'project-1' as never, updatedAt: '2026-01-01T00:00:00.000Z' }),
-        list: async () => [project()],
-        overview: async () => overview({ papers: 0, evidences: 0, datasets: 0, analyses: 0, charts: 0 }),
-      } as never,
+        overview: async () => ({
+          ...overview({ papers: 9, evidences: 0, notes: 0, documents: 0, datasets: 0, sessions: 0 }),
+          papers: { status: 'counted', value: 9, delta: { value: 4, windowDays: 30 } },
+        }),
+      },
     })
     render(createElement(MedHomeView, viewProps({ remote }) as never))
-    await screen.findByText(en['home.count.papers'])
-    const tiles = screen.getAllByText('0')
-    expect(tiles.length).toBe(5)
+    const chip = (await screen.findByText('↑4'))
+    expect(chip.getAttribute('data-tone')).toBe('up')
+    expect(chip.getAttribute('title')).toBe(en['home.deltaTitle'].replace('{days}', '30'))
+    // The evidence domain reported no delta, so it gets no chip.
+    expect(screen.getAllByText(/^↑/u)).toHaveLength(1)
   })
 
-  it('shows unknown plus retry for a failed domain without zeroing it', async () => {
-    const remote = remoteWith({
+  it('shows unknown with a retry for a domain the service could not read', async () => {
+    const remote = overviewRemote({
       projects: {
-        sessionProject: async () => ({ sessionId: 'session-1', projectId: 'project-1' as never, updatedAt: '2026-01-01T00:00:00.000Z' }),
-        list: async () => [project()],
         overview: vi.fn()
-          .mockResolvedValueOnce(overview({ papers: 2, evidences: undefined, datasets: 0, analyses: 0, charts: 0 }))
-          .mockResolvedValueOnce(overview({ papers: 2, evidences: 1, datasets: 0, analyses: 0, charts: 0 })),
-      } as never,
+          .mockResolvedValueOnce(overview({ papers: 2, evidences: undefined }))
+          .mockResolvedValueOnce(overview({ papers: 2, evidences: 1, notes: 0, documents: 0, datasets: 0, sessions: 0 })),
+      },
     })
-    render(createElement(MedHomeView, viewProps({ remote }) as never))
-
-    expect(await screen.findByText(en['home.count.unknown'])).toBeDefined()
-    expect(screen.getAllByText(en['home.count.unknown']).length).toBe(1)
-    expect(screen.getAllByText('2').length).toBeGreaterThan(0)
-    screen.getByRole('button', { name: en['home.count.retry'] }).click()
-    await screen.findByText('1')
-    expect(screen.queryAllByText(en['home.count.unknown']).length).toBe(0)
-  })
-
-  it('creates a project through the Remote and selects it for the session', async () => {
-    const create = vi.fn().mockResolvedValue(project())
-    const selectProject = vi.fn().mockResolvedValue({ sessionId: 'session-1', projectId: 'project-1', updatedAt: '' })
-    const remote = remoteWith({
-      projects: {
-        sessionProject: async () => undefined,
-        list: async () => [],
-        create,
-        selectProject,
-        overview: async () => overview(),
-      } as never,
-    })
-    render(createElement(MedHomeView, viewProps({ remote }) as never))
-
-    await screen.findByText(en['home.emptyProjects'])
-    fireEvent.change(screen.getByLabelText(en['home.name']), { target: { value: 'Thoracic-B' } })
-    fireEvent.change(screen.getAllByLabelText(en['home.question'])[0]!, { target: { value: 'lung cancer screening' } })
-    fireEvent.submit(screen.getByRole('button', { name: en['home.create'] }).closest('form')!)
+    const { container } = render(createElement(MedHomeView, viewProps({ remote }) as never))
+    await waitFor(() => { expect(counterTiles(container)).toHaveLength(6) })
+    expect(counterTiles(container).some(tile => tile.textContent?.includes(en['home.count.unknown']))).toBe(true)
+    fireEvent.click(screen.getAllByRole('button', { name: en['home.count.retry'] })[0]!)
     await waitFor(() => {
-      expect(create).toHaveBeenCalledWith({ name: 'Thoracic-B', researchQuestion: 'lung cancer screening' })
-      expect(selectProject).toHaveBeenCalledWith('session-1', 'project-1')
+      expect(counterTiles(container).some(tile => tile.textContent?.includes(en['home.count.unknown']))).toBe(false)
     })
   })
 
-  it('archives an active project and offers restore in the archive bin', async () => {
-    const archive = vi.fn().mockResolvedValue(project({ status: 'archived' }))
-    const restore = vi.fn().mockResolvedValue(project())
-    const remote = remoteWith({
-      projects: {
-        sessionProject: async () => undefined,
-        list: vi.fn()
-          .mockResolvedValueOnce([project()])
-          .mockResolvedValue([project({ status: 'archived' })]),
-        archive,
-        restore,
-      } as never,
+  it('renders the six prototype segments and marks the unregistered pages', async () => {
+    render(createElement(MedHomeView, viewProps({ remote: overviewRemote() }) as never))
+    const tabs = await screen.findAllByRole('tab')
+    expect(tabs.map(tab => tab.textContent)).toEqual([
+      en['home.tab.overview'], en['home.tab.papers'], en['home.tab.notes'],
+      en['home.tab.documents'], en['home.tab.datasets'], en['home.tab.sessions'],
+    ])
+    expect(tabs[2]?.getAttribute('aria-disabled')).toBe('true')
+    expect(tabs[2]?.getAttribute('title')).toBe(en['home.tab.notesReason'])
+    expect(tabs[0]?.getAttribute('aria-selected')).toBe('true')
+  })
+
+  it('navigates the segments and the counter cards to their pages', async () => {
+    const openView = vi.fn()
+    render(createElement(MedHomeView, viewProps({ remote: overviewRemote(), openView }) as never))
+    fireEvent.click(await screen.findByRole('tab', { name: en['home.tab.datasets'] }))
+    fireEvent.click(screen.getByRole('tab', { name: en['home.tab.sessions'] }))
+    fireEvent.click(screen.getByRole('button', { name: new RegExp(en['home.count.papers'], 'u') }))
+    expect(openView.mock.calls).toEqual([
+      ['med-statistics', ''], ['chat', ''], ['med-knowledge', ''],
+    ])
+  })
+
+  it('marks a counter whose domain has no page yet instead of making it clickable', async () => {
+    const { container } = render(createElement(MedHomeView, viewProps({ remote: overviewRemote() }) as never))
+    await waitFor(() => { expect(counterTiles(container)).toHaveLength(6) })
+    const notes = counterTiles(container).find(tile => tile.textContent?.includes('Notes'))!
+    expect(notes.getAttribute('data-disabled')).toBe('true')
+    expect(notes.getAttribute('aria-label')).toContain(en['home.tileNoTarget'])
+    expect(notes.tagName).toBe('DIV')
+  })
+
+  it('offers to continue the most recently added paper', async () => {
+    const openView = vi.fn()
+    const remote = overviewRemote({
+      knowledge: {
+        listPapers: async () => [
+          paper({ id: 'paper-old', title: 'Older paper', createdAt: '2025-01-01T00:00:00.000Z' }),
+          paper({ id: 'paper-new', title: 'Newest paper', createdAt: '2025-06-01T00:00:00.000Z' }),
+        ],
+      },
+    })
+    const { container } = render(createElement(MedHomeView, viewProps({ remote, openView }) as never))
+    await waitFor(() => { expect(container.querySelector('.medResumeTitle')?.textContent).toBe('Newest paper') })
+    fireEvent.click(screen.getByRole('button', { name: en['home.resumeRead'] }))
+    expect(openView).toHaveBeenCalledWith('med-knowledge', encodePaperFocus({ paperId: 'paper-new' as never }))
+  })
+
+  it('lists the newest papers first and shows the project notes beside them', async () => {
+    const remote = overviewRemote({
+      knowledge: {
+        listPapers: async () => [
+          paper({ id: 'paper-old', title: 'Older paper', createdAt: '2025-01-01T00:00:00.000Z' }),
+          paper({ id: 'paper-new', title: 'Newest paper', createdAt: '2025-06-01T00:00:00.000Z' }),
+        ],
+      },
+      papers: { listNotes: async () => [{ id: 'note-1', title: '用药剂量笔记' }] },
     })
     render(createElement(MedHomeView, viewProps({ remote }) as never))
-
-    const row = await screen.findByText('PONV 研究')
-    fireEvent.click(row.parentElement!.querySelector('.medArchiveLink')!)
-    await waitFor(() => { expect(archive).toHaveBeenCalledWith('project-1') })
-    await screen.findByText('PONV 研究')
-    screen.getByRole('button', { name: new RegExp(en['home.restore']) }).click()
-    await waitFor(() => { expect(restore).toHaveBeenCalledWith('project-1') })
+    await screen.findByText(en['home.recentNotes'])
+    const rows = screen.getAllByText(/paper$/u).map(node => node.textContent)
+    expect(rows[0]).toBe('Newest paper')
+    expect(screen.getByText('用药剂量笔记')).toBeDefined()
   })
 
-  it('filters the roster through the search field', async () => {
-    const remote = remoteWith({
-      projects: {
-        sessionProject: async () => undefined,
-        list: async () => [project(), project({ id: 'project-2', name: 'Thoracic-B' })],
-      } as never,
-    })
-    render(createElement(MedHomeView, viewProps({ remote }) as never))
-    expect(await screen.findByText('Thoracic-B')).toBeDefined()
-    fireEvent.change(screen.getByLabelText(en['home.searchLabel']), { target: { value: 'thoracic' } })
-    expect(screen.queryByText('PONV 研究')).toBeNull()
-    expect(screen.getByText('Thoracic-B')).toBeDefined()
+  it('states that the tasks domain does not exist yet rather than showing an empty list', async () => {
+    render(createElement(MedHomeView, viewProps({ remote: overviewRemote() }) as never))
+    expect(await screen.findByText(en['home.tasks'])).toBeDefined()
+    expect(screen.getByText(en['home.tasksReason'])).toBeDefined()
   })
 
-  it('keeps the failure state with input and retry when the roster cannot load', async () => {
-    const list = vi.fn().mockRejectedValue(new Error('gateway/internal'))
-    const remote = remoteWith({ projects: { sessionProject: async () => undefined, list } as never })
-    render(createElement(MedHomeView, viewProps({ remote }) as never))
-    expect(await screen.findByRole('alert')).toBeDefined()
-    // The create form stays rendered so the user keeps their input.
-    expect(screen.getByLabelText(en['home.name'])).toBeDefined()
-  })
-
-  it('fills the primary input from the inspiration catalog without searching', async () => {
-    const setDraft = vi.fn()
-    const remote = remoteWith({ projects: { sessionProject: async () => undefined, list: async () => [] } as never })
-    render(createElement(MedHomeView, viewProps({ remote, inputActions: { setDraft, submit: vi.fn() } }) as never))
-    const chips = await screen.findAllByRole('button', { name: en['inspire.1'] })
-    fireEvent.click(chips[0]!)
-    expect(setDraft).toHaveBeenCalledWith(en['inspire.1'])
-    expect(remote.literature).toBeUndefined()
-  })
-
-  it('opens Chat only when the resident composer reports an accepted message', async () => {
+  it('claims the host composer into a node it does not draw, because the assistant panel owns the input', async () => {
     const openView = vi.fn()
     const mountComposer = vi.fn(() => () => {})
-    const remote = remoteWith({ projects: { sessionProject: async () => undefined, list: async () => [] } as never })
-    render(createElement(MedHomeView, viewProps({
-      remote,
-      openView,
-      mountComposer,
-    }) as never))
-    await screen.findByText(en['home.heroTitle'])
-    expect(openView).not.toHaveBeenCalled()
+    render(createElement(MedHomeView, viewProps({ remote: overviewRemote(), openView, mountComposer }) as never))
+    await screen.findByRole('heading', { level: 1, name: project().name })
     const [targetId, options] = mountComposer.mock.calls[0] as unknown as [string, { onMessageAccepted(): void }]
-    expect(document.getElementById(targetId)?.closest('.medHero')).not.toBeNull()
+    const host = document.getElementById(targetId)!
+    expect(host.closest('.medComposerHandoff')).not.toBeNull()
     expect(document.querySelector('textarea')).toBeNull()
     options.onMessageAccepted()
     expect(openView).toHaveBeenCalledWith('chat', '')
   })
 
-  it('releases the composer destination when the home leaves the screen', async () => {
+  it('brings the assistant panel forward once per bound project', async () => {
+    const openInspector = vi.fn()
+    render(createElement(MedHomeView, viewProps({ remote: overviewRemote(), openInspector }) as never))
+    await screen.findByRole('heading', { level: 1, name: project().name })
+    await waitFor(() => { expect(openInspector).toHaveBeenCalled() })
+    expect(openInspector).toHaveBeenCalledTimes(1)
+  })
+
+  it('releases the composer destination when the overview leaves the screen', async () => {
     const release = vi.fn()
     const mountComposer = vi.fn(() => release)
-    const remote = remoteWith({ projects: { sessionProject: async () => undefined, list: async () => [] } as never })
-    const view = render(createElement(MedHomeView, viewProps({
-      remote,
-      mountComposer,
-    }) as never))
-    await screen.findByText(en['home.heroTitle'])
+    const view = render(createElement(MedHomeView, viewProps({ remote: overviewRemote(), mountComposer }) as never))
+    await screen.findByRole('heading', { level: 1, name: project().name })
     view.unmount()
     expect(release).toHaveBeenCalledOnce()
   })
@@ -366,24 +404,55 @@ describe('ResearchView', () => {
     expect(mountComposer).not.toHaveBeenCalled()
   })
 
-  it('hosts the Evidence section itself and sends a citation to the library', async () => {
+  it('hosts the evidence page as a segment and sends a citation to the library', async () => {
     const openView = vi.fn()
     const remote = remoteWith({
       projects: {
         sessionProject: async () => ({ sessionId: 'session-1', projectId: 'project-1' as never, updatedAt: '' }),
         get: async () => project(),
+        overview: async () => overview({ evidences: 1 }),
       } as never,
-      evidence: { listForClaim: async () => [evidence()] } as never,
+      evidence: {
+        listClaims: async () => [{ id: 'claim-1', projectId: 'project-1', text: '地塞米松可降低 PONV', createdAt: '2025-01-01T00:00:00.000Z' }],
+        listForClaim: async () => [evidence({ startOffset: 17, endOffset: 21 })],
+      } as never,
+      knowledge: { listPapers: async () => [paper()] } as never,
+      papers: { listNotes: async () => [] } as never,
     })
     render(createElement(ResearchView, viewProps({
       remote,
       openView,
-      viewRequest: { view: 'med-research', focus: encodeClaimFocus('claim-1' as never) },
+      viewRequest: { view: 'med-research', focus: encodePageFocus('evidence') },
     }) as never))
 
-    expect(await screen.findByText(en['evidence.FULLTEXT_FOUND'])).toBeDefined()
-    screen.getByRole('button', { name: en['action.openSource'] }).click()
-    expect(openView).toHaveBeenCalledWith('med-knowledge', 'paper-1|document-1|paragraph-1||')
+    // The segment is addressable from the L2 tree, and a claim focus lands here.
+    expect(await screen.findByText(en['evidence.title'])).toBeDefined()
+    await waitFor(() => { expect(screen.getAllByRole('button', { name: en['action.openSource'] }).length).toBeGreaterThan(0) })
+    screen.getAllByRole('button', { name: en['action.openSource'] })[0]!.click()
+    expect(openView).toHaveBeenCalledWith('med-knowledge', 'paper-1|document-1|paragraph-1|17|21')
+  })
+
+  it('hands its input to the assistant panel on the evidence segment only', async () => {
+    const mountComposer = vi.fn(() => () => {})
+    const remote = remoteWith({
+      projects: {
+        sessionProject: async () => ({ sessionId: 'session-1', projectId: 'project-1' as never, updatedAt: '' }),
+        get: async () => project(),
+        overview: async () => overview({ evidences: 0 }),
+      } as never,
+      evidence: { listClaims: async () => [], listForClaim: async () => [] } as never,
+      knowledge: { listPapers: async () => [] } as never,
+      papers: { listNotes: async () => [] } as never,
+    })
+    render(createElement(ResearchView, viewProps({
+      remote,
+      mountComposer,
+      viewRequest: { view: 'med-research', focus: encodePageFocus('evidence') },
+    }) as never))
+    await screen.findByText(en['evidence.title'])
+    await waitFor(() => { expect(panelInputOwner()).toBe('med-research:evidence') })
+    // 图 4 has no centre input, so the host composer is not claimed here.
+    expect(mountComposer).not.toHaveBeenCalled()
   })
 })
 
@@ -443,43 +512,64 @@ describe('MedPrimaryNavEntry', () => {
 })
 
 describe('MedPaperReader', () => {
-  it('renders the focused paper and its documents', async () => {
-    const remote = remoteWith({
+  /** A Remote serving one parsed document with a Results section. */
+  function readerRemote(overrides: Record<string, unknown> = {}): MedRemote {
+    return remoteWith({
       papers: {
         get: async () => paper(),
         document: async () => [{
           id: 'document-1', paperId: 'paper-1', sourceType: 'pmc_xml',
           contentHash: 'hash', parseStatus: 'READY', createdAt: '2026-01-01T00:00:00.000Z',
         }],
+        paragraph: async () => ({
+          id: 'paragraph-1', sectionId: 'section-1', order: 0,
+          text: 'The incidence of PONV was significantly lower.',
+          rawText: 'The incidence of PONV was significantly lower.',
+        }),
+        paragraphs: async () => [
+          { id: 'paragraph-1', sectionId: 'section-1', order: 0, text: 'The incidence of PONV was significantly lower.', rawText: '' },
+          { id: 'paragraph-2', sectionId: 'section-1', order: 1, text: 'No dose effect was observed.', rawText: '' },
+        ],
+        sections: async () => [
+          { id: 'section-1', documentId: 'document-1', title: 'Results', type: 'results', order: 1 },
+          { id: 'section-2', documentId: 'document-1', title: 'Discussion', type: 'discussion', order: 2 },
+        ],
+        ...((overrides.papers ?? {}) as Record<string, unknown>),
       } as never,
     })
+  }
+
+  it('renders the paper metadata and the catalogue of its parsed document', async () => {
     render(createElement(MedPaperReader, {
-      remote,
+      remote: readerRemote(),
       t,
       title: en['view.papers'],
       focus: decodePaperFocus(encodePaperFocus({ paperId: 'paper-1' as never })),
     } as never))
 
     expect(await screen.findByText('PONV and postoperative pain')).toBeDefined()
+    expect(await screen.findByRole('navigation', { name: en['reader.catalog'] })).toBeDefined()
+    expect(screen.getByRole('button', { name: 'Results' })).toBeDefined()
+    expect(screen.getByRole('button', { name: 'Discussion' })).toBeDefined()
     expect(screen.getByText('A randomized trial.')).toBeDefined()
-    expect(screen.getByText(/pmc_xml/)).toBeDefined()
   })
 
-  it('locates the cited paragraph and highlights the evidence span', async () => {
-    const remote = remoteWith({
-      papers: {
-        get: async () => paper(),
-        document: async () => [],
-        paragraph: async () => ({
-          id: 'paragraph-1', sectionId: 'section-1', order: 0,
-          text: 'The incidence of PONV was significantly lower.',
-          rawText: 'The incidence of PONV was significantly lower.',
-        }),
-        sections: async () => [{ id: 'section-1', documentId: 'document-1', title: 'Results', type: 'results', order: 0 }],
-      } as never,
-    })
+  it('renders the selected section body and switches it from the catalogue', async () => {
+    const { container } = render(createElement(MedPaperReader, {
+      remote: readerRemote(),
+      t,
+      title: en['view.papers'],
+      focus: decodePaperFocus(encodePaperFocus({ paperId: 'paper-1' as never })),
+    } as never))
+    await waitFor(() => { expect(container.querySelectorAll('.medReaderBody p')).toHaveLength(2) })
+    fireEvent.click(screen.getByRole('button', { name: 'Discussion' }))
+    // The empty section says so rather than rendering nothing at all.
+    expect(await screen.findByText(en['reader.noBody'])).toBeDefined()
+  })
+
+  it('locates the cited paragraph, highlights the span, and opens its section', async () => {
     render(createElement(MedPaperReader, {
-      remote,
+      remote: readerRemote(),
       t,
       title: en['view.papers'],
       focus: decodePaperFocus(encodePaperFocus({
@@ -494,44 +584,162 @@ describe('MedPaperReader', () => {
     const quote = await screen.findByText('PONV')
     expect(quote.tagName).toBe('MARK')
     expect(quote.getAttribute('data-med-quote')).toBe('true')
-    expect(screen.getByText('Results')).toBeDefined()
+    expect(screen.getByRole('button', { name: 'Results' }).getAttribute('data-active')).toBe('true')
+  })
+
+  it('offers the reading modes, disabling the two without a translator', async () => {
+    render(createElement(MedPaperReader, {
+      remote: readerRemote(),
+      t,
+      title: en['view.papers'],
+      focus: decodePaperFocus(encodePaperFocus({ paperId: 'paper-1' as never })),
+    } as never))
+    const tabs = await screen.findAllByRole('tab')
+    expect(tabs.map(tab => tab.textContent)).toEqual([
+      en['reader.mode.source'], en['reader.mode.translated'], en['reader.mode.bilingual'],
+    ])
+    expect(tabs[0]?.getAttribute('aria-selected')).toBe('true')
+    expect(tabs[1]?.getAttribute('aria-disabled')).toBe('true')
+    expect(tabs[1]?.getAttribute('title')).toBe(en['reader.mode.reason'])
+  })
+
+  it('zooms the body and fits it back to 100%', async () => {
+    const { container } = render(createElement(MedPaperReader, {
+      remote: readerRemote(),
+      t,
+      title: en['view.papers'],
+      focus: decodePaperFocus(encodePaperFocus({ paperId: 'paper-1' as never })),
+    } as never))
+    await waitFor(() => { expect(container.querySelector('.medReaderBody')?.getAttribute('data-zoom')).toBe('100') })
+    fireEvent.click(screen.getByRole('button', { name: en['reader.zoomIn'] }))
+    await waitFor(() => { expect(container.querySelector('.medReaderBody')?.getAttribute('data-zoom')).toBe('120') })
+    fireEvent.click(screen.getByRole('button', { name: en['reader.zoomOut'] }))
+    fireEvent.click(screen.getByRole('button', { name: en['reader.zoomOut'] }))
+    await waitFor(() => { expect(container.querySelector('.medReaderBody')?.getAttribute('data-zoom')).toBe('80') })
+    expect(screen.getByRole('button', { name: en['reader.zoomFit'] })).toBeDefined()
+  })
+
+  it('says the paper has no parsed document instead of showing an empty catalogue', async () => {
+    render(createElement(MedPaperReader, {
+      remote: readerRemote({ papers: { document: async () => [], sections: async () => [], paragraphs: async () => [] } }),
+      t,
+      title: en['view.papers'],
+      focus: decodePaperFocus(encodePaperFocus({ paperId: 'paper-1' as never })),
+    } as never))
+    expect(await screen.findByText(en['reader.noDocument'])).toBeDefined()
   })
 })
 
-describe('MedEvidenceList', () => {
-  it('labels each stored evidence with its display state and asks the page to open the cited paragraph', async () => {
-    const onOpenSource = vi.fn()
-    const remote = remoteWith({
+describe('MedEvidencePage (0917 图 4)', () => {
+  /** A Remote whose claims, evidence, papers and notes all load. */
+  function pageRemote(overrides: Record<string, unknown> = {}): MedRemote {
+    return remoteWith({
+      ...overrides,
       evidence: {
-        listForClaim: async () => [
-          evidence({ startOffset: 17, endOffset: 21 }),
-          evidence({ id: 'evidence-2', locatorStatus: 'NOT_FOUND', supportStatus: 'REJECTED' }),
-          evidence({ id: 'evidence-3', sourceType: 'secondary_citation' }),
+        listClaims: async () => [
+          { id: 'claim-1', projectId: 'project-1', text: '地塞米松可降低 PONV 发生率', createdAt: '2025-02-01T00:00:00.000Z' },
+          { id: 'claim-2', projectId: 'project-1', text: '最佳剂量为 4–8 mg', createdAt: '2025-01-01T00:00:00.000Z' },
         ],
+        listForClaim: async (id: never) => id === 'claim-1'
+          ? [
+            evidence({ id: 'ev-1', relation: 'SUPPORT', startOffset: 17, endOffset: 21, createdAt: '2024-01-01T00:00:00.000Z' }),
+            evidence({ id: 'ev-2', relation: 'AGAINST', paperId: 'paper-2', createdAt: '2025-05-01T00:00:00.000Z' }),
+          ]
+          : [evidence({ id: 'ev-3', paperId: 'paper-2' })],
+        ...((overrides.evidence ?? {}) as Record<string, unknown>),
+      } as never,
+      knowledge: {
+        listPapers: async () => [
+          paper({ id: 'paper-1', title: 'Dexamethasone for PONV', publicationTypes: ['Randomized Controlled Trial'], publicationDate: '2023-01-01' }),
+          paper({ id: 'paper-2', title: 'Dose response review', publicationTypes: ['Review'], publicationDate: '2021-01-01' }),
+        ],
+        ...((overrides.knowledge ?? {}) as Record<string, unknown>),
+      } as never,
+      papers: {
+        listNotes: async () => [{ id: 'note-1', title: '剂量笔记', content: '4–8 mg 区间', paperId: 'paper-1' }],
+        ...((overrides.papers ?? {}) as Record<string, unknown>),
+      } as never,
+      projects: {
+        overview: async () => overview({ evidences: 3, notes: 1 }),
+        ...((overrides.projects ?? {}) as Record<string, unknown>),
       } as never,
     })
-    render(createElement(MedEvidenceList, {
-      remote,
-      t,
-      claimId: 'claim-1' as never,
-      onOpenSource,
-    } as never))
+  }
 
-    expect(await screen.findByText(en['evidence.FULLTEXT_FOUND'])).toBeDefined()
-    expect(screen.getByText(en['evidence.NOT_FOUND'])).toBeDefined()
-    expect(screen.getByText(en['evidence.SECONDARY'])).toBeDefined()
-    screen.getAllByRole('button', { name: en['action.openSource'] })[0]!.click()
-    expect(onOpenSource).toHaveBeenCalledWith('paper-1|document-1|paragraph-1|17|21')
+  function pageProps(remote: MedRemote, overrides: Record<string, unknown> = {}) {
+    return { remote, t, projectId: 'project-1', onAddEvidence: vi.fn(), onOpenSource: vi.fn(), ...overrides } as never
+  }
+
+  it('groups the stored evidence under its claim with relation badges', async () => {
+    const { container } = render(createElement(MedEvidencePage, pageProps(pageRemote())))
+    await waitFor(() => { expect(container.querySelectorAll('.medEvidenceGroupBlock')).toHaveLength(2) })
+    const headings = [...container.querySelectorAll('.medEvidenceGroupTitle')].map(node => node.textContent)
+    expect(headings[0]).toContain('地塞米松可降低 PONV 发生率')
+    expect(headings[0]).toContain('2')
+    expect(screen.getAllByText(en['evidence.relation.SUPPORT'])).toHaveLength(2)
+    expect(screen.getByText(en['evidence.relation.AGAINST'])).toBeDefined()
+    expect(container.querySelectorAll('.medEvidenceCard')).toHaveLength(3)
   })
 
-  it('states the empty reason instead of listing nothing without a claim', () => {
-    render(createElement(MedEvidenceList, {
-      remote: remoteWith({ evidence: { listForClaim: async () => [] } as never }),
-      t,
-      claimId: undefined,
-      onOpenSource: vi.fn(),
-    } as never))
-    expect(screen.getByText(en['empty.evidence'])).toBeDefined()
+  it('takes the tab counts from the overview counters rather than from what it loaded', async () => {
+    render(createElement(MedEvidencePage, pageProps(pageRemote())))
+    const tabs = await screen.findAllByRole('tab')
+    expect(tabs[0]?.textContent).toBe(`${en['evidence.tab.evidence']}3`)
+    expect(tabs[1]?.textContent).toBe(`${en['evidence.tab.notes']}1`)
+  })
+
+  it('narrows the list by quote, claim text, and paper title', async () => {
+    const { container } = render(createElement(MedEvidencePage, pageProps(pageRemote())))
+    await waitFor(() => { expect(container.querySelectorAll('.medEvidenceCard')).toHaveLength(3) })
+    fireEvent.change(screen.getByRole('textbox', { name: en['evidence.search'] }), { target: { value: 'dose response' } })
+    await waitFor(() => { expect(container.querySelectorAll('.medEvidenceCard')).toHaveLength(2) })
+    expect(screen.getByText('最佳剂量为 4–8 mg')).toBeDefined()
+  })
+
+  it('filters by publication type and by year from the loaded papers', async () => {
+    const { container } = render(createElement(MedEvidencePage, pageProps(pageRemote())))
+    await waitFor(() => { expect(container.querySelectorAll('.medEvidenceCard')).toHaveLength(3) })
+    fireEvent.change(screen.getByRole('combobox', { name: en['evidence.filterType'] }), { target: { value: 'Review' } })
+    await waitFor(() => { expect(container.querySelectorAll('.medEvidenceCard')).toHaveLength(2) })
+    fireEvent.change(screen.getByRole('combobox', { name: en['evidence.filterYear'] }), { target: { value: '2023' } })
+    await waitFor(() => { expect(screen.getByText(en['evidence.noMatch'])).toBeDefined() })
+  })
+
+  it('reorders the evidence when the reader asks for the newest first', async () => {
+    const { container } = render(createElement(MedEvidencePage, pageProps(pageRemote())))
+    await waitFor(() => { expect(container.querySelectorAll('.medEvidenceCard')).toHaveLength(3) })
+    const ids = () => [...container.querySelectorAll('.medEvidenceCard')].map(node => node.textContent?.slice(0, 24))
+    const byRelation = ids()
+    fireEvent.change(screen.getByRole('combobox', { name: en['evidence.sort'] }), { target: { value: 'newest' } })
+    await waitFor(() => { expect(ids()).not.toEqual(byRelation) })
+  })
+
+  it('opens the cited passage in the library', async () => {
+    const onOpenSource = vi.fn()
+    const { container } = render(createElement(MedEvidencePage, pageProps(pageRemote(), { onOpenSource })))
+    await waitFor(() => { expect(container.querySelectorAll('.medEvidenceCard')).toHaveLength(3) })
+    fireEvent.click(screen.getAllByRole('button', { name: en['action.openSource'] })[0]!)
+    expect(onOpenSource).toHaveBeenCalledWith(encodePaperFocus({
+      paperId: 'paper-1' as never,
+      documentId: 'document-1' as never,
+      paragraphId: 'paragraph-1' as never,
+      startOffset: 17,
+      endOffset: 21,
+    }))
+  })
+
+  it('lists the project notes on the second segment', async () => {
+    render(createElement(MedEvidencePage, pageProps(pageRemote())))
+    fireEvent.click((await screen.findAllByRole('tab'))[1]!)
+    expect(await screen.findByText('剂量笔记')).toBeDefined()
+    expect(screen.getByText('Dexamethasone for PONV')).toBeDefined()
+  })
+
+  it('sends the reader back to the search segment to add evidence', async () => {
+    const onAddEvidence = vi.fn()
+    render(createElement(MedEvidencePage, pageProps(pageRemote(), { onAddEvidence })))
+    fireEvent.click(await screen.findByRole('button', { name: en['evidence.add'] }))
+    expect(onAddEvidence).toHaveBeenCalledTimes(1)
   })
 })
 

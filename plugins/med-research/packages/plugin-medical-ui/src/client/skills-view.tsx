@@ -13,8 +13,11 @@ export function SkillsView({ remote, t, sessionId }: MedViewProps) {
   const binding = useMedSessionProject(remote, sessionId)
   const projectName = useMedProjectName(remote, binding.value?.projectId)
   const skills = useMedLoad(useCallback((signal: AbortSignal) => remote.skills.catalog(query, signal), [remote, query]), [remote, query])
-  return <MedPanel title={t('view.skills')} state={t('skills.builtin')}>
-    <MedBreadcrumb page={t('view.skills')} project={projectName} t={t} />
+  return <MedPanel
+    crumb={<MedBreadcrumb page={t('view.skills')} project={projectName} t={t} />}
+    state={t('skills.builtin')}
+    title={t('view.skills')}
+  >
     <p>{t('skills.description')}</p>
     <Input aria-label={t('skills.title')} size="md" value={query} onChange={event => { setQuery(event.currentTarget.value) }} />
     {skills.error === undefined ? null : <MedFailure message={skills.error} label={t('action.retry')} onReload={skills.reload} />}
